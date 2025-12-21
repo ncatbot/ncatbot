@@ -42,6 +42,9 @@ class PluginLoader:
             LOG.warning("插件系统已切换为调试模式")
 
     # -------------------- 对外 API --------------------
+    def get_plugin_name_by_folder_name(self, folder_name: str) -> Optional[str]:
+        return self._importer.get_plugin_name_by_folder(folder_name)
+
     async def _init_plugin_in_thread(self, plugin: BasePlugin) -> None:
         """在插件的线程中初始化"""
 
@@ -70,46 +73,14 @@ class PluginLoader:
             debug=self._debug,
             rbac_manager=self.rbac_manager,
             plugin_loader=self,
+            name=name,
             **kwargs,
         )
         # Ensure name is set (may be provided via manifest)
-        if not getattr(plugin, "name", None):
-            plugin.name = name
 
         self.plugins[name] = plugin
         await self._init_plugin_in_thread(plugin)
         return plugin
-
-    async def load_all_plugins_by_class(
-        self, plugin_classes: Dict[str, tuple], **kwargs
-    ) -> None:
-        """从「插件类对象」加载。plugin_classes: name -> (Type[BasePlugin], manifest_dict)"""
-        valid_classes = {
-            name: val for name, val in plugin_classes.items() if self._is_valid(val)
-        }
-        self._resolver.build(valid_classes)
-
-        load_order = self._resolver.resolve()
-        init_tasks = []
-
-        for name in load_order:
-            cls, manifest = valid_classes[name]
-            LOG.info("加载插件「%s」", name)
-            # Collect extras from manifest
-            extras = {"_meta_data": manifest}
-            # Avoid passing 'name' as a kwarg because 'name' is provided positionally
-            extras.update(
-                {
-                    k: v
-                    for k, v in manifest.items()
-                    if k in ("version", "author", "description", "dependencies")
-                }
-            )
-            init_tasks.append(self.load_plugin_by_class(cls, name, **extras))
-
-        self._validate_versions()
-        # 并发执行所有插件的初始化
-        await asyncio.gather(*init_tasks)
 
     async def load_builtin_plugins(self) -> None:
         """加载内置插件。"""
@@ -135,60 +106,46 @@ class PluginLoader:
 
         await self._pre_first_load()
         LOG.info("从 %s 导入插件", path)
-        plugin_folder_names = self._importer.inspect_all()
-        plugin_classes: Dict[str, tuple] = {}
-        importer = self._importer
-        for plugin_folder_name in plugin_folder_names:
-            manifest = importer.get_manifest(plugin_folder_name) or {}
-            plugin_name = manifest.get("name")
-            if (
-                ncatbot_config.plugin.plugin_whitelist
-                and plugin_name not in ncatbot_config.plugin.plugin_whitelist
-            ):
-                LOG.info("插件 '%s' 不在白名单中，跳过加载", plugin_name)
-                continue
-            if plugin_name in ncatbot_config.plugin.plugin_blacklist:
-                LOG.info("插件 '%s' 在黑名单中，跳过加载", plugin_name)
-                continue
-            # Determine module path based on manifest main field (package or single file)
-            main_rel = manifest.get("main", "plugin.py")
-            candidate_file = path / plugin_folder_name / main_rel
-            module_path = (
-                candidate_file
-                if candidate_file.exists()
-                else (path / plugin_folder_name)
-            )
-            module = importer.load_module(plugin_folder_name, module_path)
-            if not module:
-                continue
-            # Prefer entry_class if specified in manifest
-            cls = None
-            entry_class_name = manifest.get("entry_class")
-            if entry_class_name:
-                cls = getattr(module, entry_class_name, None)
-            if not cls:
-                # Fallback to auto-discover first BasePlugin subclass
-                cls = self._find_plugin_class_in_module(module)
-            if not cls:
-                LOG.warning("在模块中未找到插件类 '%s'", plugin_name)
-                continue
-            plugin_classes[plugin_name] = (cls, manifest)
 
-        await self.load_all_plugins_by_class(plugin_classes, **kwargs)
-        LOG.info("已加载插件数 [%d]", len(self.plugins))
+        plugin_manifests = self._importer.get_plugin_manifests()
+        self._resolver.build(plugin_manifests)
+
+        load_order = self._resolver.resolve()
+
+        for name in load_order:
+            manifest = plugin_manifests[name]
+            LOG.info("加载插件「%s」", name)
+            # Collect extras from manifest
+            extras = {"_meta_data": manifest}
+            # Avoid passing 'name' as a kwarg because 'name' is provided positionally
+            extras.update(
+                {
+                    k: v
+                    for k, v in manifest.items()
+                    if k in ("version", "author", "description", "dependencies")
+                }
+            )
+            await self.load_plugin(name, **extras)
+
+        self._validate_versions()
+        # 并发执行所有插件的初始化
+        LOG.info("已加载插件数 [%d]", len(plugin_manifests))
 
     # -------------------- 单个插件的加载方法 ---------------------
-
-    async def load_plugin(self, name) -> BasePlugin:
+    async def load_plugin(self, name: str, **kwargs) -> Optional[BasePlugin]:
         try:
-            module = self._importer.load_module(
-                name, Path(ncatbot_config.plugin.plugins_dir) / name
-            )
-            return await self.load_plugin_by_class(
-                self._find_plugin_class_in_module(module), name
-            )
+            module = self._importer.load_plugin_module(name)
+            if module is None:
+                LOG.error("尝试加载失败的插件 %s: 模块未返回", name)
+                return None
+            plugin_class = self._find_plugin_class_in_module(module)
+            if plugin_class is None:
+                LOG.error("尝试加载失败的插件 %s: 未在模块中找到插件类", name)
+                return None
+            return await self.load_plugin_by_class(plugin_class, name, **kwargs)
         except Exception as e:
-            LOG.error(f"尝试加载失败的插件 {name}: {e}")
+            LOG.error("尝试加载失败的插件 %s: %s", name, e)
+            return None
 
     async def unload_plugin(self, name: str, **kwargs) -> bool:
         """卸载单个插件。"""
@@ -198,7 +155,7 @@ class PluginLoader:
             return False
         try:
             await plugin.__unload__(**kwargs)
-            self._importer.unload_module(name)
+            self._importer.unload_plugin_module(name)
             del self.plugins[name]
             return True
         except Exception as e:
@@ -235,13 +192,16 @@ class PluginLoader:
 
     # -------------------- 私有辅助 --------------------
     @staticmethod
-    def _is_valid(cls: Type[BasePlugin]) -> bool:
-        # Only accept (Type[BasePlugin], manifest) tuples
-        if not isinstance(cls, tuple):
+    def _is_valid(item: object) -> bool:
+        """Return True if `item` is a tuple whose first element is a subclass of BasePlugin.
+
+        Expected form: (Type[BasePlugin], manifest_dict)
+        """
+        if not isinstance(item, tuple):
             return False
-        target = cls[0]
         try:
-            return issubclass(target, BasePlugin)
+            target = item[0]
+            return isinstance(target, type) and issubclass(target, BasePlugin)
         except Exception:
             return False
 
@@ -261,7 +221,12 @@ class PluginLoader:
         self, module: ModuleType
     ) -> Optional[Type[BasePlugin]]:
         for obj in vars(module).values():
-            if isinstance(obj, type) and issubclass(obj, BasePlugin):
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, BasePlugin)
+                and obj is not BasePlugin
+                and obj.__module__ == module.__name__
+            ):
                 return obj
         return None
 
@@ -269,6 +234,7 @@ class PluginLoader:
     async def _pre_first_load(self):
         # 第一次扫描插件目录前
         interactive_migrate_plugins(ncatbot_config.plugin.plugins_dir)
+        self._importer.inspect_all()
 
     async def _after_first_load(self):
         # 完成第一次加载操作后

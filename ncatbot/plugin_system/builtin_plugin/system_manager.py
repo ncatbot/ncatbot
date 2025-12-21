@@ -132,23 +132,24 @@ class SystemManager(NcatBotPlugin):
         for plugin_dir in dirs_to_process:
             try:
                 # 发送卸载请求
+                plugin_name = self._loader.get_plugin_name_by_folder_name(plugin_dir)
                 unload_event = NcatBotEventFactory.create_event(
-                    "plugin_unload_request", name=plugin_dir
+                    "plugin_unload_request", name=plugin_name
                 )
                 await self.event_bus.publish(unload_event)
-                LOG.info(f"发送插件卸载请求: {plugin_dir}")
+                LOG.info(f"发送插件卸载请求: {plugin_name}")
 
                 # 稍微延迟后发送加载请求
-                await run_coroutine(lambda: __import__("asyncio").sleep(0.5))
+                await run_coroutine(lambda: __import__("asyncio").sleep(0.2))
 
                 # 发送加载请求
                 load_event = NcatBotEventFactory.create_event(
-                    "plugin_load_request", name=plugin_dir
+                    "plugin_load_request", name=plugin_name
                 )
                 await self.event_bus.publish(load_event)
-                LOG.info(f"发送插件加载请求: {plugin_dir}")
+                LOG.info(f"发送插件加载请求: {plugin_name}")
             except Exception as e:
-                LOG.error(f"处理插件目录 {plugin_dir} 时出错: {e}")
+                LOG.error(f"处理插件 {plugin_name} 时出错: {e}")
 
     async def on_load(self) -> None:
         self.register_handler("ncatbot.plugin_load_request", self.load_plugin)

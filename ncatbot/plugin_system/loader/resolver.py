@@ -1,8 +1,7 @@
 from collections import defaultdict, deque
-from typing import Dict, List, Set, Type
+from typing import Dict, List, Set, Any
 
 from ..pluginsys_err import PluginCircularDependencyError, PluginNameConflictError
-from ..base_plugin import BasePlugin
 
 
 class _DependencyResolver:
@@ -12,15 +11,14 @@ class _DependencyResolver:
         self._graph: Dict[str, Set[str]] = {}
         self._constraints: Dict[str, Dict[str, str]] = {}
 
-    def build(self, plugin_classes: Dict[str, Type[BasePlugin]]) -> None:
+    def build(self, plugin_manifests: Dict[str, Dict[str, Any]]) -> None:
         self._graph.clear()
         self._constraints.clear()
         # plugin_classes 必须为 name -> (Type[BasePlugin], manifest_dict)
-        for name, cls_manifest in plugin_classes.items():
-            _, manifest = cls_manifest
+        for name, manifest in plugin_manifests.items():
             deps = manifest.get("dependencies", {}) or {}
             self._graph[name] = set(deps.keys())
-            self._constraints[name] = deps.copy()
+            self._constraints[name] = deps
 
     def resolve(self) -> List[str]:
         """返回按依赖排序后的插件名；出错抛异常。"""

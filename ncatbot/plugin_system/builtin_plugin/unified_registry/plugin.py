@@ -1,6 +1,7 @@
 """统一注册插件"""
 
 import asyncio
+import traceback
 from typing import Dict, Callable, TYPE_CHECKING, List, Tuple, Optional
 from ncatbot.plugin_system.builtin_plugin.unified_registry.command_system.utils import (
     CommandSpec,
@@ -23,7 +24,7 @@ from .legacy_registry import legacy_registry
 if TYPE_CHECKING:
     pass
 
-LOG = get_log(__name__)
+LOG = get_log("UnifiedRegistry")
 
 
 class UnifiedRegistryPlugin(NcatBotPlugin):
@@ -110,6 +111,7 @@ class UnifiedRegistryPlugin(NcatBotPlugin):
                 return await asyncio.to_thread(func, *args, **kwargs)
         except Exception as e:
             LOG.error(f"执行函数 {func.__name__} 时发生错误: {e}")
+            LOG.info(f"{traceback.format_exc()}")
             return False
 
     async def _run_pure_filters(self, event: "BaseMessageEvent") -> None:
@@ -235,7 +237,6 @@ class UnifiedRegistryPlugin(NcatBotPlugin):
 
         # 3) 交给 resolver 构建并做冲突检测
         self._resolver.build_index(filtered_commands, filtered_aliases)
-        print(filtered_commands.keys(), filtered_aliases.keys())
         LOG.debug(
             f"TriggerEngine 初始化完成：命令={len(filtered_commands)}, 别名={len(filtered_aliases)}"
         )
