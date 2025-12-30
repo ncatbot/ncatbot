@@ -1,26 +1,26 @@
-from typing import Union, Literal, TYPE_CHECKING
+from typing import Union, Literal, TYPE_CHECKING, Optional, Any, Dict
 from abc import abstractmethod, ABC
-from ...utils import status
-from .sender import PrivateSender, GroupSender
-from .event_data import MessageEventData
+from ....utils import status
+from ..sender import PrivateSender, GroupSender
+from ..base_event import MessageEventData
 
 if TYPE_CHECKING:
     from .message_segment import MessageArray
 
 
 class BaseMessageEvent(MessageEventData, ABC):
-    message_type: Literal["private", "group"] = None  # 上级会获取
-    sub_type: str = None  # 下级会细化 Literal, 上级会获取
+    message_type: Optional[Literal["private", "group"]] = None  # 上级会获取
+    sub_type: Optional[str] = None  # 下级会细化 Literal, 上级会获取
 
     def is_group_msg(self):
         return hasattr(self, "group_id")
 
     @abstractmethod
-    async def reply(self, *args, **kwargs):
+    async def reply(self, *args: Any, **kwargs: Any) -> Any:
         pass
 
     @abstractmethod
-    def reply_sync(self, *args, **kwargs):
+    def reply_sync(self, *args: Any, **kwargs: Any) -> Any:
         pass
 
     def get_core_properties_str(self):
@@ -30,24 +30,30 @@ class BaseMessageEvent(MessageEventData, ABC):
 
 
 class AnonymousMessage(BaseMessageEvent):
-    id: str = None
-    name: str = None
-    flag: str = None
+    id: Optional[str] = None
+    name: Optional[str] = None
+    flag: Optional[str] = None
 
-    def __init__(self, data: dict):
-        self.id = str(data.get("id"))
+    def __init__(self, data: Dict[str, Any]):
+        self.id = str(data.get("id")) if data.get("id") else None
         self.name = data.get("name")
         self.flag = data.get("flag")
+    
+    async def reply(self, *args: Any, **kwargs: Any) -> Any:
+        raise NotImplementedError()
+    
+    def reply_sync(self, *args: Any, **kwargs: Any) -> Any:
+        raise NotImplementedError()
 
 
 class GroupMessageEvent(BaseMessageEvent):
-    message_type: Literal["group"] = None  # 上级会获取
-    anonymous: Union[None, AnonymousMessage]
-    group_id: str = None
-    sub_type: Literal["normal", "anonymous", "notice"]  # 上级会获取
-    sender: GroupSender = None
+    message_type: Optional[Literal["group"]] = None  # 上级会获取
+    anonymous: Optional[AnonymousMessage] = None
+    group_id: Optional[str] = None
+    sub_type: Optional[Literal["normal", "anonymous", "notice"]] = None  # 上级会获取
+    sender: Optional[GroupSender] = None
 
-    def __init__(self, data: dict):
+    def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
         self.sender = GroupSender(data.get("sender"))
         self.anonymous = (
@@ -85,12 +91,12 @@ class GroupMessageEvent(BaseMessageEvent):
 
     async def reply(
         self,
-        text: str = None,
-        image: str = None,
+        text: Optional[str] = None,
+        image: Optional[str] = None,
         at: bool = True,
         space: bool = True,
-        rtf: "MessageArray" = None,
-    ):
+        rtf: Optional["MessageArray"] = None,
+    ) -> Any:
         if text is not None:
             text = (" " if space else "") + text
         return await status.global_api.post_group_msg(
@@ -104,12 +110,12 @@ class GroupMessageEvent(BaseMessageEvent):
 
     def reply_sync(
         self,
-        text: str = None,
-        image: str = None,
+        text: Optional[str] = None,
+        image: Optional[str] = None,
         at: bool = True,
         space: bool = True,
-        rtf: "MessageArray" = None,
-    ):
+        rtf: Optional["MessageArray"] = None,
+    ) -> Any:
         if text is not None:
             text = (" " if space else "") + text
         return status.global_api.post_group_msg_sync(
@@ -123,24 +129,24 @@ class GroupMessageEvent(BaseMessageEvent):
 
 
 class PrivateMessageEvent(BaseMessageEvent):
-    message_type: Literal["private"] = None  # 上级会获取
-    sub_type: Literal["friend", "group", "other"]  # 上级会获取
-    sender: PrivateSender = None
+    message_type: Optional[Literal["private"]] = None  # 上级会获取
+    sub_type: Optional[Literal["friend", "group", "other"]] = None  # 上级会获取
+    sender: Optional[PrivateSender] = None
 
-    def __init__(self, data: dict):
+    def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
         self.sender = PrivateSender(data.get("sender"))
 
     async def reply(
-        self, text: str = None, image: str = None, rtf: "MessageArray" = None
-    ):
+        self, text: Optional[str] = None, image: Optional[str] = None, rtf: Optional["MessageArray"] = None
+    ) -> Any:
         return await status.global_api.post_private_msg(
             self.user_id, text, self.message_id, image, rtf
         )
 
     def reply_sync(
-        self, text: str = None, image: str = None, rtf: "MessageArray" = None
-    ):
+        self, text: Optional[str] = None, image: Optional[str] = None, rtf: Optional["MessageArray"] = None
+    ) -> Any:
         return status.global_api.post_private_msg_sync(
             self.user_id, text, self.message_id, image, rtf
         )
@@ -150,28 +156,29 @@ class PrivateMessageEvent(BaseMessageEvent):
 
 
 class MessageSentEvent(BaseMessageEvent):
-    message_type: Literal["group", "private"] = None  # 上级会获取
-    sub_type: Literal["friend", "group", "other", "normal"] = None  # 上级会获取
-    sender: Union[PrivateSender, GroupSender] = None
-    message_sent_type: Literal["self"] = None
-    target_id: str = None
-    real_seq: str = None
-    group_id: str = None
+    message_type: Optional[Literal["group", "private"]] = None  # 上级会获取
+    sub_type: Optional[Literal["friend", "group", "other", "normal"]] = None  # 上级会获取
+    sender: Optional[Union[PrivateSender, GroupSender]] = None
+    message_sent_type: Optional[Literal["self"]] = None
+    target_id: Optional[str] = None
+    real_seq: Optional[str] = None
+    group_id: Optional[str] = None
 
-    def __init__(self, data: dict):
+    def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
         self.message_sent_type = data.get("message_sent_type")
         self.target_id = str(data.get("target_id")) if data.get("target_id") else None
         self.real_seq = str(data.get("real_seq")) if data.get("real_seq") else None
 
         # 根据消息类型初始化不同的 Sender
-        if self.message_type == "group":
-            self.sender = GroupSender(data.get("sender"))
+        sender_data = data.get("sender")
+        if self.message_type == "group" and sender_data:
+            self.sender = GroupSender(sender_data)
             self.group_id = str(data.get("group_id")) if data.get("group_id") else None
-        elif self.message_type == "private":
-            self.sender = PrivateSender(data.get("sender"))
+        elif self.message_type == "private" and sender_data:
+            self.sender = PrivateSender(sender_data)
         else:
-            self.sender = data.get("sender")
+            self.sender = None
 
     def is_group_msg(self):
         """
@@ -201,8 +208,8 @@ class MessageSentEvent(BaseMessageEvent):
         return base_props
 
     async def reply(
-        self, text: str = None, image: str = None, rtf: "MessageArray" = None
-    ):
+        self, text: Optional[str] = None, image: Optional[str] = None, rtf: Optional["MessageArray"] = None
+    ) -> Any:
         if self.is_group_msg():
             return await status.global_api.post_group_msg(
                 group_id=self.group_id,
@@ -221,8 +228,8 @@ class MessageSentEvent(BaseMessageEvent):
             )
 
     def reply_sync(
-        self, text: str = None, image: str = None, rtf: "MessageArray" = None
-    ):
+        self, text: Optional[str] = None, image: Optional[str] = None, rtf: Optional["MessageArray"] = None
+    ) -> Any:
         if self.is_group_msg():
             return status.global_api.post_group_msg_sync(
                 group_id=self.group_id,

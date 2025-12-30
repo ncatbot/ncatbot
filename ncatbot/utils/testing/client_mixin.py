@@ -26,7 +26,7 @@ class ClientMixin:
     def mock_start(self):
         LOG.info("Mock 模式启动：跳过 NapCat 服务和 WebSocket 连接")
         # 在 mock 模式下触发启动事件
-        from ncatbot.core.event.meta import MetaEvent
+        from ncatbot.core.event.meta_event import MetaEvent
 
         startup_event = MetaEvent(
             {

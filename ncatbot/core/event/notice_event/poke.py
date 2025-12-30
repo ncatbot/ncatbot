@@ -1,6 +1,6 @@
 from ncatbot.utils import status
 from ncatbot.utils.thread_pool import run_coroutine
-from .notice import NoticeEvent
+from .base import NoticeEvent
 from typing import Optional
 
 

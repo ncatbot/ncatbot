@@ -1,9 +1,9 @@
-from typing import Literal, Optional
+from typing import Literal, Optional, ClassVar
 from .base import MessageSegment
 
 
 class Share(MessageSegment):
-    type: Literal["share"] = "share"
+    type: ClassVar[str] = "share"
     url: str
     title: str
     content: Optional[str] = None
@@ -11,7 +11,7 @@ class Share(MessageSegment):
 
 
 class Location(MessageSegment):
-    type: Literal["location"] = "location"
+    type: ClassVar[str] = "location"
     lat: float
     lon: float
     title: Optional[str] = None
@@ -19,7 +19,7 @@ class Location(MessageSegment):
 
 
 class Music(MessageSegment):
-    type: Literal["music"] = "music"
+    type: ClassVar[str] = "music"
     platform: Literal[
         "qq", "163", "custom"
     ]  # 仅用于透传访问, 与 Dict 交换时处理为 data['data']['type']
@@ -43,10 +43,11 @@ class Music(MessageSegment):
 
 
 class Json(MessageSegment):
-    type: Literal["json"] = "json"
+    type: ClassVar[str] = "json"
     data: str
 
 
 class Markdown(MessageSegment):
-    type: Literal["markdown"] = "markdown"
+    type: ClassVar[str] = "markdown"
     content: str
+

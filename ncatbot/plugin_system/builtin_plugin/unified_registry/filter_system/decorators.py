@@ -59,7 +59,7 @@ def on_notice(func: Callable) -> Callable:
 
 def on_group_poke(func: Callable) -> Callable:
     """群聊戳一戳专用装饰器"""
-    from ncatbot.core.event.notice import NoticeEvent
+    from ncatbot.core.event.notice_event import NoticeEvent
 
     def poke_filter(event) -> bool:
         """检查是否是戳一戳事件"""
@@ -73,7 +73,7 @@ def on_group_poke(func: Callable) -> Callable:
 
 def on_group_at(func: Callable) -> Callable:
     """群聊艾特专用装饰器"""
-    from ncatbot.core.event.message import GroupMessageEvent
+    from ncatbot.core.event.message_event.message import GroupMessageEvent
 
     def at_filter(event) -> bool:
         """检查是否艾特了机器人"""
@@ -97,7 +97,7 @@ def on_group_increase(func: Callable) -> Callable:
 
     def group_increase_filter(event) -> bool:
         """检查是否是群聊人数增加事件"""
-        from ncatbot.core.event.notice import NoticeEvent
+        from ncatbot.core.event.notice_event import NoticeEvent
 
         return isinstance(event, NoticeEvent) and event.notice_type == "group_increase"
 
@@ -112,7 +112,7 @@ def on_group_decrease(func: Callable) -> Callable:
 
     def group_decrease_filter(event) -> bool:
         """检查是否是群聊人数减少事件"""
-        from ncatbot.core.event.notice import NoticeEvent
+        from ncatbot.core.event.notice_event import NoticeEvent
 
         return isinstance(event, NoticeEvent) and event.notice_type == "group_decrease"
 
@@ -127,7 +127,7 @@ def on_group_request(func: Callable) -> Callable:
 
     def group_request_filter(event) -> bool:
         """检查是否是群聊请求事件"""
-        from ncatbot.core.event.request import RequestEvent
+        from ncatbot.core.event.request_event import RequestEvent
 
         return isinstance(event, RequestEvent)
 

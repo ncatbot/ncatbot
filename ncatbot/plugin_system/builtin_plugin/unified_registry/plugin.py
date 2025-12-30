@@ -8,7 +8,7 @@ from ncatbot.plugin_system.builtin_plugin.unified_registry.command_system.utils 
 )
 from ncatbot.plugin_system.event.event import NcatBotEvent
 from ncatbot.core.event import BaseMessageEvent
-from ncatbot.core.event.event_data import BaseEventData
+from ncatbot.core.event.base_event import BaseEventData
 from ncatbot.utils import get_log
 from ...builtin_mixin import NcatBotPlugin
 from .trigger.binder import BindResult

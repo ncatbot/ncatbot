@@ -1,4 +1,4 @@
-from .event_data import BaseEventData
+from .base_event import BaseEventData
 from typing import Literal, Optional
 
 

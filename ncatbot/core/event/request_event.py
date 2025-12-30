@@ -1,5 +1,5 @@
 from typing import Literal, Optional
-from ncatbot.core.event.event_data import BaseEventData
+from ncatbot.core.event.base_event import BaseEventData
 from ncatbot.utils import status, get_log
 
 LOG = get_log("ncatbot.core.event.request")
