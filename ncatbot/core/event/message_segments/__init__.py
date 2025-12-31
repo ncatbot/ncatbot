@@ -3,7 +3,7 @@ from .media import *  # noqa: F401,F403
 from .forward import *  # noqa: F401,F403
 from .misc import *  # noqa: F401,F403
 from .base import *  # noqa: F401,F403
-from .message_array import MessageArray
+from .message_array import MessageArray, AtAll, Text
 
 # 导出所有公开类
 __all__ = [
@@ -11,7 +11,6 @@ __all__ = [
     "MessageSegment",
     "MessageArrayDTO",
     "parse_message_segment",
-    "TYPE_MAP",
     # primitives
     "PlainText",
     "Face",
@@ -34,4 +33,6 @@ __all__ = [
     "Forward",
     # array
     "MessageArray",
+    "Text",
+    "AtAll"
 ]

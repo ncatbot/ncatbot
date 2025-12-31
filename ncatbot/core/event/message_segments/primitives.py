@@ -7,7 +7,6 @@ class PlainText(MessageSegment):
     type: ClassVar[str] = "text"
     text: str
 
-
 class Face(MessageSegment):
     type: ClassVar[str] = "face"
     id: str
@@ -41,4 +40,3 @@ class Reply(MessageSegment):
     @classmethod
     def validate_id(cls, v) -> str:
         return str(v)
-    

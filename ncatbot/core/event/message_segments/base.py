@@ -35,7 +35,7 @@ class MessageArrayDTO(BaseModel):
     @classmethod
     def from_list(cls, data: List[Dict[str, Any]]) -> "MessageArrayDTO":
         return cls(message=[parse_message_segment(seg) for seg in data])
-
+    
     def to_list(self) -> Dict[str, Any]:
         return self.model_dump()
     
