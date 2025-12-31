@@ -1,29 +1,7 @@
-from .api import BotAPI
-from .api_account import AccountAPI
-from .api_group import GroupAPI
-from .api_message import MessageAPI
-from .api_private import PrivateAPI
-from .api_support import SupportAPI
-from .utils import (
-    BaseAPI,
-    APIReturnStatus,
-    MessageAPIReturnStatus,
-    NapCatAPIError,
-    ExclusiveArgumentError,
-    check_exclusive_argument,
-)
+"""
+NcatBot API 模块
 
-__all__ = [
-    "BotAPI",
-    "AccountAPI",
-    "GroupAPI",
-    "MessageAPI",
-    "PrivateAPI",
-    "SupportAPI",
-    "BaseAPI",
-    "APIReturnStatus",
-    "MessageAPIReturnStatus",
-    "NapCatAPIError",
-    "ExclusiveArgumentError",
-    "check_exclusive_argument",
-]
+提供与 NapCat 通信的 API 接口。
+"""
+
+from .api import BotAPI

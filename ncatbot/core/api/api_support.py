@@ -1,19 +1,47 @@
-from typing import Literal, Union, List
-from .utils import BaseAPI, APIReturnStatus
-from ncatbot.utils import run_coroutine
-from ncatbot.core.event.message_segment.message_segment import convert_uploadable_object
+"""
+支持功能 API
+
+提供 AI 声聊、状态检查、OCR、版本信息等辅助功能。
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List, Literal, Optional, TYPE_CHECKING, Union
+
+from .utils import (
+    APIComponent,
+    APIReturnStatus,
+    generate_sync_methods,
+)
+
+if TYPE_CHECKING:
+    from .client import IAPIClient
 
 
+# =============================================================================
+# 数据模型
+# =============================================================================
+
+
+@dataclass
 class AICharacter:
+    """AI 声聊角色"""
+
+    character_id: str
+    character_name: str
+    preview_url: str
+
     def __init__(self, data: dict):
-        self.character_id = data.get("character_id")
-        self.character_name = data.get("character_name")
-        self.preview_url = data.get("preview_url")
+        self.character_id = data.get("character_id", "")
+        self.character_name = data.get("character_name", "")
+        self.preview_url = data.get("preview_url", "")
 
     def __repr__(self) -> str:
-        return f"AICharacter(name={self.character_name})"
+        return f"AICharacter(name={self.character_name!r})"
 
     def get_details(self) -> dict:
+        """获取角色详细信息"""
         return {
             "character_id": self.character_id,
             "character_name": self.character_name,
@@ -22,127 +50,187 @@ class AICharacter:
 
 
 class AICharacterList:
+    """AI 声聊角色列表"""
+
+    characters: List[AICharacter]
+
     def __init__(self, data: List[dict]):
         self.characters = [AICharacter(item) for item in data]
 
     def __repr__(self) -> str:
-        return f"AICharacterList(characters={self.characters})"
+        return f"AICharacterList(count={len(self.characters)})"
 
-    def get_search_id_by_name(self, name: str) -> str:
+    def __len__(self) -> int:
+        return len(self.characters)
+
+    def __iter__(self):
+        return iter(self.characters)
+
+    def get_id_by_name(self, name: str) -> Optional[str]:
+        """
+        通过名称获取角色 ID
+
+        Args:
+            name: 角色名称
+
+        Returns:
+            str | None: 角色 ID，未找到返回 None
+        """
         for character in self.characters:
             if character.character_name == name:
                 return character.character_id
         return None
 
+    # 向后兼容别名
+    def get_search_id_by_name(self, name: str) -> Optional[str]:
+        """向后兼容：请使用 get_id_by_name"""
+        return self.get_id_by_name(name)
 
-class SupportAPI(BaseAPI):
-    # ---------------------
+
+# =============================================================================
+# SupportAPI 实现
+# =============================================================================
+
+
+@generate_sync_methods
+class SupportAPI(APIComponent):
+    """
+    支持功能 API
+
+    提供 AI 声聊、状态检查、OCR、版本信息等辅助功能。
+    """
+
+    # -------------------------------------------------------------------------
     # region AI 声聊
-    # ---------------------
+    # -------------------------------------------------------------------------
+
     async def get_ai_characters(
-        self, group_id: Union[str, int], chat_type: Literal[1, 2]
+        self,
+        group_id: Union[str, int],
+        chat_type: Literal[1, 2],
     ) -> AICharacterList:
-        result = await self.async_callback(
-            "/get_ai_characters", {"group_id": group_id, "chat_type": chat_type}
+        """
+        获取 AI 声聊角色列表
+
+        Args:
+            group_id: 群号
+            chat_type: 聊天类型 (1 或 2)
+
+        Returns:
+            AICharacterList: AI 角色列表
+        """
+        result = await self._request_raw(
+            "/get_ai_characters",
+            {"group_id": group_id, "chat_type": chat_type},
         )
         status = APIReturnStatus(result)
         all_characters = sum([item["characters"] for item in status.data], [])
         return AICharacterList(all_characters)
 
     async def get_ai_record(
-        self, group_id: Union[str, int], character_id: str, text: str
+        self,
+        group_id: Union[str, int],
+        character_id: str,
+        text: str,
     ) -> str:
         """
-        发送 AI 声聊并返回链接 str（似乎用不了）
-        :param group_id: 群号
-        :param character_id: 角色ID
-        :param text: 文本
-        :return: 链接
+        获取 AI 声聊语音
+
+        Args:
+            group_id: 群号
+            character_id: 角色 ID
+            text: 要转换的文本
+
+        Returns:
+            str: 语音链接
+
+        Note:
+            此功能可能不可用
         """
-        result = await self.async_callback(
+        result = await self._request_raw(
             "/get_ai_record",
             {"group_id": group_id, "character": character_id, "text": text},
         )
         status = APIReturnStatus(result)
         return status.data
 
-    # ---------------------
+    # -------------------------------------------------------------------------
     # region 状态检查
-    # ---------------------
+    # -------------------------------------------------------------------------
 
     async def can_send_image(self) -> bool:
-        result = await self.async_callback("/can_send_image")
-        status = APIReturnStatus(result)
+        """
+        检查是否可以发送图片
 
-        return status.data.get("yes")
+        Returns:
+            bool: 是否可以发送
+        """
+        result = await self._request_raw("/can_send_image")
+        status = APIReturnStatus(result)
+        return status.data.get("yes", False)
 
     async def can_send_record(self, group_id: Union[str, int]) -> bool:
-        result = await self.async_callback("/can_send_record", {"group_id": group_id})
-        status = APIReturnStatus(result)
-        return status.data.get("yes")
+        """
+        检查是否可以发送语音
 
-    # ---------------------
-    # region OCR 相关（仅 windows 可用）
-    # ---------------------
+        Args:
+            group_id: 群号
 
-    async def ocr_image(self, image: str) -> List[dict]:
-        # TODO: 返回值(不紧急)
-        result = await self.async_callback(
-            "/ocr_image", {"image": convert_uploadable_object(image)}
+        Returns:
+            bool: 是否可以发送
+        """
+        result = await self._request_raw(
+            "/can_send_record",
+            {"group_id": group_id},
         )
         status = APIReturnStatus(result)
+        return status.data.get("yes", False)
 
+    # -------------------------------------------------------------------------
+    # region OCR 相关
+    # -------------------------------------------------------------------------
+
+    async def ocr_image(self, image: str) -> List[dict]:
+        """
+        图片文字识别（OCR）
+
+        Args:
+            image: 图片路径/URL
+
+        Returns:
+            List[dict]: OCR 识别结果
+
+        Note:
+            仅 Windows 可用
+        """
+        result = await self._request_raw(
+            "/ocr_image",
+            {"image": image},
+        )
+        status = APIReturnStatus(result)
         return status.data
 
-    # ---------------------
+    # -------------------------------------------------------------------------
     # region 其它
-    # ---------------------
+    # -------------------------------------------------------------------------
 
     async def get_version_info(self) -> dict:
         """
         获取 NapCat 版本信息
+
+        Returns:
+            dict: 版本信息
         """
-        result = await self.async_callback("/get_version_info")
+        result = await self._request_raw("/get_version_info")
         status = APIReturnStatus(result)
         return status.data
 
     async def bot_exit(self) -> None:
-        """退出机器人"""
-        # TODO: 测试
-        result = await self.async_callback("/bot_exit")
+        """
+        退出机器人
+
+        Note:
+            此功能可能需要测试
+        """
+        result = await self._request_raw("/bot_exit")
         APIReturnStatus.raise_if_failed(result)
-
-    # ---------------------
-    # region 实验性功能
-    # ---------------------
-
-    pass
-
-    # ---------------------
-    # region 同步版本接口
-    # ---------------------
-
-    def get_ai_characters_sync(
-        self, group_id: Union[str, int], chat_type: Literal[1, 2]
-    ) -> AICharacterList:
-        return run_coroutine(self.get_ai_characters, group_id, chat_type)
-
-    def get_ai_record_sync(
-        self, group_id: Union[str, int], character_id: str, text: str
-    ) -> str:
-        return run_coroutine(self.get_ai_record, group_id, character_id, text)
-
-    def can_send_image_sync(self) -> bool:
-        return run_coroutine(self.can_send_image)
-
-    def can_send_record_sync(self, group_id: Union[str, int]) -> bool:
-        return run_coroutine(self.can_send_record, group_id)
-
-    def ocr_image_sync(self, image: str) -> List[dict]:
-        return run_coroutine(self.ocr_image, image)
-
-    def get_version_info_sync(self) -> dict:
-        return run_coroutine(self.get_version_info)
-
-    def bot_exit_sync(self) -> None:
-        return run_coroutine(self.bot_exit)

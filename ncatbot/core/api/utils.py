@@ -1,19 +1,98 @@
-from typing import Callable, List
-from ncatbot.utils import get_log, ncatbot_config, NcatBotError
-import traceback
+"""
+API 工具类和基础组件
 
+提供 API 调用的核心工具、错误处理、状态管理和依赖注入支持。
+"""
+
+from __future__ import annotations
+
+import functools
+import traceback
+from dataclasses import dataclass, field
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    TYPE_CHECKING,
+    TypeVar,
+    Union,
+    overload,
+)
+
+from ncatbot.utils import get_log, ncatbot_config, NcatBotError
+
+if TYPE_CHECKING:
+    from .client import IAPIClient, APIResponse
 
 LOG = get_log("API")
+T = TypeVar("T")
+R = TypeVar("R")
+
+
+# =============================================================================
+# 错误类型定义
+# =============================================================================
 
 
 class ExclusiveArgumentError(NcatBotError):
+    """互斥参数错误"""
+
     logger = LOG
 
-    def __init__(self, arg_name1, arg_name2, extra_info="参数互斥"):
+    def __init__(self, arg_name1: str, arg_name2: str, extra_info: str = "参数互斥"):
         super().__init__(f"{extra_info}: {arg_name1}, {arg_name2}")
 
 
-def check_exclusive_argument(arg1, arg2, names: List[str], error: bool = False):
+class NapCatAPIError(Exception):
+    """NapCat API 调用错误"""
+
+    def __init__(self, info: str, retcode: Optional[int] = None):
+        LOG.error(f"NapCatAPIError: {info}")
+        if ncatbot_config.debug:
+            LOG.info(f"stacktrace:\n{traceback.format_exc()}")
+        self.info = info
+        self.retcode = retcode
+        super().__init__(info)
+
+
+class APIValidationError(NcatBotError):
+    """API 参数验证错误"""
+
+    logger = LOG
+
+    def __init__(self, message: str):
+        super().__init__(f"参数验证失败: {message}")
+
+
+# =============================================================================
+# 参数验证工具
+# =============================================================================
+
+
+def check_exclusive_argument(
+    arg1: Any,
+    arg2: Any,
+    names: List[str],
+    error: bool = False,
+) -> Optional[ExclusiveArgumentError]:
+    """
+    检查两个互斥参数
+
+    Args:
+        arg1: 第一个参数值
+        arg2: 第二个参数值
+        names: 参数名称列表 [name1, name2]
+        error: 是否在检测到错误时抛出异常
+
+    Returns:
+        如果有错误且 error=False，返回错误对象；否则返回 None
+
+    Raises:
+        ExclusiveArgumentError: 当 error=True 且参数互斥时
+    """
     if (arg1 is not None) == (arg2 is not None):
         if arg1 is not None:
             e = ExclusiveArgumentError(*names)
@@ -21,47 +100,241 @@ def check_exclusive_argument(arg1, arg2, names: List[str], error: bool = False):
             e = ExclusiveArgumentError(*names, "至少提供一个参数")
         if error:
             raise e
+        return e
+    return None
 
 
-class NapCatAPIError(Exception):
-    def __init__(self, info):
-        LOG.error(f"NapCatAPIError: {info}")
-        if ncatbot_config.debug:
-            LOG.info(f"stacktrace:\n{traceback.format_exc()}")
-        super().__init__(info)
+def require_at_least_one(*args: Any, names: List[str]) -> None:
+    """
+    要求至少提供一个参数
+
+    Args:
+        *args: 参数值列表
+        names: 对应的参数名称列表
+
+    Raises:
+        APIValidationError: 如果所有参数都为 None
+    """
+    if all(arg is None for arg in args):
+        raise APIValidationError(f"至少需要提供以下参数之一: {', '.join(names)}")
 
 
+def require_exactly_one(*args: Any, names: List[str]) -> None:
+    """
+    要求恰好提供一个参数
+
+    Args:
+        *args: 参数值列表
+        names: 对应的参数名称列表
+
+    Raises:
+        APIValidationError: 如果提供的参数数量不是 1
+    """
+    count = sum(1 for arg in args if arg is not None)
+    if count != 1:
+        raise APIValidationError(f"必须且只能提供以下参数之一: {', '.join(names)}")
+
+
+# =============================================================================
+# API 响应状态处理
+# =============================================================================
+
+
+@dataclass
 class APIReturnStatus:
-    retcode: int = None
-    message: str = None
-    data: dict = None
+    """API 返回状态封装"""
+
+    retcode: int
+    message: str
+    data: Any = None
+    _raw: Dict[str, Any] = field(default_factory=dict, repr=False)
+
+    def __init__(self, data: Dict[str, Any]):
+        """
+        从响应字典构造状态对象
+
+        Args:
+            data: API 响应字典
+
+        Raises:
+            NapCatAPIError: 如果响应表示失败
+        """
+        self.raise_if_failed(data)
+        self.retcode = data.get("retcode", -1)
+        self.message = data.get("message", "")
+        self.data = data.get("data")
+        self._raw = data
 
     @classmethod
-    def raise_if_failed(cls, data: dict):
+    def raise_if_failed(cls, data: Dict[str, Any]) -> None:
+        """
+        检查响应是否成功，失败则抛出异常
+
+        Args:
+            data: API 响应字典
+
+        Raises:
+            NapCatAPIError: 如果 retcode != 0
+        """
         if data.get("retcode") != 0:
-            raise NapCatAPIError(data.get("message"))
+            raise NapCatAPIError(
+                data.get("message", "Unknown error"),
+                retcode=data.get("retcode"),
+            )
 
-    def __init__(self, data: dict):
-        self.raise_if_failed(data)
-        self.retcode = data.get("retcode")
-        self.message = data.get("message")
-        self.data = data.get("data")
-
-    def is_success(self):
+    @property
+    def is_success(self) -> bool:
         return self.retcode == 0
 
-    def __str__(self):
-        return f"APIReturnStatus(retcode={self.retcode}, message={self.message}, data={self.data})"
+    def __bool__(self) -> bool:
+        return self.is_success
+
+    def __str__(self) -> str:
+        return f"APIReturnStatus(retcode={self.retcode}, message={self.message})"
 
 
+@dataclass
 class MessageAPIReturnStatus(APIReturnStatus):
+    """消息 API 返回状态，包含 message_id"""
+
     @property
     def message_id(self) -> str:
-        return str(self.data.get("message_id"))
+        """获取消息 ID"""
+        if self.data and "message_id" in self.data:
+            return str(self.data["message_id"])
+        return ""
+
+
+# =============================================================================
+# 依赖注入基础设施
+# =============================================================================
+
+
+class APIComponent:
+    """
+    API 组件基类（使用依赖注入）
+
+    所有 API 模块应继承此类，通过构造函数注入 IAPIClient 依赖。
+    """
+
+    def __init__(self, client: "IAPIClient"):
+        """
+        Args:
+            client: API 客户端实例，实现 IAPIClient 接口
+        """
+        self._client = client
+
+    async def _request(
+        self, endpoint: str, params: Optional[Dict[str, Any]] = None
+    ) -> "APIResponse":
+        """
+        发送 API 请求
+
+        Args:
+            endpoint: API 端点
+            params: 请求参数
+
+        Returns:
+            APIResponse 对象
+        """
+        return await self._client.request(endpoint, params)
+
+    async def _request_raw(
+        self, endpoint: str, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        发送 API 请求并返回原始字典
+
+        为了兼容现有代码，返回原始响应字典。
+
+        Args:
+            endpoint: API 端点
+            params: 请求参数
+
+        Returns:
+            原始响应字典
+        """
+        response = await self._client.request(endpoint, params)
+        return response.raw
+
+
+# =============================================================================
+# 向后兼容的 BaseAPI（过渡用）
+# =============================================================================
 
 
 class BaseAPI:
-    """Base class for all API classes"""
+    """
+    传统 API 基类（向后兼容）
+
+    ⚠️ 已废弃：新代码请使用 APIComponent
+
+    保留此类是为了向后兼容现有代码，新的 API 模块应使用 APIComponent。
+    """
 
     def __init__(self, async_callback: Callable[[str, dict], dict]):
+        """
+        Args:
+            async_callback: 异步回调函数
+        """
         self.async_callback = async_callback
+
+
+# =============================================================================
+# 同步方法生成器
+# =============================================================================
+
+
+def sync_wrapper(async_method: Callable[..., T]) -> Callable[..., T]:
+    """
+    将异步方法包装为同步方法的装饰器
+
+    ⚠️ 警告：此方法会阻塞线程，仅用于向后兼容。
+    新代码应直接使用异步方法。
+
+    Args:
+        async_method: 异步方法
+
+    Returns:
+        同步包装方法
+    """
+    from ncatbot.utils import run_coroutine
+
+    @functools.wraps(async_method)
+    def wrapper(self, *args, **kwargs):
+        return run_coroutine(async_method, self, *args, **kwargs)
+
+    # 标记为同步包装方法
+    wrapper._is_sync_wrapper = True
+    wrapper._async_method = async_method
+
+    return wrapper
+
+
+def generate_sync_methods(cls: type) -> type:
+    """
+    类装饰器：为所有异步方法自动生成同步版本
+
+    同步方法命名规则：{method_name}_sync
+
+    Args:
+        cls: 要处理的类
+
+    Returns:
+        添加了同步方法的类
+    """
+    import asyncio
+    import inspect
+
+    for name, method in inspect.getmembers(cls, predicate=inspect.iscoroutinefunction):
+        # 跳过私有方法和已有同步版本的方法
+        if name.startswith("_"):
+            continue
+        sync_name = f"{name}_sync"
+        if hasattr(cls, sync_name):
+            continue
+
+        # 生成同步包装方法
+        setattr(cls, sync_name, sync_wrapper(method))
+
+    return cls
