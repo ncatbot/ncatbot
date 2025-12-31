@@ -36,6 +36,8 @@ class PrivateMessageMixin(APIComponent):
         """
         发送私聊消息（底层接口）
 
+        此方法会自动处理消息中的文件预上传。
+
         Args:
             user_id: 用户 QQ 号
             message: 消息内容列表
@@ -46,10 +48,13 @@ class PrivateMessageMixin(APIComponent):
         if not validate_msg(message):
             LOG.warning("消息格式验证失败，发送私聊消息取消")
             return ""
+        
+        # 预上传处理
+        processed_message = await self._preupload_message(message)
 
         result = await self._request_raw(
             "/send_private_msg",
-            {"user_id": user_id, "message": message},
+            {"user_id": user_id, "message": processed_message},
         )
         status = MessageAPIReturnStatus(result)
         return status.message_id
@@ -150,13 +155,10 @@ class PrivateMessageMixin(APIComponent):
             str: 消息 ID
         """
         from ncatbot.core.event import Image
-
-        result = await self._request_raw(
-            "/send_private_msg",
-            {"user_id": user_id, "message": [Image(file=image).to_dict()]},
+        # 统一走 send_private_msg 以确保预上传
+        return await self.send_private_msg(
+            user_id, [Image(file=image).to_dict()]
         )
-        status = MessageAPIReturnStatus(result)
-        return status.message_id
 
     async def send_private_record(self, user_id: Union[str, int], file: str) -> str:
         """
@@ -170,13 +172,10 @@ class PrivateMessageMixin(APIComponent):
             str: 消息 ID
         """
         from ncatbot.core.event import Record
-
-        result = await self._request_raw(
-            "/send_private_msg",
-            {"user_id": user_id, "message": [Record(file=file).to_dict()]},
+        # 统一走 send_private_msg 以确保预上传
+        return await self.send_private_msg(
+            user_id, [Record(file=file).to_dict()]
         )
-        status = MessageAPIReturnStatus(result)
-        return status.message_id
 
     async def send_private_dice(
         self, user_id: Union[str, int], value: int = 1
@@ -191,15 +190,10 @@ class PrivateMessageMixin(APIComponent):
         Returns:
             str: 消息 ID
         """
-        result = await self._request_raw(
-            "/send_private_msg",
-            {
-                "user_id": user_id,
-                "message": [{"type": "dice", "data": {"value": value}}],
-            },
+        # 骰子不需要预上传，直接发送
+        return await self.send_private_msg(
+            user_id, [{"type": "dice", "data": {"value": value}}]
         )
-        status = MessageAPIReturnStatus(result)
-        return status.message_id
 
     async def send_private_rps(
         self, user_id: Union[str, int], value: int = 1
@@ -214,15 +208,10 @@ class PrivateMessageMixin(APIComponent):
         Returns:
             str: 消息 ID
         """
-        result = await self._request_raw(
-            "/send_private_msg",
-            {
-                "user_id": user_id,
-                "message": [{"type": "rps", "data": {"value": value}}],
-            },
+        # 猜拳不需要预上传，直接发送
+        return await self.send_private_msg(
+            user_id, [{"type": "rps", "data": {"value": value}}]
         )
-        status = MessageAPIReturnStatus(result)
-        return status.message_id
 
     async def send_private_file(
         self,
@@ -242,13 +231,7 @@ class PrivateMessageMixin(APIComponent):
             str: 消息 ID
         """
         from ncatbot.core.event import File
-
-        result = await self._request_raw(
-            "/send_private_msg",
-            {
-                "user_id": user_id,
-                "message": [File(file=file, file_name=name).to_dict()],
-            },
+        # 统一走 send_private_msg 以确保预上传
+        return await self.send_private_msg(
+            user_id, [File(file=file, file_name=name).to_dict()]
         )
-        status = MessageAPIReturnStatus(result)
-        return status.message_id

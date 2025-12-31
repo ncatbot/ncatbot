@@ -13,10 +13,13 @@ from .utils import (
     APIReturnStatus,
     generate_sync_methods,
     require_exactly_one,
+    get_log,
 )
 
 if TYPE_CHECKING:
     from .client import IAPIClient
+
+LOG = get_log("PrivateAPI")
 
 
 # =============================================================================
@@ -50,9 +53,12 @@ class PrivateAPI(APIComponent):
             file: 文件路径/URL
             name: 文件名
         """
+        # 预上传处理
+        processed_file = await self._preupload_file(file, "file")
+        
         result = await self._request_raw(
             "/upload_private_file",
-            {"user_id": user_id, "file": file, "name": name},
+            {"user_id": user_id, "file": processed_file, "name": name},
         )
         APIReturnStatus.raise_if_failed(result)
 

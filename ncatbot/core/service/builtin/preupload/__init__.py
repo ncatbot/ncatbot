@@ -1,22 +1,22 @@
 """
-内置服务
+预上传服务
 
-提供 NcatBot 核心功能所需的内置服务。
+提供消息和文件的预上传功能，包括流式上传。
 """
 
-from .websocket import WebSocketService
-from .preupload import (
-    # 常量
+from .constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_FILE_RETENTION,
     StreamStatus,
     StreamResponseType,
-    # 客户端
+)
+from .client import (
     StreamUploadClient,
     FileAnalysis,
     ChunkInfo,
     UploadResult,
-    # 工具函数
+)
+from .utils import (
     DOWNLOADABLE_TYPES,
     is_local_file,
     is_base64_data,
@@ -25,27 +25,22 @@ from .preupload import (
     get_local_path,
     extract_base64_data,
     generate_filename_from_type,
-    # 处理器
-    MessagePreUploadProcessor,
-    ProcessResult,
-    # 服务
-    PreUploadService,
-    PreUploadResult,
 )
+from .processor import MessagePreUploadProcessor, ProcessResult
+from .service import PreUploadService, PreUploadResult
 
 __all__ = [
-    "WebSocketService",
-    # 预上传常量
+    # 常量
     "DEFAULT_CHUNK_SIZE",
     "DEFAULT_FILE_RETENTION",
     "StreamStatus",
     "StreamResponseType",
-    # 预上传客户端
+    # 客户端
     "StreamUploadClient",
     "FileAnalysis",
     "ChunkInfo",
     "UploadResult",
-    # 预上传工具函数
+    # 工具函数
     "DOWNLOADABLE_TYPES",
     "is_local_file",
     "is_base64_data",
@@ -54,10 +49,10 @@ __all__ = [
     "get_local_path",
     "extract_base64_data",
     "generate_filename_from_type",
-    # 预上传处理器
+    # 处理器
     "MessagePreUploadProcessor",
     "ProcessResult",
-    # 预上传服务
+    # 服务
     "PreUploadService",
     "PreUploadResult",
 ]

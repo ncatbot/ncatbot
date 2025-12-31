@@ -4,9 +4,15 @@
 负责服务的注册、加载、卸载。
 """
 
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, TYPE_CHECKING, overload
 from ncatbot.utils import get_log
 from .base import BaseService
+
+if TYPE_CHECKING:
+    from .builtin import (
+        WebSocketService,
+        PreUploadService,
+    )
 
 LOG = get_log("ServiceManager")
 
@@ -16,6 +22,26 @@ class ServiceManager:
     服务管理器
     
     管理所有服务的生命周期，提供服务的注册、加载、卸载、获取等功能。
+    
+    内置服务（支持 IDE 类型提示）：
+        - websocket: WebSocketService - WebSocket 通信服务
+        - preupload: PreUploadService - 消息和文件预上传服务
+    
+    使用示例：
+        ```python
+        manager = ServiceManager()
+        
+        # 注册内置服务
+        manager.register(WebSocketService)
+        manager.register(PreUploadService)
+        
+        # 加载并使用
+        await manager.load_all()
+        
+        # 类型安全的访问（IDE 提示支持）
+        ws = manager.websocket  # 类型: WebSocketService
+        preupload = manager.preupload  # 类型: PreUploadService
+        ```
     """
     
     def __init__(self):
@@ -23,6 +49,24 @@ class ServiceManager:
         self._services: Dict[str, BaseService] = {}
         self._service_classes: Dict[str, Type[BaseService]] = {}
         self._service_configs: Dict[str, Dict[str, Any]] = {}
+    
+    # -------------------------------------------------------------------------
+    # 内置服务属性（支持 IDE 类型提示）
+    # -------------------------------------------------------------------------
+    
+    @property
+    def websocket(self) -> Optional["WebSocketService"]:
+        """WebSocket 通信服务"""
+        return self._services.get("websocket")  # type: ignore
+    
+    @property
+    def preupload(self) -> Optional["PreUploadService"]:
+        """消息和文件预上传服务"""
+        return self._services.get("preupload")  # type: ignore
+    
+    # -------------------------------------------------------------------------
+    # 服务管理方法
+    # -------------------------------------------------------------------------
     
     def register(self, service_class: Type[BaseService], **config: Any) -> None:
         """注册服务类"""

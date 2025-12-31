@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Optional, Union
 
-from ..utils import APIComponent, APIReturnStatus
+from ..utils import APIComponent, APIReturnStatus, get_log
 
 if TYPE_CHECKING:
     from ..client import IAPIClient
+
+LOG = get_log("GroupAdminMixin")
 
 
 # =============================================================================
@@ -105,13 +107,16 @@ class GroupAdminMixin(APIComponent):
             album_id: 相册 ID
             album_name: 相册名称
         """
+        # 预上传处理
+        processed_file = await self._preupload_file(file, "image")
+        
         result = await self._request_raw(
             "/upload_image_to_qun_album",
             {
                 "group_id": group_id,
                 "album_name": album_name,
                 "album_id": album_id,
-                "file": file,
+                "file": processed_file,
             },
         )
         APIReturnStatus.raise_if_failed(result)
@@ -130,9 +135,12 @@ class GroupAdminMixin(APIComponent):
             group_id: 群号
             file: 图片 URL（目前仅支持 URL）
         """
+        # 预上传处理
+        processed_file = await self._preupload_file(file, "image")
+        
         result = await self._request_raw(
             "/set_group_avatar",
-            {"group_id": group_id, "file": file},
+            {"group_id": group_id, "file": processed_file},
         )
         APIReturnStatus.raise_if_failed(result)
 

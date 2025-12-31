@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, Union
 
-from ..utils import APIComponent, APIReturnStatus
+from ..utils import APIComponent, APIReturnStatus, get_log
 
 if TYPE_CHECKING:
     from ..client import IAPIClient
     from ncatbot.core.event import File
+
+LOG = get_log("GroupFileMixin")
 
 
 # =============================================================================
@@ -39,9 +41,12 @@ class GroupFileMixin(APIComponent):
             name: 文件名
             folder_id: 目标文件夹 ID
         """
+        # 预上传处理
+        processed_file = await self._preupload_file(file, "file")
+        
         result = await self._request_raw(
             "/upload_group_file",
-            {"group_id": group_id, "file": file, "name": name, "folder": folder_id},
+            {"group_id": group_id, "file": processed_file, "name": name, "folder": folder_id},
         )
         APIReturnStatus.raise_if_failed(result)
 
@@ -144,9 +149,12 @@ class GroupFileMixin(APIComponent):
             name: 文件名
             folder: 目标文件夹
         """
+        # 预上传处理
+        processed_file = await self._preupload_file(file, "file")
+        
         result = await self._request_raw(
             "/upload_group_file",
-            {"group_id": group_id, "file": file, "name": name, "folder": folder},
+            {"group_id": group_id, "file": processed_file, "name": name, "folder": folder},
         )
         APIReturnStatus.raise_if_failed(result)
 

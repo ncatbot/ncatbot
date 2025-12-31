@@ -209,6 +209,64 @@ class APIComponent:
     def services(self) -> Optional["ServiceManager"]:
         """获取服务管理器实例"""
         return self._service_manager
+    
+    @property
+    def _preupload_available(self) -> bool:
+        """预上传服务是否可用"""
+        if not self._service_manager:
+            return False
+        preupload = self._service_manager.preupload
+        return preupload is not None and preupload.available
+    
+    async def _preupload_message(
+        self, 
+        message: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        预上传消息中的文件资源
+        
+        Args:
+            message: 消息段列表
+            
+        Returns:
+            处理后的消息段列表
+        """
+        if not self._preupload_available:
+            return message
+        
+        preupload = self._service_manager.preupload
+        result = await preupload.process_message_array(message)
+        
+        if result.success and result.data:
+            return result.data.get("message", message)
+        
+        LOG.warning(f"消息预上传处理失败: {result.errors}")
+        return message
+    
+    async def _preupload_file(
+        self, 
+        file_value: str, 
+        file_type: str = "file"
+    ) -> str:
+        """
+        预上传单个文件
+        
+        Args:
+            file_value: 文件路径/URL/Base64
+            file_type: 文件类型
+            
+        Returns:
+            处理后的文件路径
+        """
+        if not self._preupload_available:
+            return file_value
+        
+        try:
+            preupload = self._service_manager.preupload
+            return await preupload.preupload_file_if_needed(file_value, file_type)
+        except Exception as e:
+            LOG.warning(f"文件预上传失败: {e}，使用原始路径")
+            return file_value
 
     async def _request(
         self, endpoint: str, params: Optional[Dict[str, Any]] = None

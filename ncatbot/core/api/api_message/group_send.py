@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import List, Optional, Union, TYPE_CHECKING
 from ...event import MessageArray, Record, File
 from ..utils import (
     APIComponent,
@@ -15,6 +15,8 @@ from ..utils import (
 )
 from .validation import validate_msg
 
+if TYPE_CHECKING:
+    from ...event import MessageArray
 
 LOG = get_log("ncatbot.core.api.api_message.group_send")
 
@@ -33,6 +35,8 @@ class GroupMessageMixin(APIComponent):
         """
         发送群消息（底层接口）
 
+        此方法会自动处理消息中的文件预上传。
+
         Args:
             group_id: 群号
             message: 消息内容列表
@@ -43,10 +47,13 @@ class GroupMessageMixin(APIComponent):
         if not validate_msg(message):
             LOG.warning("消息格式验证失败，发送群聊消息取消")
             return ""
+        
+        # 预上传处理
+        processed_message = await self._preupload_message(message)
 
         result = await self._request(
             "/send_group_msg",
-            {"group_id": group_id, "message": message},
+            {"group_id": group_id, "message": processed_message},
         )
         return result.data
 

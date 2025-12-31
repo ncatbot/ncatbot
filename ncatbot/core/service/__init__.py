@@ -6,10 +6,24 @@
 
 from .base import BaseService
 from .manager import ServiceManager
-from .builtin import WebSocketService
+from .builtin import (
+    WebSocketService,
+    StreamUploadClient,
+    UploadResult,
+    MessagePreUploadProcessor,
+    ProcessResult,
+    PreUploadResult,
+    PreUploadService,
+)
 
 __all__ = [
     "BaseService",
     "ServiceManager",
     "WebSocketService",
+    "StreamUploadClient",
+    "UploadResult",
+    "MessagePreUploadProcessor",
+    "ProcessResult",
+    "PreUploadResult",
+    "PreUploadService",
 ]
