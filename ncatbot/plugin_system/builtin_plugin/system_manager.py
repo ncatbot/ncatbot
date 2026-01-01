@@ -1,6 +1,6 @@
 from ..builtin_mixin import NcatBotPlugin
 from .unified_registry import command_registry, filter_registry, root_filter, option_group
-from ncatbot.core import MessageEvent, NcatBotEvent, NcatBotEventFactory
+from ncatbot.core import MessageEvent, NcatBotEvent, NcatBotEventFactory, GroupMessageEvent, PrivateMessageEvent
 import psutil
 import ncatbot
 from ncatbot.utils import get_log, PermissionGroup, run_coroutine, config
@@ -152,6 +152,7 @@ class SystemManager(NcatBotPlugin):
     async def on_load(self) -> None:
         self.register_handler("ncatbot.plugin_load_request", self.load_plugin)
         self.register_handler("ncatbot.plugin_unload_request", self.unload_plugin)
+        self.register_handler("ncatbot.message_event", self.handle_message_event)
 
         # 启动文件监视守护线程
         self._watch_stop_event.clear()
@@ -160,6 +161,16 @@ class SystemManager(NcatBotPlugin):
         )
         self._file_watcher_thread.start()
         LOG.info("文件监视守护线程已启动")
+
+    async def handle_message_event(self, event: NcatBotEvent) -> None:
+        """处理消息事件
+        TODO: 兼容层, 未来删除
+        """
+        message_event = event.data
+        if isinstance(message_event, PrivateMessageEvent):
+            await self.publish("ncatbot.private_message_event", message_event)
+        elif isinstance(message_event, GroupMessageEvent):
+            await self.publish("ncatbot.group_message_event", message_event)
 
     @command_registry.command("ncatbot_status", aliases=["ncs"])
     @root_filter

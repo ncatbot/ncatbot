@@ -290,6 +290,3 @@ class TestForwardMessageProcessing:
         
         assert result.success
         assert result.uploaded_count == 2
-
-
-class TestErrorHandling:

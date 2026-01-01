@@ -11,12 +11,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Set, Union, TYPE_CHECKING
 from concurrent.futures import ThreadPoolExecutor
 
+from ncatbot.utils import get_log
 from ncatbot.core import EventBus, NcatBotEvent
 from ncatbot.core.service import ServiceManager
 
 if TYPE_CHECKING:
     from .loader import PluginLoader
     from ncatbot.core.service.builtin import RBACService, PluginConfigService, PluginConfig
+
+LOG = get_log("BasePlugin")
 
 
 class BasePlugin:
@@ -133,6 +136,8 @@ class BasePlugin:
         timeout: float = None,
     ) -> UUID:
         """注册事件处理器。"""
+        if event_type in ["group_message", "private_message"]:
+            LOG.warning(f"使用了 deprecated 事件类型: {event_type}, 请使用 ncatbot.message_event 代替")
         handler_id = self._event_bus.subscribe(
             event_type, handler, priority, timeout, plugin=self
         )

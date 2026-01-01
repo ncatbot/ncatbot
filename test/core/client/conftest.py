@@ -57,6 +57,22 @@ def mock_services():
     services.load_all = AsyncMock()
     services.close_all = AsyncMock()
     services.get = MagicMock(return_value=MagicMock())
+
+    # 支持服务注册的基本实现
+    services._service_classes = {}
+    services._service_configs = {}
+
+    def mock_register(service_class, **config):
+        """Mock register 方法"""
+        service_name = getattr(service_class, 'name', service_class.__name__.lower())
+        services._service_classes[service_name] = service_class
+        services._service_configs[service_name] = config
+        # 创建服务实例作为属性
+        instance = service_class(**config)
+        setattr(services, service_name, instance)
+        return instance
+
+    services.register = mock_register
     return services
 
 

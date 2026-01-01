@@ -26,7 +26,7 @@ class TestAssertReplyValidity:
             suite.register_plugin_sync(SimpleReplyPlugin)
             
             # 发送命令
-            suite.inject_group_message_sync("/ping")
+            suite.inject_group_message_sync("ping")
             time.sleep(0.1)  # 等待异步处理
             
             # 断言应该能检测到回复

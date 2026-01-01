@@ -6,6 +6,7 @@
 
 from typing import List, Optional, Type, TYPE_CHECKING
 from contextlib import asynccontextmanager
+from unittest.mock import MagicMock, AsyncMock
 
 from ncatbot.utils import get_log, run_coroutine
 
@@ -75,20 +76,51 @@ class E2ETestSuite:
         BotClient.reset_singleton()
         
         self._client = BotClient()
+
+        # 替换服务管理器为支持 Mock 注册的版本
+        self._client.services = self._create_mock_service_manager()
+
         # 始终跳过插件目录加载，但可选择是否加载内置插件
         self._client.start(
             mock=True,
             bt_uin=self._bt_uin,
             skip_plugin_load=True,  # 始终跳过自动加载
         )
-        
+
         # 手动加载内置插件（如果需要）
         if not self._skip_builtin_plugins:
             run_coroutine(self._client.plugin_loader.load_builtin_plugins)
         
         LOG.info("测试套件已启动")
         return self._client
-    
+
+    def _create_mock_service_manager(self):
+        """创建支持 Mock 注册的 ServiceManager"""
+        from ncatbot.core.service import ServiceManager
+
+        mock_services = type('MockServiceManager', (ServiceManager,), {})()
+        mock_services._service_classes = {}
+        mock_services._service_configs = {}
+
+        def mock_register(service_class, **config):
+            """Mock register 方法"""
+            service_name = getattr(service_class, 'name', service_class.__name__.lower())
+            mock_services._service_classes[service_name] = service_class
+            mock_services._service_configs[service_name] = config
+            # 创建服务实例并存储在 _services 字典中
+            instance = service_class(**config)
+            if not hasattr(mock_services, '_services'):
+                mock_services._services = {}
+            mock_services._services[service_name] = instance
+            return instance
+
+        mock_services.register = mock_register
+        mock_services.load_all = AsyncMock()
+        mock_services.close_all = AsyncMock()
+        mock_services.get = MagicMock(return_value=MagicMock())
+
+        return mock_services
+
     def teardown(self) -> None:
         """清理测试环境"""
         if self._client:

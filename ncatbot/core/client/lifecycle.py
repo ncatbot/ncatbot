@@ -136,7 +136,8 @@ class LifecycleManager:
         # 启动服务
         if not mock_mode:
             launch_napcat_service()
-        
+
+        # 加载服务（Mock 模式也需要加载 Mock 服务）
         try:
             # 检查是否已有事件循环在运行
             try:
@@ -147,8 +148,10 @@ class LifecycleManager:
                 # 没有事件循环，使用 asyncio.run
                 asyncio.run(self._async_start())
         except NcatBotConnectionError:
-            self.bot_exit()
-            raise
+            # Mock 模式下忽略连接错误
+            if not mock_mode:
+                self.bot_exit()
+                raise
     
     def _replace_network_services_with_mock(self):
         """
@@ -163,12 +166,13 @@ class LifecycleManager:
         from ncatbot.utils.testing.mock_services import MockMessageRouter, MockPreUploadService
         
         # 移除真实的网络相关服务，注册 Mock 版本
-        if "message_router" in self.services._service_classes:
-            del self.services._service_classes["message_router"]
-            del self.services._service_configs["message_router"]
-        if "preupload" in self.services._service_classes:
-            del self.services._service_classes["preupload"]
-            del self.services._service_configs["preupload"]
+        if hasattr(self.services, '_service_classes'):
+            if "message_router" in self.services._service_classes:
+                del self.services._service_classes["message_router"]
+                del self.services._service_configs["message_router"]
+            if "preupload" in self.services._service_classes:
+                del self.services._service_classes["preupload"]
+                del self.services._service_configs["preupload"]
         
         self.services.register(MockMessageRouter)
         self.services.register(MockPreUploadService)
@@ -177,21 +181,21 @@ class LifecycleManager:
         """异步启动流程（正常模式和 Mock 模式共用）"""
         # 加载所有服务
         await self.services.load_all()
-        
+
         # 获取消息路由服务
         router = self.services.message_router
-        
+
         from ncatbot.core.api import BotAPI
         from .dispatcher import EventDispatcher
-        
+
         # 传入 service_manager 以支持预上传等服务
         self.api = BotAPI(router.send, service_manager=self.services)
-        
+
         # 设置事件分发器
         self.dispatcher = EventDispatcher(self.event_bus, self.api)
         router.set_event_callback(self.dispatcher)
-        
-        # 开始监听（仅在有 WebSocket 连接时）
+
+        # 开始监听
         await router.websocket.listen()
     
     # ==================== 测试辅助方法 ====================

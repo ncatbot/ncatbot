@@ -66,19 +66,18 @@ class TestLifecycleManagerStartValidation:
     def test_start_validates_legal_args(self, mock_services, event_bus, event_registry):
         """启动时验证合法参数"""
         manager = LifecycleManager(mock_services, event_bus, event_registry)
-        manager.mock_mode = True  # 使用 mock 模式
-        
+
         with patch("ncatbot.core.client.lifecycle.ncatbot_config") as mock_config:
             mock_config.validate_config = MagicMock()
             mock_config.debug = False
-            
+
             with patch("ncatbot.core.client.lifecycle.run_coroutine"):
                 with patch("ncatbot.plugin_system.PluginLoader") as mock_loader:
                     mock_loader_instance = MagicMock()
                     mock_loader.return_value = mock_loader_instance
-                    
-                    # 合法参数应该正常工作
-                    manager.start(bt_uin="123456", debug=True)
+
+                    # 合法参数应该正常工作，使用 mock 模式避免网络操作
+                    manager.start(mock=True, bt_uin="123456", debug=True)
                     
                     # 验证 config 被更新
                     mock_config.update_value.assert_any_call("bt_uin", "123456")
@@ -94,18 +93,17 @@ class TestLifecycleManagerStartValidation:
     def test_start_ignores_none_values(self, mock_services, event_bus, event_registry):
         """忽略 None 值参数"""
         manager = LifecycleManager(mock_services, event_bus, event_registry)
-        manager.mock_mode = True
-        
+
         with patch("ncatbot.core.client.lifecycle.ncatbot_config") as mock_config:
             mock_config.validate_config = MagicMock()
             mock_config.debug = False
-            
+
             with patch("ncatbot.core.client.lifecycle.run_coroutine"):
                 with patch("ncatbot.plugin_system.PluginLoader") as mock_loader:
                     mock_loader_instance = MagicMock()
                     mock_loader.return_value = mock_loader_instance
-                    
-                    manager.start(bt_uin="123", root=None)
+
+                    manager.start(mock=True, bt_uin="123", root=None)
                     
                     # None 值不应被更新
                     calls = mock_config.update_value.call_args_list
@@ -119,20 +117,19 @@ class TestLifecycleManagerMockMode:
     def test_mock_start(self, mock_services, event_bus, event_registry):
         """Mock 模式启动不连接真实服务"""
         manager = LifecycleManager(mock_services, event_bus, event_registry)
-        manager.mock_mode = True
-        
+
         with patch("ncatbot.core.client.lifecycle.ncatbot_config") as mock_config:
             mock_config.validate_config = MagicMock()
             mock_config.debug = False
-            
+
             with patch("ncatbot.core.client.lifecycle.run_coroutine"):
                 with patch("ncatbot.plugin_system.PluginLoader") as mock_loader:
                     mock_loader_instance = MagicMock()
                     mock_loader.return_value = mock_loader_instance
-                    
+
                     with patch("ncatbot.core.client.lifecycle.launch_napcat_service") as mock_launch:
-                        manager.start(bt_uin="123456")
-                        
+                        manager.start(mock=True, bt_uin="123456")
+
                         # Mock 模式不应调用真实服务
                         mock_launch.assert_not_called()
 
@@ -251,18 +248,17 @@ class TestLifecycleManagerPluginLoader:
     def test_plugin_loader_initialized_on_start(self, mock_services, event_bus, event_registry):
         """启动时初始化插件加载器"""
         manager = LifecycleManager(mock_services, event_bus, event_registry)
-        manager.mock_mode = True
-        
+
         with patch("ncatbot.core.client.lifecycle.ncatbot_config") as mock_config:
             mock_config.validate_config = MagicMock()
             mock_config.debug = False
-            
+
             with patch("ncatbot.core.client.lifecycle.run_coroutine"):
                 with patch("ncatbot.plugin_system.PluginLoader") as mock_loader_class:
                     mock_loader_instance = MagicMock()
                     mock_loader_class.return_value = mock_loader_instance
-                    
-                    manager.start(bt_uin="123456")
+
+                    manager.start(mock=True, bt_uin="123456")
                     
                     mock_loader_class.assert_called_once()
                     assert manager.plugin_loader is mock_loader_instance
@@ -274,18 +270,17 @@ class TestLifecycleManagerStartFlow:
     def test_start_flow_mock_mode(self, mock_services, event_bus, event_registry):
         """Mock 模式完整启动流程"""
         manager = LifecycleManager(mock_services, event_bus, event_registry)
-        manager.mock_mode = True
-        
+
         with patch("ncatbot.core.client.lifecycle.ncatbot_config") as mock_config:
             mock_config.validate_config = MagicMock()
             mock_config.debug = False
-            
+
             with patch("ncatbot.core.client.lifecycle.run_coroutine") as mock_run_coroutine:
                 with patch("ncatbot.plugin_system.PluginLoader") as mock_loader_class:
                     mock_loader_instance = MagicMock()
                     mock_loader_class.return_value = mock_loader_instance
-                    
-                    manager.start(bt_uin="123456")
+
+                    manager.start(mock=True, bt_uin="123456")
                     
                     # 验证流程
                     mock_config.validate_config.assert_called_once()
@@ -295,18 +290,17 @@ class TestLifecycleManagerStartFlow:
     def test_start_sets_running_flag(self, mock_services, event_bus, event_registry):
         """启动设置 running 标志"""
         manager = LifecycleManager(mock_services, event_bus, event_registry)
-        manager.mock_mode = True
-        
+
         assert manager._running is False
-        
+
         with patch("ncatbot.core.client.lifecycle.ncatbot_config") as mock_config:
             mock_config.validate_config = MagicMock()
             mock_config.debug = False
-            
+
             with patch("ncatbot.core.client.lifecycle.run_coroutine"):
                 with patch("ncatbot.plugin_system.PluginLoader") as mock_loader_class:
                     mock_loader_class.return_value = MagicMock()
-                    
-                    manager.start(bt_uin="123456")
+
+                    manager.start(mock=True, bt_uin="123456")
         
         assert manager._running is True

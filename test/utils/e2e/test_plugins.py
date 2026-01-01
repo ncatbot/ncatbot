@@ -27,7 +27,7 @@ class SimpleReplyPlugin(NcatBotPlugin):
     
     async def on_load(self):
         SimpleReplyPlugin.handled_commands = []
-        
+
         @command_registry.command("ping", description="ping 命令")
         async def ping_handler(event: GroupMessageEvent):
             SimpleReplyPlugin.handled_commands.append("ping")

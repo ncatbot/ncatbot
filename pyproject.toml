@@ -73,5 +73,6 @@ dev = [
 asyncio_mode = "strict"
 testpaths = ["test"]
 # 忽略集成测试目录（这些测试有自定义框架，不通过 pytest 直接运行）
+# 忽略 e2e 测试目录（这些测试有自定义框架，不通过 pytest 直接运行）
 # 忽略 examples 目录
-addopts = "--ignore=test/integration --ignore=examples"
+addopts = "--ignore=test/integration --ignore=test/e2e --ignore=examples"
