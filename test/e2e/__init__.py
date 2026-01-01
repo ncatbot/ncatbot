@@ -1,10 +1,9 @@
 """
-端到端测试模块
+NcatBot 端到端测试模块
+
+包含各类服务的端到端测试：
+- api: API 服务端到端测试
+- plugin_config: PluginConfig 服务端到端测试
 """
 
-from pathlib import Path
-
-E2E_ROOT = Path(__file__).parent
-DATA_DIR = E2E_ROOT / "data"
-
-__all__ = ["E2E_ROOT", "DATA_DIR"]
+__all__ = []

@@ -14,7 +14,7 @@ from .output import Colors, print_header, print_section
 __all__ = [
     # 类型
     "TestCase",
-    "TestResult",
+    "TestResult", 
     "TestStatus",
     # 装饰器
     "test_case",

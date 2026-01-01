@@ -43,17 +43,57 @@ from typing import List, Optional
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from framework import (
-    TestCase,
-    TestConfig,
-    TestRunner,
-    InteractiveTestRunner,
-    TestReporter,
-    collect_all_tests,
-    Colors,
-    print_header,
+# 添加当前目录到路径，以便导入所有模块
+current_dir = Path(__file__).parent
+sys.path.insert(0, str(current_dir))
+
+try:
+    # 尝试作为模块导入
+    from framework import (
+        TestCase,
+        TestConfig,
+        TestRunner,
+        InteractiveTestRunner,
+        TestReporter,
+        collect_all_tests,
+        Colors,
+        print_header,
+    )
+except ImportError:
+    # 直接导入文件
+    from framework.types import TestCase
+    from framework.config import TestConfig
+    from framework.runner import TestRunner, InteractiveTestRunner
+    from framework.reporter import TestReporter
+    from framework.decorators import collect_all_tests
+    from framework.output import Colors, print_header
+
+# 直接导入测试套件
+from test_scenario_basic import BasicInfoScenarioTests
+from test_scenario_group_msg import GroupMessageScenarioTests
+from test_scenario_group_file import GroupFileScenarioTests, GroupAlbumScenarioTests
+from test_scenario_friend import FriendInteractionScenarioTests
+from test_scenario_admin import (
+    GroupAdminScenarioTests,
+    GroupAdminActionTests,
+    DangerousAdminTests,
 )
-from api import ALL_TEST_SUITES
+
+ALL_TEST_SUITES = [
+    # 场景1: 基础信息（只读，全自动）
+    BasicInfoScenarioTests,
+    # 场景2: 群消息操作（自动）
+    GroupMessageScenarioTests,
+    # 场景3: 群文件操作（自动）
+    GroupFileScenarioTests,
+    GroupAlbumScenarioTests,
+    # 场景4: 好友互动（自动）
+    FriendInteractionScenarioTests,
+    # 场景5: 群管理（部分需要确认）
+    GroupAdminScenarioTests,
+    GroupAdminActionTests,
+    DangerousAdminTests,
+]
 
 
 def print_banner():
