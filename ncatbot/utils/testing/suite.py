@@ -77,8 +77,7 @@ class E2ETestSuite:
         
         self._client = BotClient()
 
-        # 替换服务管理器为支持 Mock 注册的版本
-        self._client.services = self._create_mock_service_manager()
+        # 使用真实的 ServiceManager（稍后会替换 WebSocket）
 
         # 始终跳过插件目录加载，但可选择是否加载内置插件
         self._client.start(
@@ -90,36 +89,30 @@ class E2ETestSuite:
         # 手动加载内置插件（如果需要）
         if not self._skip_builtin_plugins:
             run_coroutine(self._client.plugin_loader.load_builtin_plugins)
-        
+
+        # 在启动完成后，替换 MessageRouter 的 WebSocket 为 Mock 版本
+        self._replace_websocket_with_mock()
+
         LOG.info("测试套件已启动")
         return self._client
 
-    def _create_mock_service_manager(self):
-        """创建支持 Mock 注册的 ServiceManager"""
-        from ncatbot.core.service import ServiceManager
-
-        mock_services = type('MockServiceManager', (ServiceManager,), {})()
-        mock_services._service_classes = {}
-        mock_services._service_configs = {}
-
-        def mock_register(service_class, **config):
-            """Mock register 方法"""
-            service_name = getattr(service_class, 'name', service_class.__name__.lower())
-            mock_services._service_classes[service_name] = service_class
-            mock_services._service_configs[service_name] = config
-            # 创建服务实例并存储在 _services 字典中
-            instance = service_class(**config)
-            if not hasattr(mock_services, '_services'):
-                mock_services._services = {}
-            mock_services._services[service_name] = instance
-            return instance
-
-        mock_services.register = mock_register
-        mock_services.load_all = AsyncMock()
-        mock_services.close_all = AsyncMock()
-        mock_services.get = MagicMock(return_value=MagicMock())
-
-        return mock_services
+    def _replace_websocket_with_mock(self):
+        """确保 MessageRouter 使用 Mock WebSocket"""
+        try:
+            router = self._client.services.message_router
+            if router:
+                from ncatbot.utils.testing.mock_services import MockWebSocket, MockMessageRouter
+                if isinstance(router, MockMessageRouter):
+                    # 对于 MockMessageRouter，确保它使用 MockWebSocket
+                    router._ws = MockWebSocket()
+                    LOG.info("MockMessageRouter 的 WebSocket 已设置")
+                elif hasattr(router, '_ws'):
+                    # 对于真实 MessageRouter，替换 WebSocket
+                    if not isinstance(router._ws, MockWebSocket):
+                        router._ws = MockWebSocket()
+                        LOG.info("MessageRouter 的 WebSocket 已替换为 Mock 版本")
+        except Exception as e:
+            LOG.warning(f"替换 WebSocket 失败: {e}")
 
     def teardown(self) -> None:
         """清理测试环境"""
@@ -209,6 +202,7 @@ class E2ETestSuite:
     
     async def unregister_plugin(self, plugin_name: str) -> None:
         """卸载插件"""
+        # TODO: 这个卸不掉
         await self.client.plugin_loader.unload_plugin(plugin_name)
         if plugin_name in self._registered_plugins:
             self._registered_plugins.remove(plugin_name)
@@ -262,14 +256,20 @@ class E2ETestSuite:
             user_id: 发送者 QQ
         """
         from .event_factory import EventFactory
-        event = EventFactory.create_group_message(
+        from ncatbot.core.client.ncatbot_event import NcatBotEvent
+
+        message_event = EventFactory.create_group_message(
             message=message,
             group_id=group_id,
             user_id=user_id,
             **kwargs
         )
-        await self.inject_event(event)
-    
+        # 绑定 API 上下文
+        message_event.bind_api(self.api)
+        # 使用与真实系统一致的事件类型 ncatbot.message_event
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", data=message_event)
+        await self.event_bus.publish(ncatbot_event)
+
     def inject_group_message_sync(
         self,
         message: str,
@@ -294,13 +294,19 @@ class E2ETestSuite:
             user_id: 发送者 QQ
         """
         from .event_factory import EventFactory
-        event = EventFactory.create_private_message(
+        from ncatbot.core.client.ncatbot_event import NcatBotEvent
+
+        message_event = EventFactory.create_private_message(
             message=message,
             user_id=user_id,
             **kwargs
         )
-        await self.inject_event(event)
-    
+        # 绑定 API 上下文
+        message_event.bind_api(self.api)
+        # 使用与真实系统一致的事件类型 ncatbot.message_event
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", data=message_event)
+        await self.event_bus.publish(ncatbot_event)
+
     def inject_private_message_sync(
         self,
         message: str,

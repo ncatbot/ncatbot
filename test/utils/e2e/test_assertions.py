@@ -25,8 +25,8 @@ class TestAssertReplyValidity:
         with E2ETestSuite() as suite:
             suite.register_plugin_sync(SimpleReplyPlugin)
             
-            # 发送命令
-            suite.inject_group_message_sync("ping")
+            # 发送命令（需要命令前缀 /）
+            suite.inject_group_message_sync("/ping")
             time.sleep(0.1)  # 等待异步处理
             
             # 断言应该能检测到回复
@@ -112,8 +112,8 @@ class TestTestHelperAssertions:
             
             helper.assert_no_reply()
     
-    def test_helper_get_last_reply(self):
-        """测试 TestHelper.get_last_reply"""
+    def test_helper_get_latest_reply(self):
+        """测试 TestHelper.get_latest_reply"""
         with E2ETestSuite() as suite:
             suite.register_plugin_sync(SimpleReplyPlugin)
             helper = TestHelper(suite.client)
@@ -122,7 +122,7 @@ class TestTestHelperAssertions:
             time.sleep(0.1)
             
             # 获取最后一条回复
-            last_reply = helper.get_last_reply()
+            last_reply = helper.get_latest_reply()
             assert last_reply is not None
 
 

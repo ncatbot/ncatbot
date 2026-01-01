@@ -55,17 +55,13 @@ class ArgumentBinder:
             tokenizer = MessageTokenizer()
             parsed = tokenizer.parse_message(event.message)
             elements = list(parsed.elements)  # copy
-            LOG.debug(
-                f"解析后的元素: {elements}, 命名参数: {parsed.named_params}, 选项: {parsed.options}"
-            )
-            LOG.debug(f"路径词: {path_words}")
             # 跳过命令词（仅匹配前置的 text 元素）
             skip_idx = 0
             pw = list(path_words)
             pw_idx = 0
             while skip_idx < len(elements) and pw_idx < len(pw):
                 el = elements[skip_idx]
-                content_str = getattr(el.content, 'text', str(el.content))
+                content_str = el.content
                 if el.type in ("text", "plaintext") and (
                     content_str == pw[pw_idx]
                     or (len(content_str) > 0 and content_str[0] in prefixes)
@@ -114,12 +110,25 @@ class ArgumentBinder:
                     raise InvalidOptionError(o)
                 bound_kwargs.update(result)
 
-            for idx, element in enumerate(elements[skip_idx:]):
+            remaining_elements = elements[skip_idx:]
+            args_types = spec.args_types
+            
+            for idx, element in enumerate(remaining_elements):
                 content = element.content
-                if spec.args_types[idx] is bool:
+                
+                # 如果参数索引超出 args_types 范围，且最后一个参数是 str 类型
+                # 则将剩余内容合并到最后一个参数中
+                if idx >= len(args_types):
+                    if args_types and args_types[-1] is str and bound_args:
+                        # 将剩余元素合并到最后一个 str 参数
+                        bound_args[-1] = f"{bound_args[-1]} {content}"
+                    continue
+                
+                arg_type = args_types[idx]
+                if arg_type is bool:
                     bound_args.append(content.lower() not in ["false", "0"])
-                elif spec.args_types[idx] in (str, float, int):
-                    bound_args.append(spec.args_types[idx](content))
+                elif arg_type in (str, float, int):
+                    bound_args.append(arg_type(content))
                 else:
                     bound_args.append(element.content)
 
