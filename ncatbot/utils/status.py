@@ -16,7 +16,6 @@ class Status:
         self.exit = False  # 全局退出标志
         self._lock = Lock()
         self.current_github_proxy = None
-        self.global_api: BotAPI = None
         self.global_access_manager: "RBACManager" = None
         self._registered_loggers: Set[str] = set()
 

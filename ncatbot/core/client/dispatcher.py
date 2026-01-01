@@ -32,8 +32,11 @@ def parse_event_type(data: dict) -> Optional[EventType]:
     """
     post_type = data.get("post_type")
     
-    if post_type == PostType.MESSAGE or post_type == "message_sent":
+    if post_type == PostType.MESSAGE:
         return EventType.MESSAGE
+    
+    if post_type == PostType.MESSAGE_SENT or post_type == "message_sent":
+        return EventType.MESSAGE_SENT
     
     if post_type == PostType.NOTICE:
         return EventType.NOTICE

@@ -133,7 +133,7 @@ class EventRegistry:
 
     def add_message_sent_handler(self, handler: Callable):
         """添加消息发送处理器（message_sent 事件）"""        
-        self.register_handler(EventType.MESSAGE, handler)
+        self.register_handler(EventType.MESSAGE_SENT, handler)
 
     def add_notice_handler(self, handler: Callable):
         """添加通知事件处理器"""

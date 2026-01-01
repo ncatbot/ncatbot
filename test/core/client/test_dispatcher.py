@@ -29,12 +29,12 @@ class TestParseEventType:
         assert result == EventType.MESSAGE
 
     def test_parse_message_sent_type(self):
-        """post_type=message_sent → EventType.MESSAGE"""
+        """post_type=message_sent → EventType.MESSAGE_SENT"""
         data = {"post_type": "message_sent"}
         
         result = parse_event_type(data)
         
-        assert result == EventType.MESSAGE
+        assert result == EventType.MESSAGE_SENT
 
     def test_parse_notice_type(self):
         """post_type=notice → EventType.NOTICE"""

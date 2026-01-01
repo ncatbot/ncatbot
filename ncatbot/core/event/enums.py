@@ -8,7 +8,7 @@ __all__ = [
 
 class PostType(str, Enum):
     MESSAGE = "message"
-    MESSAGE_SENT = "message_sent"  # 自己发送的消息
+    MESSAGE_SENT = "message_sent"
     NOTICE = "notice"
     REQUEST = "request"
     META_EVENT = "meta_event"
@@ -46,9 +46,10 @@ class EventType(str, Enum):
     """
     统一的事件类型枚举
     
-    简化为四大类事件：消息、通知、请求、元事件
+    简化为五大类事件：消息、消息发送、通知、请求、元事件
     """
     MESSAGE = "message_event"
+    MESSAGE_SENT = "message_sent_event"
     NOTICE = "notice_event"
     REQUEST = "request_event"
     META = "meta_event"

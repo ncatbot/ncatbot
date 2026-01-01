@@ -104,7 +104,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
         
-        assert "message_event" in event_registry.event_bus._exact
+        assert "message_sent_event" in event_registry.event_bus._exact
 
 
 class TestEventRegistryIntegration:

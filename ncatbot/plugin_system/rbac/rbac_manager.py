@@ -264,23 +264,29 @@ class _RBACManager:
             self.users[user_name]["role_list"].append(role_name)
             self.role_users[role_name].add(user_name)
 
-    def unassign_permissions_to_role(self, role_name: str, permissions_path: str):
+    def unassign_permissions_to_role(
+        self, role_name: str, permissions_path: str, mode: str = None
+    ):
         if not self.check_availability(role_name=role_name):
             raise IndexError(f"角色 {role_name} 不存在")
         self.refresh_cache(role_name=role_name)
-        for mode in ["white", "black"]:
-            if permissions_path in self.roles[role_name][f"{mode}_permissions_list"]:
-                self.roles[role_name][f"{mode}_permissions_list"].remove(
+        modes = [mode] if mode else ["white", "black"]
+        for m in modes:
+            if permissions_path in self.roles[role_name][f"{m}_permissions_list"]:
+                self.roles[role_name][f"{m}_permissions_list"].remove(
                     permissions_path
                 )
 
-    def unassign_permissions_to_user(self, user_name: str, permissions_path: str):
+    def unassign_permissions_to_user(
+        self, user_name: str, permissions_path: str, mode: str = None
+    ):
         if not self.check_availability(user_name=user_name):
             raise IndexError(f"用户 {user_name} 不存在")
         self.refresh_cache(user_name=user_name)
-        for mode in ["white", "black"]:
-            if permissions_path in self.users[user_name][f"{mode}_permissions_list"]:
-                self.users[user_name][f"{mode}_permissions_list"].remove(
+        modes = [mode] if mode else ["white", "black"]
+        for m in modes:
+            if permissions_path in self.users[user_name][f"{m}_permissions_list"]:
+                self.users[user_name][f"{m}_permissions_list"].remove(
                     permissions_path
                 )
 
@@ -294,16 +300,26 @@ class _RBACManager:
     def _check_circular_inheritance(
         self, role: str, inherited_role: str, visited: set = None
     ) -> bool:
-        """检查是否存在循环继承"""
+        """
+        检查是否存在循环继承
+        
+        检查如果 role 继承 inherited_role，是否会形成循环。
+        即检查 inherited_role 的继承链中是否能到达 role。
+        """
         if visited is None:
             visited = set()
-        if role in visited:
+        
+        # 如果 inherited_role 就是 role，直接形成循环
+        if inherited_role == role:
             return True
-        visited.add(role)
+            
+        if inherited_role in visited:
+            return False  # 已访问过，无需重复检查
+        visited.add(inherited_role)
 
-        # 检查继承链上的所有角色
+        # 检查 inherited_role 继承的所有角色
         for parent in self.role_inheritance.get(inherited_role, []):
-            if self._check_circular_inheritance(inherited_role, parent, visited.copy()):
+            if self._check_circular_inheritance(role, parent, visited):
                 return True
         return False
 
@@ -568,7 +584,9 @@ class RBACManager:
             else:
                 raise IndexError(f"权限路径 {permissions_path} 不存在")
         self.manager.assign_permissions_to_role(role_name, permissions_path, mode)
-        self.manager.unassign_permissions_to_role(role_name, permissions_path)
+        # 从相反的模式中移除该权限（避免冲突）
+        opposite_mode = "black" if mode == "white" else "white"
+        self.manager.unassign_permissions_to_role(role_name, permissions_path, opposite_mode)
 
     def assign_permissions_to_user(
         self,
