@@ -4,14 +4,9 @@
 """
 
 from typing import List
-from .tokenizer import (
-    StringTokenizer,
-    Token,
-    TokenType,
-    NonTextToken,
-    AdvancedCommandParser,
-    ParsedCommand,
-)
+
+from .tokenizer import StringTokenizer, Token, TokenType, NonTextToken
+from .command_parser import CommandParser, ParsedCommand
 
 
 class MessageTokenizer:
@@ -23,7 +18,7 @@ class MessageTokenizer:
     """
 
     def __init__(self):
-        self.command_parser = AdvancedCommandParser()
+        self._parser = CommandParser()
 
     def tokenize(self, message_array) -> List[Token]:
         """将 MessageArray 转换为 Token 序列
@@ -45,7 +40,6 @@ class MessageTokenizer:
                 # 过滤 EOF，添加到结果中
                 for token in text_tokens:
                     if token.type != TokenType.EOF:
-                        # 调整 token 位置为全局位置
                         token.position = len(tokens)
                         tokens.append(token)
             else:
@@ -66,28 +60,15 @@ class MessageTokenizer:
         Returns:
             ParsedCommand 解析结果
         """
-        # 1. 分词
         tokens = self.tokenize(message_array)
-
-        # 2. 解析
-        result = self.command_parser.parse(tokens)
-
-        return result
+        return self._parser.parse(tokens)
 
     def _is_text_segment(self, segment) -> bool:
-        """判断是否为文本段
-
-        Args:
-            segment: MessageSegment 对象
-
-        Returns:
-            是否为文本段
-        """
+        """判断是否为文本段"""
         from ncatbot.core.event.message_segments.primitives import PlainText
         return isinstance(segment, PlainText)
 
 
-# 便捷函数
 def parse_message_command(message_array) -> ParsedCommand:
     """便捷函数：直接解析 MessageArray
 

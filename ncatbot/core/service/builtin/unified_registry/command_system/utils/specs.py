@@ -4,7 +4,7 @@
 """
 
 from dataclasses import dataclass
-from typing import Callable, Any, List, Optional, Dict, Type
+from typing import Callable, Any, List, Optional
 import inspect
 
 
@@ -35,7 +35,7 @@ class OptionSpec:
     description: str = ""
 
     @property
-    def name(self) -> str:
+    def name(self) -> Optional[str]:
         return self.long_name if self.long_name else self.short_name
 
 
@@ -64,61 +64,61 @@ class ParameterSpec:
     required: Optional[bool] = False
     description: str = ""
     choices: Optional[List[Any]] = None
-    validator: Optional[Callable] = None
-    examples: List[str] = None
-    type_hints: Dict[Type, str] = None
-    type_examples: Dict[Type, List[str]] = None
     is_named: bool = True
     is_positional: bool = False
-    index: int = -1  # 用于确认参数位置（args_types 中），由分析器设置
-
-    def __post_init__(self):
-        if self.examples is None:
-            self.examples = []
-        if self.type_hints is None:
-            self.type_hints = {}
-        if self.type_examples is None:
-            self.type_examples = {}
+    index: int = -1  # 用于确认参数位置（param_types 中），由分析器设置
 
 
 class CommandSpec:
-    # 彻底分析函数后得到的命令标识器，用于指导参数传递
+    """命令规格
+
+    彻底分析函数后得到的命令标识器，用于指导参数传递。
+    """
+
     def __init__(
         self,
         options: List[OptionSpec],
         option_groups: List[OptionGroupSpec],
         params: List[ParameterSpec],
-        args_types: List[type],
+        param_types: List[type],
         func: Callable,
     ):
         self.options: List[OptionSpec] = options
         self.option_groups: List[OptionGroupSpec] = option_groups
         self.params: List[ParameterSpec] = params
-        self.args_types: List[type] = args_types
+        self.param_types: List[type] = param_types
         self.func: Callable = func
         self.plugin_name: Optional[str] = None
 
         # 必须外部重新设置的属性
-        self.aliases = []  # 默认为空列表而不是None
-        self.description = None
-        self.name = None
-        self.prefixes = []
+        self.aliases: List[str] = []
+        self.description: Optional[str] = None
+        self.name: Optional[str] = None
+        self.prefixes: List[str] = []
 
-    def get_kw_binding(self, option: str) -> dict:
-        for value in self.options:
-            if value.name == option or value.short_name == option:
-                return {value.name: True}
-        for value in self.option_groups:
-            if option in value.choices:
-                return {value.name: option}
+    def find_option(self, name: str) -> Optional[OptionSpec]:
+        """查找匹配的选项"""
+        for opt in self.options:
+            if opt.name == name or opt.short_name == name:
+                return opt
         return None
 
-    def get_param_binding(self, param: str, value: Any) -> dict:
-        for param_spec in self.params:
-            if param_spec.name == param:
-                target_type = self.args_types[param_spec.index]
-                if target_type is bool:
-                    return {param_spec.name: value.lower() not in ["false", "0"]}
-                else:
-                    return {param_spec.name: target_type(value)}
+    def find_option_group(self, choice: str) -> Optional[OptionGroupSpec]:
+        """查找包含该选项值的选项组"""
+        for group in self.option_groups:
+            if choice in group.choices:
+                return group
+        return None
+
+    def find_param(self, name: str) -> Optional[ParameterSpec]:
+        """查找匹配的参数"""
+        for param in self.params:
+            if param.name == name:
+                return param
+        return None
+
+    def get_param_type(self, index: int) -> Optional[type]:
+        """获取指定索引的参数类型"""
+        if 0 <= index < len(self.param_types):
+            return self.param_types[index]
         return None

@@ -29,16 +29,6 @@ class FilterRegistry:
     def __init__(self):
         self._filters: Dict[str, FilterEntry] = {}
         self._function_filters: Dict[str, Callable] = {}
-        from .decorators import admin_filter, root_filter, private_filter, group_filter
-
-        self.admin_filter = admin_filter
-        self.root_filter = root_filter
-        self.private_filter = private_filter
-        self.group_filter = group_filter
-        self.admin_only = admin_filter
-        self.root_only = root_filter
-        self.private_only = private_filter
-        self.group_only = group_filter
 
     @classmethod
     def set_current_plugin_name(cls, plugin_name: str):

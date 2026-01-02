@@ -4,8 +4,8 @@
 """
 
 from typing import List, Optional
-from ..utils.specs import ParameterSpec, OptionSpec, OptionGroupSpec
-from .registry import CommandSpec, CommandGroup
+from ..utils.specs import ParameterSpec, OptionSpec, OptionGroupSpec, CommandSpec
+from .registry import CommandGroup
 
 
 class HelpGenerator:
@@ -36,21 +36,12 @@ class HelpGenerator:
         lines.append("💡 用法:")
         lines.append(f"{self.indent}{usage}")
 
-        # 位置参数
-        positional_params = cmd_def.get_positional_parameters()
-        if positional_params:
-            lines.append("")
-            lines.append("📍 位置参数:")
-            for param in positional_params:
-                lines.extend(self._format_parameter(param))
-
         # 命名参数
-        named_params = cmd_def.get_named_parameters()
-        if named_params:
+        if cmd_def.params:
             lines.append("")
-            lines.append("🏷️ 命名参数:")
-            for param in named_params:
-                lines.extend(self._format_named_parameter(param))
+            lines.append("🏷️ 参数:")
+            for param in cmd_def.params:
+                lines.extend(self._format_parameter(param))
 
         # 选项
         if cmd_def.options:
@@ -64,7 +55,7 @@ class HelpGenerator:
             lines.append("")
             lines.append("📦 选项组:")
             for group in cmd_def.option_groups:
-                lines.extend(self._format_option_group(group, cmd_def.options))
+                lines.extend(self._format_option_group(group))
 
         # 示例
         examples = self._generate_examples(cmd_def)
@@ -128,17 +119,12 @@ class HelpGenerator:
         """生成用法字符串"""
         parts = [f"/{cmd_def.name}"]
 
-        # 位置参数
-        for param in cmd_def.get_positional_parameters():
+        # 参数
+        for param in cmd_def.params:
             if param.required:
-                parts.append(f"<{param.name}>")
+                parts.append(f"<--{param.name}=值>")
             else:
-                parts.append(f"[{param.name}]")
-
-        # 命名参数
-        named_params = cmd_def.get_named_parameters()
-        if named_params:
-            parts.append("[命名参数...]")
+                parts.append(f"[--{param.name}=值]")
 
         # 选项
         if cmd_def.options:
@@ -147,15 +133,13 @@ class HelpGenerator:
         return " ".join(parts)
 
     def _format_parameter(self, param: ParameterSpec) -> List[str]:
-        """格式化位置参数"""
+        """格式化参数"""
         lines = []
 
-        # 参数名和类型
-        type_name = param.get_friendly_type_name()
-        param_line = f"{self.indent}{param.name}"
+        # 参数名
+        param_line = f"{self.indent}--{param.name}"
         if not param.required:
             param_line += " (可选)"
-        param_line += f" - {type_name}"
         lines.append(param_line)
 
         # 描述
@@ -171,35 +155,6 @@ class HelpGenerator:
             choices_str = ", ".join(str(c) for c in param.choices)
             lines.append(f"{self.indent}{self.indent}可选值: {choices_str}")
 
-        # 多类型示例
-        if param.is_multi_type():
-            union_type = param.get_union_type()
-            for type_obj in union_type.types:
-                examples = param.get_examples_for_type(type_obj)
-                if examples:
-                    type_name = type_obj.__name__
-                    examples_str = ", ".join(examples[:3])
-                    lines.append(
-                        f"{self.indent}{self.indent}{type_name}示例: {examples_str}"
-                    )
-
-        return lines
-
-    def _format_named_parameter(self, param: ParameterSpec) -> List[str]:
-        """格式化命名参数"""
-        lines = []
-
-        # 参数名和类型
-        type_name = param.get_friendly_type_name()
-        param_line = f"{self.indent}--{param.name}"
-        if not param.required:
-            param_line += " (可选)"
-        param_line += f" - {type_name}"
-        lines.append(param_line)
-
-        # 描述和其他信息同位置参数
-        lines.extend(self._format_parameter(param)[1:])  # 跳过第一行
-
         return lines
 
     def _format_option(self, option: OptionSpec) -> List[str]:
@@ -207,44 +162,26 @@ class HelpGenerator:
         lines = []
 
         # 选项名
-        names = option.get_option_names()
+        names = []
+        if option.short_name:
+            names.append(f"-{option.short_name}")
+        if option.long_name:
+            names.append(f"--{option.long_name}")
         option_line = f"{self.indent}{', '.join(names)}"
-
-        if option.needs_value():
-            type_name = (
-                option.value_type.__name__
-                if hasattr(option.value_type, "__name__")
-                else str(option.value_type)
-            )
-            option_line += f" <{type_name}>"
-
         lines.append(option_line)
 
         # 描述
         if option.description:
             lines.append(f"{self.indent}{self.indent}{option.description}")
 
-        # 默认值
-        if option.default_value is not None and not option.is_flag():
-            lines.append(f"{self.indent}{self.indent}默认值: {option.default_value}")
-
-        # 选择值
-        if option.choices:
-            choices_str = ", ".join(str(c) for c in option.choices)
-            lines.append(f"{self.indent}{self.indent}可选值: {choices_str}")
-
         return lines
 
-    def _format_option_group(
-        self, group: OptionGroupSpec, all_options: List[OptionSpec]
-    ) -> List[str]:
+    def _format_option_group(self, group: OptionGroupSpec) -> List[str]:
         """格式化选项组"""
         lines = []
 
         # 组名
         group_line = f"{self.indent}{group.name}"
-        if group.is_required:
-            group_line += " (必选)"
         lines.append(group_line)
 
         # 组描述
@@ -253,7 +190,7 @@ class HelpGenerator:
 
         # 组内选项 - 显示所有可选项
         for choice in group.choices:
-            choice_line = f"{self.indent}--{choice}"
+            choice_line = f"{self.indent}{self.indent}--{choice}"
             if choice == group.default:
                 choice_line += " (默认)"
             lines.append(choice_line)
@@ -267,39 +204,21 @@ class HelpGenerator:
         # 基本示例
         basic_example = f"/{cmd_def.name}"
 
-        # 添加必需的位置参数
-        required_pos = [p for p in cmd_def.get_positional_parameters() if p.required]
-        for param in required_pos:
-            examples_for_type = param.get_examples_for_type(param.get_type_list()[0])
-            if examples_for_type:
-                basic_example += f" {examples_for_type[0]}"
-            else:
-                basic_example += f" <{param.name}>"
+        # 添加必需的参数占位符
+        for param in cmd_def.params:
+            if param.required:
+                basic_example += f" --{param.name}=<值>"
 
         examples.append(basic_example)
 
         # 带选项的示例
         if cmd_def.options:
             with_options = basic_example
-            flag_options = [opt for opt in cmd_def.options if opt.is_flag()]
-            if flag_options:
-                opt = flag_options[0]
+            for opt in cmd_def.options[:1]:  # 只取第一个选项作为示例
                 if opt.short_name:
-                    with_options += f" {opt.short_name}"
+                    with_options += f" -{opt.short_name}"
                 elif opt.long_name:
-                    with_options += f" {opt.long_name}"
-
-            value_options = [opt for opt in cmd_def.options if opt.needs_value()]
-            if value_options:
-                opt = value_options[0]
-                option_name = opt.long_name or opt.short_name
-                if opt.choices:
-                    value = opt.choices[0]
-                elif opt.default_value is not None:
-                    value = opt.default_value
-                else:
-                    value = "value"
-                with_options += f" {option_name}={value}"
+                    with_options += f" --{opt.long_name}"
 
             if with_options != basic_example:
                 examples.append(with_options)

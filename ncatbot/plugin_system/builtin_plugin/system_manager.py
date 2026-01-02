@@ -17,7 +17,7 @@ import psutil
 import ncatbot
 from ncatbot.core import MessageEvent, NcatBotEvent, GroupMessageEvent, PrivateMessageEvent
 from ncatbot.core.service.builtin.unified_registry import (
-    command_registry, filter_registry, root_filter, option_group
+    command_registry, root_filter, option_group, admin_filter,
 )
 from ncatbot.utils import get_log, PermissionGroup
 
@@ -173,7 +173,7 @@ class SystemManager(NcatBotPlugin):
             await event.reply(f"删除管理员 {user_id}", at=False)
 
     @command_registry.command("set_config", aliases=["cfg"])
-    @filter_registry.admin_filter
+    @admin_filter
     async def set_config(
         self, event: MessageEvent, plugin_name: str, config_name: str, value: str
     ) -> None:

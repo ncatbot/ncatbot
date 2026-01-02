@@ -140,8 +140,7 @@ class PluginLoader:
     # -------------------- 单个插件的加载方法 ---------------------
     async def load_plugin(self, name: str, **kwargs) -> Optional[BasePlugin]:
         try:
-            command_registry.set_current_plugin_name(name)
-            filter_registry.set_current_plugin_name(name)
+            self._service_manager.unified_registry.set_current_plugin_name(name)
             module = self._importer.load_plugin_module(name)
             if module is None:
                 LOG.error("尝试加载失败的插件 %s: 模块未返回", name)

@@ -14,24 +14,31 @@ from .tokenizer import (
     QuoteState,
     QuoteMismatchError,
     InvalidEscapeSequenceError,
+    NonTextToken,
+)
+from .command_parser import (
     Element,
     ParsedCommand,
-    AdvancedCommandParser,
-    NonTextToken,
+    CommandParser,
+    AdvancedCommandParser,  # 向后兼容
 )
 from .message_tokenizer import MessageTokenizer, parse_message_command
 
 __all__ = [
+    # Tokenizer
     "StringTokenizer",
     "Token",
     "TokenType",
     "QuoteState",
     "QuoteMismatchError",
     "InvalidEscapeSequenceError",
+    "NonTextToken",
+    # Parser
     "Element",
     "ParsedCommand",
+    "CommandParser",
     "AdvancedCommandParser",
-    "NonTextToken",
+    # Message
     "MessageTokenizer",
     "parse_message_command",
 ]

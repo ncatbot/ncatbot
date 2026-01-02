@@ -3,7 +3,7 @@
 提供直观的装饰器API，支持链式调用和参数验证。
 """
 
-from typing import Callable, Any, List, Optional, Dict, Type
+from typing import Callable, Any, List, Optional
 
 from ..utils import CommandRegistrationError, OptionSpec, OptionGroupSpec, ParameterSpec
 
@@ -101,10 +101,6 @@ def param(
     required: Optional[bool] = False,
     help: str = "",
     choices: Optional[List[Any]] = None,
-    validator: Optional[Callable] = None,
-    examples: Optional[List[str]] = None,
-    type_hints: Optional[Dict[Type, str]] = None,
-    type_examples: Optional[Dict[Type, List[str]]] = None,
 ):
     """参数装饰器
 
@@ -116,16 +112,10 @@ def param(
         required: 是否必需（None表示自动判断）
         help: 帮助文本
         choices: 可选值列表
-        validator: 自定义验证器
-        examples: 使用示例
-        type_hints: 各类型的提示文本
-        type_examples: 各类型的示例
 
     Examples:
-        @param("env", type=str, choices=["dev", "test", "prod"])
-        @param("port", type=int, default=8080)
-        @param("input", type=[str, MessageSegment],
-               type_hints={str: "文件路径", MessageSegment: "图片文件"})
+        @param("env", choices=["dev", "test", "prod"])
+        @param("port", default=8080)
     """
 
     def decorator(func: Callable) -> Callable:
@@ -142,10 +132,6 @@ def param(
             required=required,
             description=help,
             choices=choices,
-            validator=validator,
-            examples=examples or [],
-            type_hints=type_hints or {},
-            type_examples=type_examples or {},
             is_named=True,
             is_positional=False,
         )

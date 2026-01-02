@@ -7,13 +7,14 @@
 """
 
 from .registry import filter_registry
+from .event_registry import event_registry
 from .base import *
 from .builtin import *
 from .decorators import *
 from . import base, builtin, decorators
 
 # 动态构建 __all__
-__all__ = ["filter_registry"]
+__all__ = ["filter_registry", "event_registry"]
 __all__.extend((getattr(base, "__all__", [])) + 
                (getattr(builtin, "__all__", [])) + 
-               (getattr(decorators, "__all__", []))) # type: ignore
+               (getattr(decorators, "__all__", [])))  # type: ignore

@@ -4,7 +4,7 @@
 """
 
 from typing import Callable, Dict, List, Optional, Tuple
-from ..analyzer.func_analyzer import FuncAnalyser
+from ..analyzer.func_analyzer import FuncAnalyzer
 from ..utils import (
     CommandRegistrationError,
     ErrorHandler,
@@ -55,7 +55,7 @@ class CommandGroup:
         def decorator(func: Callable) -> Callable:
             # 验证装饰器 - 延迟导入避免循环导入
 
-            command_spec = FuncAnalyser(func).analyze()
+            command_spec = FuncAnalyzer(func).analyze()
             command_spec.aliases = aliases if aliases else []
             command_spec.description = description if description else ""
             command_spec.name = name

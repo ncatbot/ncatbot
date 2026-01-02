@@ -151,7 +151,7 @@ class ParamsValidator:
         
         param_list = self.actual_params  # 实际的命令参数
         LOG.debug(param_list)
-        args_types = []
+        param_types = []
         is_required_list = []
 
         for param in param_list:
@@ -171,11 +171,11 @@ class ParamsValidator:
             # TODO: 支持 Sentence 类型
             # 检查注解是否为支持的类型
             if annotation in (str, int, float, bool):
-                args_types.append(annotation)
+                param_types.append(annotation)
             elif isinstance(annotation, type) and issubclass(
                 annotation, MessageSegment
             ):
-                args_types.append(annotation)
+                param_types.append(annotation)
             else:
                 LOG.error(
                     f"函数参数类型不支持: {self.descriptor.func_qualname} 的参数 '{param.name}' 的类型注解 {annotation} 不支持"
@@ -194,4 +194,4 @@ class ParamsValidator:
             # 标记该参数是否为必需参数
             is_required_list.append(param.default == inspect.Parameter.empty)
 
-        return args_types
+        return param_types

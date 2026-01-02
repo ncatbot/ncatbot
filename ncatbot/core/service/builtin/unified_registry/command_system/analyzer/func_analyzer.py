@@ -25,7 +25,7 @@ def get_subclass_recursive(cls: type) -> List[type]:
     ]
 
 
-class FuncAnalyser:
+class FuncAnalyzer:
     """函数分析器
 
     分析函数签名，验证参数类型，并提供参数转换功能。

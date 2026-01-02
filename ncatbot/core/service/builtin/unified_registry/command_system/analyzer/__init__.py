@@ -1,8 +1,8 @@
 """命令分析器模块"""
 
-from .func_analyzer import FuncAnalyser, get_subclass_recursive
+from .func_analyzer import FuncAnalyzer, get_subclass_recursive
 
 __all__ = [
-    "FuncAnalyser",
+    "FuncAnalyzer",
     "get_subclass_recursive",
 ]
