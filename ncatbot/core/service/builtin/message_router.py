@@ -1,17 +1,6 @@
-"""
-消息路由服务
-
-基于 NapCatWebSocket，负责：
-- 区分 API 响应和事件
-- 将响应分发给等待的请求
-- 将事件转发给事件处理器
-"""
-
 import asyncio
 import uuid
 from typing import Dict, Optional, Callable, Awaitable
-from threading import Lock
-from queue import Queue
 
 from ..base import BaseService
 from ncatbot.core.adapter.nc import NapCatWebSocket
@@ -22,15 +11,12 @@ LOG = get_log("MessageRouter")
 
 class MessageRouter(BaseService):
     """
-    消息路由服务
+    消息路由服务 (异步优化版)
     
-    职责：
-    - 管理 NapCatWebSocket 连接
-    - 区分收到的消息是 API 响应（有 echo）还是事件
-    - 响应分发给等待的请求
-    - 事件转发给事件处理器
-    
-    提供 send(action, params) -> response 接口供 BotAPI 使用。
+    改进点：
+    1. 移除 threading.Lock 和 queue.Queue，消除线程阻塞风险。
+    2. 使用 asyncio.Future 实现高效的请求-响应匹配。
+    3. 移除 asyncio.to_thread，大幅降低并发开销。
     """
     
     name = "message_router"
@@ -42,28 +28,17 @@ class MessageRouter(BaseService):
         event_callback: Optional[Callable[[dict], Awaitable[None]]] = None,
         **config
     ):
-        """
-        Args:
-            uri: WebSocket URI，不提供则从配置读取
-            event_callback: 收到事件时的回调
-        """
         super().__init__(**config)
         self._uri = uri
         self._event_callback = event_callback
         
-        # 底层 WebSocket 连接
         self._ws: Optional[NapCatWebSocket] = None
         
-        # 响应等待队列
-        self._pending: Dict[str, Queue] = {}
-        self._lock = Lock()
-    
-    # ------------------------------------------------------------------
-    # 生命周期
-    # ------------------------------------------------------------------
+        # 核心改进：使用 Future 存储挂起的请求
+        # Key: echo (str), Value: asyncio.Future
+        self._pending_futures: Dict[str, asyncio.Future] = {}
     
     async def on_load(self) -> None:
-        """加载服务 - 建立连接"""
         self._ws = NapCatWebSocket(
             uri=self._uri,
             message_callback=self._on_message,
@@ -72,99 +47,84 @@ class MessageRouter(BaseService):
         LOG.info("消息路由服务已加载")
     
     async def on_close(self) -> None:
-        """关闭服务"""
-        with self._lock:
-            self._pending.clear()
+        # 清理所有正在等待的 Future，防止调用方永久卡死
+        for future in self._pending_futures.values():
+            if not future.done():
+                future.cancel()
+        self._pending_futures.clear()
         
         if self._ws:
             await self._ws.disconnect()
             self._ws = None
         
         LOG.info("消息路由服务已关闭")
-    
-    # ------------------------------------------------------------------
-    # 公开接口
-    # ------------------------------------------------------------------
-    
+
     @property
     def connected(self) -> bool:
-        """是否已连接"""
         return self._ws is not None and self._ws.connected
-    
+
     @property
     def websocket(self) -> Optional[NapCatWebSocket]:
-        """获取底层 WebSocket 连接（供 PreUploadService 等使用）"""
         return self._ws
-    
+        
     def set_event_callback(self, callback: Callable[[dict], Awaitable[None]]) -> None:
-        """设置事件回调"""
         self._event_callback = callback
-    
+
     async def send(
         self, 
         action: str, 
         params: Optional[dict] = None, 
-        timeout: float = 300.0
+        timeout: float = 30.0 # 建议默认超时不要设置太长，30秒足够
     ) -> dict:
-        """
-        发送 API 请求并等待响应
-        
-        Args:
-            action: API 动作名
-            params: 请求参数
-            timeout: 超时时间（秒）
-            
-        Returns:
-            API 响应字典
-        """
         if not self._ws:
             raise ConnectionError("服务未连接")
         
         echo = str(uuid.uuid4())
-        queue: Queue = Queue(maxsize=1)
         
-        with self._lock:
-            self._pending[echo] = queue
+        # 1. 创建一个 Future 对象，代表“未来的结果”
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        
+        # 2. 存入字典，准备接收
+        self._pending_futures[echo] = future
         
         try:
+            # 3. 发送 WebSocket 消息
             await self._ws.send({
                 "action": action.replace("/", ""),
                 "params": params or {},
                 "echo": echo,
             })
-            return await asyncio.to_thread(queue.get, timeout=timeout)
+            
+            # 4. 非阻塞等待 Future 完成
+            # 这里没有任何线程切换，纯异步挂起
+            return await asyncio.wait_for(future, timeout=timeout)
+            
+        except asyncio.TimeoutError:
+            raise TimeoutError(f"API请求超时: {action}")
         finally:
-            with self._lock:
-                self._pending.pop(echo, None)
-    
+            # 5. 无论成功、失败还是超时，都要清理字典
+            # dict.pop 是原子操作（在单线程 async 循环中），不需要 Lock
+            self._pending_futures.pop(echo, None)
+
     def start_listening(self):
-        """启动消息监听"""
         if self._ws:
             return self._ws.start_listening()
-    
-    # ------------------------------------------------------------------
-    # 消息处理
-    # ------------------------------------------------------------------
-    
+
     async def _on_message(self, data: dict) -> None:
-        """
-        处理收到的消息
+        """处理收到的消息"""
+        echo = data.get("echo")
         
-        区分响应和事件，分别处理。
-        """
-        if "echo" in data:
-            # API 响应 - 分发给等待的请求
-            self._dispatch_response(data)
-        else:
-            # 事件 - 转发给事件处理器
-            if self._event_callback:
-                await self._event_callback(data)
-    
-    def _dispatch_response(self, data: dict) -> None:
-        """分发 API 响应"""
-        with self._lock:
-            echo = data.get("echo")
-            if echo:
-                queue = self._pending.get(echo)
-                if queue:
-                    queue.put(data)
+        # 1. 优先检查是否是 API 响应
+        if echo:
+            # 从字典中查找对应的 Future
+            future = self._pending_futures.get(echo)
+            if future and not future.done():
+                # 2. 填入结果，唤醒 send 中的 await
+                future.set_result(data)
+                return
+
+        # 2. 如果不是响应，或者找不到 echo，则视为事件
+        if self._event_callback:
+            # 建议使用 create_task 防止用户回调阻塞 WebSocket 接收循环
+            asyncio.create_task(self._event_callback(data))
