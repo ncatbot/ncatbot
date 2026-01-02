@@ -85,7 +85,6 @@ class NapCatConfig(BaseConfig):
 
         if self.ws_host not in ["localhost", "127.0.0.1"]:
             logger.info("NapCat 服务不是本地的，请确保远程服务配置正确")
-            time.sleep(1)
 
         if self.ws_listen_ip not in {"0.0.0.0", self.ws_host}:
             logger.warning("WS 监听地址与 WS 地址不匹配，连接可能失败")
