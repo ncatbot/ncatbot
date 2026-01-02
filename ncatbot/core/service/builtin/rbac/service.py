@@ -34,9 +34,12 @@ class RBACService(BaseService):
     name = "rbac"
     description = "基于角色的访问控制服务"
     
+    # 默认存储路径
+    DEFAULT_STORAGE_PATH = "data/rbac.json"
+    
     def __init__(
         self,
-        storage_path: Optional[str] = None,
+        storage_path: Optional[str] = DEFAULT_STORAGE_PATH,
         default_role: Optional[str] = None,
         case_sensitive: bool = True,
         **config
@@ -256,6 +259,39 @@ class RBACService(BaseService):
     def user_exists(self, user: str) -> bool:
         """检查用户是否存在"""
         return user in self._users
+
+    def user_has_role(self, user: str, role: str, create_user: bool = True) -> bool:
+        """
+        检查用户是否拥有指定角色（包括继承的角色）
+        
+        Args:
+            user: 用户 ID
+            role: 角色名
+            create_user: 用户不存在时是否自动创建
+            
+        Returns:
+            用户是否拥有该角色
+        """
+        if not self.user_exists(user):
+            if create_user:
+                self.add_user(user)
+            else:
+                return False
+        
+        # 获取用户所有角色（包括继承的）
+        all_roles = set()
+        
+        def collect_roles(r: str):
+            if r in all_roles:
+                return
+            all_roles.add(r)
+            for parent in self._role_inheritance.get(r, []):
+                collect_roles(parent)
+        
+        for r in self._users[user]["roles"]:
+            collect_roles(r)
+        
+        return role in all_roles
 
     def assign_role(
         self, 
