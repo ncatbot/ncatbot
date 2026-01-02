@@ -15,12 +15,6 @@ if TYPE_CHECKING:
     from ncatbot.core import MessageEvent
 
 
-def _get_message_sent_event():
-    """延迟获取 MessageSentEvent 类"""
-    from ncatbot.core.event import MessageSentEvent
-    return MessageSentEvent
-
-
 class GroupFilter(BaseFilter):
     """群聊消息过滤器"""
 
@@ -73,8 +67,8 @@ class MessageSentFilter(BaseFilter):
     """自身上报消息过滤器"""
 
     def check(self, event: "MessageEvent") -> bool:
-        """检查是否为自身上报的消息"""
-        return isinstance(event, _get_message_sent_event())
+        """检查是否为自身上报的消息（user_id == self_id）"""
+        return event.user_id == event.self_id
 
 
 class AdminFilter(BaseFilter):
@@ -140,7 +134,8 @@ class NonSelfFilter(BaseFilter):
     """非自身消息过滤器"""
 
     def check(self, event: "MessageEvent") -> bool:
-        return not isinstance(event, _get_message_sent_event())
+        """过滤掉机器人自己发送的消息（user_id != self_id）"""
+        return event.user_id != event.self_id
 
 
 class TrueFilter(BaseFilter):
