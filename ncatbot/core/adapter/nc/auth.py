@@ -111,16 +111,7 @@ class AuthHandler:
             )
             return content.get("data", {}).get("Credential")
         except Exception:
-            # 尝试旧版本认证方式
-            try:
-                content = post_json(
-                    f"{self._base_uri}/api/auth/login",
-                    payload={"token": ncatbot_config.napcat.webui_token},
-                    timeout=5,
-                )
-                return content.get("data", {}).get("Credential")
-            except Exception:
-                return None
+            raise AuthError("认证失败, 请升级 NapCat 到最新版本")
 
     def _handle_connection_error(self, error: Exception) -> None:
         """处理连接错误"""
@@ -311,26 +302,3 @@ class AuthHandler:
         if self.report_status() != LoginStatus.OK:
             LOG.error("登录状态异常, 请检查是否使用了正确的 bot 账号扫码登录")
             raise AuthError("登录状态异常")
-
-
-# ==================== 模块级便捷函数 ====================
-
-_handler: Optional[AuthHandler] = None
-
-
-def get_auth_handler(reset: bool = False) -> AuthHandler:
-    """获取认证处理器单例"""
-    global _handler
-    if _handler is None or reset:
-        _handler = AuthHandler()
-    return _handler
-
-
-def login(reset: bool = False) -> None:
-    """执行登录"""
-    get_auth_handler(reset=reset).login()
-
-
-def report_login_status(reset: bool = False) -> LoginStatus:
-    """报告登录状态"""
-    return get_auth_handler(reset=reset).report_status()

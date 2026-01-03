@@ -179,9 +179,9 @@ class NapCatWebSocket:
 
     async def _reconnect(self, uri: str) -> bool:
         """尝试重连"""
-        from .service import napcat_service_ok
+        from .service import NapCatService
 
-        if napcat_service_ok(ncatbot_config.websocket_timeout):
+        if NapCatService().is_service_ok(ncatbot_config.websocket_timeout):
             try:
                 self._client = await websockets.connect(
                     uri, close_timeout=0.2, max_size=2**30, open_timeout=1

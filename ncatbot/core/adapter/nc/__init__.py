@@ -7,14 +7,10 @@ NapCat 适配器模块
 from .service import (
     NapCatService,
     launch_napcat_service,
-    napcat_service_ok,
-    get_service,
 )
 from .auth import (
     AuthHandler,
     LoginStatus,
-    login,
-    report_login_status,
 )
 from .platform import (
     PlatformOps,
@@ -34,13 +30,9 @@ __all__ = [
     # 主服务
     "NapCatService",
     "launch_napcat_service",
-    "napcat_service_ok",
-    "get_service",
     # 认证
     "AuthHandler",
     "LoginStatus",
-    "login",
-    "report_login_status",
     # 平台操作
     "PlatformOps",
     "WindowsOps",

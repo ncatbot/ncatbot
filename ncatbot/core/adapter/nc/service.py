@@ -11,7 +11,7 @@ from typing import Optional
 import websockets
 
 from ....utils import NcatBotError, get_log, ncatbot_config, run_coroutine
-from .auth import AuthHandler, LoginStatus, get_auth_handler, login
+from .auth import AuthHandler, LoginStatus
 from .config_manager import ConfigManager
 from .platform import PlatformOps, UnsupportedPlatformError
 
@@ -131,7 +131,7 @@ class NapCatService:
             return True
 
         # 检查登录状态
-        status = get_auth_handler().report_status()
+        status = AuthHandler().report_status()
 
         if status == LoginStatus.OK:
             return True
@@ -188,7 +188,7 @@ class NapCatService:
             # WebUI 交互模式
             if not self.is_service_ok(3):
                 LOG.info("登录中...")
-                login(reset=True)
+                AuthHandler().login()
                 self.wait_for_service()
                 LOG.info("连接成功")
             else:
@@ -219,24 +219,6 @@ class NapCatService:
             self._launch_local()
 
 
-# ==================== 模块级便捷函数 ====================
-
-_service: Optional[NapCatService] = None
-
-
-def get_service() -> NapCatService:
-    """获取服务单例"""
-    global _service
-    if _service is None:
-        _service = NapCatService()
-    return _service
-
-
-def launch_napcat_service(*args, **kwargs) -> None:
-    """启动 NapCat 服务（兼容旧接口）"""
-    get_service().launch()
-
-
-def napcat_service_ok(timeout: int = 0, show_info: bool = True) -> bool:
-    """检查服务是否正常（兼容旧接口）"""
-    return get_service().is_service_ok(timeout, show_info)
+def launch_napcat_service() -> None:
+    """启动 NapCat 服务"""
+    NapCatService().launch()

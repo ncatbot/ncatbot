@@ -173,12 +173,12 @@ def print_test_list(tests: List[TestCase]):
 async def setup_connection():
     """建立连接并返回 BotAPI"""
     from ncatbot.core.api import BotAPI
-    from ncatbot.core.adapter.nc import napcat_service_ok
+    from ncatbot.core.adapter.nc import NapCatService
     from ncatbot.core.service import MessageRouter, ServiceManager, PreUploadService
 
     print(f"{Colors.BLUE}正在连接 NapCat 服务...{Colors.ENDC}")
 
-    if not napcat_service_ok(timeout=5):
+    if not NapCatService().is_service_ok(timeout=5):
         print(f"{Colors.RED}错误: 无法连接到 NapCat 服务{Colors.ENDC}")
         print(f"{Colors.YELLOW}请确保 NapCat 服务正在运行{Colors.ENDC}")
         sys.exit(1)
