@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable, Optional, Set, Dict, Awaitable
 
 from ncatbot.core.service.base import BaseService
-from ncatbot.utils import get_log, config
+from ncatbot.utils import get_log
 
 LOG = get_log("FileWatcher")
 
@@ -38,27 +38,14 @@ class FileWatcherService(BaseService):
     # 默认配置
     DEFAULT_WATCH_INTERVAL = 1.0  # 生产环境扫描间隔
     DEFAULT_DEBOUNCE_DELAY = 1.0  # 生产环境防抖延迟
-    FAST_WATCH_INTERVAL = 0.05   # debug 模式扫描间隔
-    FAST_DEBOUNCE_DELAY = 0.05   # debug 模式防抖延迟
+    FAST_WATCH_INTERVAL = 0.02   # debug 模式扫描间隔
+    FAST_DEBOUNCE_DELAY = 0.02   # debug 模式防抖延迟
     
-    def __init__(self, watch_interval: Optional[float] = None, debounce_delay: Optional[float] = None, **config_args):
+    def __init__(self, **config_args):
         """
         Args:
-            watch_interval: 文件扫描间隔（秒），None 时根据 debug 模式自动选择
-            debounce_delay: 防抖延迟（秒），None 时根据 debug 模式自动选择
         """
         super().__init__(**config_args)
-        
-        # 根据 debug 模式自动选择间隔
-        is_debug = getattr(config, "debug", False)
-        if watch_interval is None:
-            self._watch_interval = self.FAST_WATCH_INTERVAL if is_debug else self.DEFAULT_WATCH_INTERVAL
-        else:
-            self._watch_interval = watch_interval
-        if debounce_delay is None:
-            self._debounce_delay = self.FAST_DEBOUNCE_DELAY if is_debug else self.DEFAULT_DEBOUNCE_DELAY
-        else:
-            self._debounce_delay = debounce_delay
         
         # 文件监视状态
         self._watcher_thread: Optional[threading.Thread] = None
@@ -88,7 +75,10 @@ class FileWatcherService(BaseService):
     async def on_load(self) -> None:
         """启动文件监视"""
         # 添加主插件目录
-        self.add_watch_dir(config.plugin.plugins_dir)
+        # 根据 debug 模式自动选择间隔
+        is_test_mode = getattr(self.service_manager, "_test_mode", False)
+        self._watch_interval = self.FAST_WATCH_INTERVAL if is_test_mode else self.DEFAULT_WATCH_INTERVAL
+        self._debounce_delay = self.FAST_DEBOUNCE_DELAY if is_test_mode else self.DEFAULT_DEBOUNCE_DELAY
         
         self._stop_event.clear()
         self._watcher_thread = threading.Thread(
@@ -214,7 +204,7 @@ class FileWatcherService(BaseService):
     
     def _on_file_changed(self, file_path: str, plugins_dir: str) -> None:
         """处理文件变化"""
-        if not getattr(config, "debug", False):
+        if not getattr(self.service_manager, "_debug_mode", False):
             return
         
         LOG.info(f"检测到文件变化: {file_path}")

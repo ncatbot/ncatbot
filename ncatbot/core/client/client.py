@@ -49,8 +49,8 @@ class BotClient(EventRegistry, LifecycleManager):
     - EventRegistry: 提供事件注册和装饰器接口
     
     测试模式：
-    使用 start(mock=True) 启动 Mock 模式，无需网络连接。
-    可通过 inject_event() 或 inject_raw_event() 注入测试事件。
+    使用 start(mock=True) 启动 Mock 模式，连接到 MockServer。
+    事件注入通过 MockServer.inject_event() 等方法实现。
     """
 
     _initialized = False
@@ -133,3 +133,10 @@ class BotClient(EventRegistry, LifecycleManager):
             if isinstance(plugin, plugin_type):
                 return plugin
         raise ValueError(f"插件 {plugin_type.__name__} 未找到")
+    
+    def get_plugin_class_by_name(self, plugin_name: str) -> Type["BasePlugin"]:
+        """获取指定名称的插件类"""
+        for plugin in self.get_registered_plugins():
+            if plugin.name == plugin_name:
+                return type(plugin)
+        raise ValueError(f"插件 {plugin_name} 未找到")

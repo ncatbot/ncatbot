@@ -50,6 +50,8 @@ class ServiceManager:
         preupload = manager.preupload  # 类型: PreUploadService
         ```
     """
+    _debug_mode: bool = False
+    _test_mode: bool = False
     
     def __init__(self):
         """初始化服务管理器"""
@@ -57,6 +59,14 @@ class ServiceManager:
         self._service_classes: Dict[str, Type[BaseService]] = {}
         self._service_configs: Dict[str, Dict[str, Any]] = {}
         self._bot_client: Optional["BotClient"] = None
+    
+    def set_debug_mode(self, enable: bool = True) -> None:
+        """设置调试模式"""
+        self._debug_mode = enable
+    
+    def set_test_mode(self, enable: bool = True) -> None:
+        """设置测试模式"""
+        self._test_mode = enable
     
     def set_bot_client(self, bot_client: "BotClient") -> None:
         """设置 BotClient 引用"""

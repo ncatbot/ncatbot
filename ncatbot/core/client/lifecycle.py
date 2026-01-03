@@ -9,6 +9,7 @@ import sys
 from typing import Optional, Union, TypedDict, TYPE_CHECKING
 
 from typing_extensions import Unpack
+from pathlib import Path
 
 from ncatbot.utils import get_log, ncatbot_config
 from ncatbot.utils.error import NcatBotError, NcatBotConnectionError
@@ -65,11 +66,8 @@ class LifecycleManager:
         self._startup_event: Optional[asyncio.Event] = None
         self._skip_plugin_load = False
 
-    def _prepare_startup(self, **kwargs: Unpack[StartArgs]) -> bool:
+    def _prepare_startup(self, **kwargs: Unpack[StartArgs]):
         """通用启动准备"""
-        mock_mode = kwargs.pop("mock", False)
-        self._skip_plugin_load = kwargs.pop("skip_plugin_load", False)
-        
         for key, value in kwargs.items():
             if key not in LEGAL_ARGS:
                 raise NcatBotError(f"非法启动参数: {key}")
@@ -78,19 +76,23 @@ class LifecycleManager:
 
         ncatbot_config.validate_config()
 
+        self._test_mode = bool(kwargs.pop("mock", False))
+        self._skip_plugin_load = ncatbot_config.plugin.skip_plugin_load
+        self._debug_mode = ncatbot_config.debug or bool(self._test_mode)
+        self.services.set_debug_mode(self._debug_mode)
+        self.services.set_test_mode(self._test_mode)
+
         from ncatbot.plugin_system import PluginLoader
         self.plugin_loader = PluginLoader(
             self.event_bus,
             self.services,
-            debug=ncatbot_config.debug,
+            debug=self._debug_mode,
         )
         self._running = True
 
-        if not mock_mode:
+        if not self._test_mode:
             launch_napcat_service()
             
-        return mock_mode
-
     async def _core_execution(self):
         """核心执行流"""
         try:
@@ -107,9 +109,10 @@ class LifecycleManager:
             router.set_event_callback(self.dispatcher)
 
             # 3. 加载插件
-            if not self._skip_plugin_load and self.plugin_loader:
-                await self.plugin_loader.load_plugins()
-
+            if self.plugin_loader:
+                if not self._skip_plugin_load:
+                    await self.plugin_loader.load_external_plugins(Path(ncatbot_config.plugin.plugins_dir).resolve())
+                await self.plugin_loader.load_builtin_plugins()
             # 4. 关键：通知启动完成
             # 在开始无限循环监听之前，设置事件，告知 start_background 可以返回了
             if self._startup_event:
@@ -210,6 +213,68 @@ class LifecycleManager:
         except Exception as e:
             LOG.error(f"启动失败: {e}")
             sys.exit(1)
+
+    def run_backend(self, daemon: bool = True, **kwargs: Unpack[StartArgs]) -> "BotAPI":
+        """
+        [新增] 同步环境下的安全非阻塞启动
+        
+        在独立线程中启动一个新的 Event Loop 运行 Bot，适合在 GUI 程序或
+        同步脚本中使用，不会阻塞主线程。
+        
+        Args:
+            daemon: 是否将 Bot 线程设为守护线程（主程序退出时 Bot 自动退出）
+            **kwargs: 启动参数
+            
+        Returns:
+            BotAPI: Bot 操作接口 (注意：调用其方法时需注意线程安全或使用 run_coroutine_threadsafe)
+        """
+        import threading
+        import concurrent.futures
+        
+        if self._running:
+            LOG.warning("Bot 已经在运行中")
+            return self.api  # type: ignore
+
+        # 用于跨线程传递结果（BotAPI 或 异常）
+        future = concurrent.futures.Future()
+
+        def _thread_entry():
+            """线程入口：建立新的事件循环"""
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                # 调用异步启动逻辑
+                api = loop.run_until_complete(self.run_backend_async(**kwargs))
+                future.set_result(api)
+                # 启动成功后，保持 loop 运行以处理后续事件
+                loop.run_forever()
+            except Exception as e:
+                if not future.done():
+                    future.set_exception(e)
+                else:
+                    LOG.error(f"Bot 线程运行时发生错误: {e}")
+            finally:
+                # 清理工作
+                try:
+                    tasks = asyncio.all_tasks(loop)
+                    for task in tasks:
+                        task.cancel()
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+                    loop.close()
+                except Exception as cleanup_err:
+                    LOG.error(f"Bot 线程清理失败: {cleanup_err}")
+
+        # 启动后台线程
+        bot_thread = threading.Thread(target=_thread_entry, name="NcatBot-Thread", daemon=daemon)
+        bot_thread.start()
+
+        # 阻塞当前线程，直到 Bot 启动成功或失败
+        # 这里类似 run_backend_async，保证返回时 API 已经可用
+        try:
+            return future.result()
+        except Exception as e:
+            LOG.exception(e)
+            raise NcatBotError(f"Bot 线程启动失败: {e}") from e
 
     # ================= 退出逻辑 =================
 
