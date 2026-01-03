@@ -66,6 +66,7 @@ class PluginLoader:
             service_manager=self._service_manager,
             **kwargs,
         )
+        plugin.api = self._service_manager.bot_client.api # type: ignore
         # Ensure name is set (may be provided via manifest)
 
         self.plugins[name] = plugin

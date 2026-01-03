@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         PluginConfigService,
         PluginConfig,
     )
+    from ncatbot.core import BotAPI
 
 LOG = get_log("BasePlugin")
 
@@ -48,6 +49,7 @@ class BasePlugin:
     source_dir: Path
     workspace: Path
     services: ServiceManager
+    api: "BotAPI"
 
     # -------- 内部属性 --------
     _debug: bool
