@@ -1,6 +1,7 @@
 """UnifiedRegistry 端到端测试共享 fixtures"""
 
 import pytest
+import pytest_asyncio
 from pathlib import Path
 
 from ncatbot.utils.testing import E2ETestSuite
@@ -17,56 +18,56 @@ PARAMS_PLUGIN_DIR = PLUGINS_DIR / "params_test_plugin"
 GROUPS_PLUGIN_DIR = PLUGINS_DIR / "command_groups_plugin"
 
 
-@pytest.fixture
-def basic_command_suite():
+@pytest_asyncio.fixture
+async def basic_command_suite():
     """创建基础命令测试套件"""
     suite = E2ETestSuite()
-    suite.setup()
+    await suite.setup()
     suite.index_plugin(str(BASIC_PLUGIN_DIR))
-    suite.register_plugin_sync("basic_command_plugin")
+    await suite.register_plugin("basic_command_plugin")
     
     yield suite
     
-    suite.teardown()
+    await suite.teardown()
 
 
-@pytest.fixture
-def filter_suite():
+@pytest_asyncio.fixture
+async def filter_suite():
     """创建过滤器测试套件"""
     suite = E2ETestSuite()
-    suite.setup()
+    await suite.setup()
     suite.index_plugin(str(FILTER_PLUGIN_DIR))
-    suite.register_plugin_sync("filter_test_plugin")
+    await suite.register_plugin("filter_test_plugin")
     
     yield suite
     
-    suite.teardown()
+    await suite.teardown()
 
 
-@pytest.fixture
-def params_suite():
+@pytest_asyncio.fixture
+async def params_suite():
     """创建参数测试套件"""
     suite = E2ETestSuite()
-    suite.setup()
+    await suite.setup()
     suite.index_plugin(str(PARAMS_PLUGIN_DIR))
-    suite.register_plugin_sync("params_test_plugin")
+    await suite.register_plugin("params_test_plugin")
     
     yield suite
     
-    suite.teardown()
+    await suite.teardown()
 
 
-@pytest.fixture
-def groups_suite():
+@pytest_asyncio.fixture
+async def groups_suite():
     """创建命令分组测试套件"""
     suite = E2ETestSuite()
-    suite.setup()
+    await suite.setup()
     suite.index_plugin(str(GROUPS_PLUGIN_DIR))
-    suite.register_plugin_sync("command_groups_plugin")
+    await suite.register_plugin("command_groups_plugin")
     
     yield suite
     
-    suite.teardown()
+    await suite.teardown()
 
 
 @pytest.fixture
@@ -95,4 +96,3 @@ def mock_non_admin():
     status.global_access_manager = NonAdminManager()
     yield
     status.global_access_manager = original_manager
-

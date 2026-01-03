@@ -44,13 +44,14 @@ def _cleanup_modules():
 class TestDecoratorValidation:
     """装饰器验证测试"""
 
-    def test_valid_plugin_loads_successfully(self):
+    @pytest.mark.asyncio
+    async def test_valid_plugin_loads_successfully(self):
         """测试有效插件加载成功"""
         _cleanup_modules()
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(DECORATOR_PLUGIN_DIR))
-            suite.register_plugin_sync("decorator_test_plugin")
+            await suite.register_plugin("decorator_test_plugin")
 
             # 验证命令已注册
             all_commands = command_registry.get_all_commands()
@@ -61,16 +62,17 @@ class TestDecoratorValidation:
 
         _cleanup_modules()
 
-    def test_command_with_options_works(self):
+    @pytest.mark.asyncio
+    async def test_command_with_options_works(self):
         """测试带选项的命令能正常工作"""
         _cleanup_modules()
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(DECORATOR_PLUGIN_DIR))
-            suite.register_plugin_sync("decorator_test_plugin")
+            await suite.register_plugin("decorator_test_plugin")
 
             # 测试短选项
-            suite.inject_group_message_sync("/opt_short -v")
+            await suite.inject_group_message("/opt_short -v")
             suite.assert_reply_sent()
             calls = suite.get_api_calls("send_group_msg")
             assert "verbose=True" in str(calls[-1].get("message", ""))
@@ -78,23 +80,24 @@ class TestDecoratorValidation:
             suite.clear_call_history()
 
             # 测试长选项
-            suite.inject_group_message_sync("/opt_long --verbose")
+            await suite.inject_group_message("/opt_long --verbose")
             suite.assert_reply_sent()
             calls = suite.get_api_calls("send_group_msg")
             assert "verbose=True" in str(calls[-1].get("message", ""))
 
         _cleanup_modules()
 
-    def test_complex_command_works(self):
+    @pytest.mark.asyncio
+    async def test_complex_command_works(self):
         """测试复杂命令组合"""
         _cleanup_modules()
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(DECORATOR_PLUGIN_DIR))
-            suite.register_plugin_sync("decorator_test_plugin")
+            await suite.register_plugin("decorator_test_plugin")
 
             # option_group 创建的是 --fast/--normal/--safe 选项，而非 --mode=xxx
-            suite.inject_group_message_sync(
+            await suite.inject_group_message(
                 "/complex test.txt --output=result.txt --fast -v -f"
             )
             suite.assert_reply_sent()
@@ -352,5 +355,3 @@ class TestDecoratorValidatorUnit:
 
         with pytest.raises(CommandRegistrationError):
             DecoratorValidator.validate_function_decorators(invalid_func)
-
-

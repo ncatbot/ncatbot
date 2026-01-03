@@ -15,148 +15,169 @@ import pytest
 class TestBasicParams:
     """基础参数测试"""
 
-    def test_single_param(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_single_param(self, params_suite):
         """测试单参数"""
-        params_suite.inject_private_message_sync("/say hello")
+        await params_suite.inject_private_message("/say hello")
         params_suite.assert_reply_sent("你说: hello")
 
-    def test_multiple_params(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_multiple_params(self, params_suite):
         """测试多参数"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/concat hello world")
+        await params_suite.inject_private_message("/concat hello world")
         params_suite.assert_reply_sent("helloworld")
 
-    def test_quoted_param(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_quoted_param(self, params_suite):
         """测试引用字符串参数"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync('/say "hello world"')
+        await params_suite.inject_private_message('/say "hello world"')
         params_suite.assert_reply_sent("你说: hello world")
 
 
 class TestTypeConversion:
     """类型转换测试"""
 
-    def test_int_params(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_int_params(self, params_suite):
         """测试整数参数"""
-        params_suite.inject_private_message_sync("/calc 10 5")
+        await params_suite.inject_private_message("/calc 10 5")
         params_suite.assert_reply_sent("结果: 15")
 
-    def test_int_with_operator(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_int_with_operator(self, params_suite):
         """测试带运算符的整数参数"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/calc 10 5 -")
+        await params_suite.inject_private_message("/calc 10 5 -")
         params_suite.assert_reply_sent("结果: 5")
 
-    def test_repeat_with_times(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_repeat_with_times(self, params_suite):
         """测试整数默认参数"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/repeat abc 3")
+        await params_suite.inject_private_message("/repeat abc 3")
         params_suite.assert_reply_sent("abcabcabc")
 
 
 class TestShortOptions:
     """短选项测试"""
 
-    def test_list_basic(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_list_basic(self, params_suite):
         """测试基础列表命令"""
-        params_suite.inject_private_message_sync("/list")
+        await params_suite.inject_private_message("/list")
         params_suite.assert_reply_sent("列出目录: .")
 
-    def test_list_single_option(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_list_single_option(self, params_suite):
         """测试单个短选项"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/list -l")
+        await params_suite.inject_private_message("/list -l")
         params_suite.assert_reply_sent("列出目录: . (长格式)")
 
-    def test_list_combined_options(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_list_combined_options(self, params_suite):
         """测试组合短选项"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/list -la")
+        await params_suite.inject_private_message("/list -la")
         params_suite.assert_reply_sent("列出目录: . (长格式, 显示隐藏)")
 
-    def test_list_all_options_with_path(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_list_all_options_with_path(self, params_suite):
         """测试所有选项加路径"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/list -lah /home")
+        await params_suite.inject_private_message("/list -lah /home")
         params_suite.assert_reply_sent("列出目录: /home (长格式, 显示隐藏, 人类可读)")
 
 
 class TestLongOptions:
     """长选项测试"""
 
-    def test_backup_basic(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_backup_basic(self, params_suite):
         """测试基础备份命令"""
-        params_suite.inject_private_message_sync("/backup /data")
+        await params_suite.inject_private_message("/backup /data")
         params_suite.assert_reply_sent("备份 /data")
 
-    def test_backup_compress(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_backup_compress(self, params_suite):
         """测试压缩选项"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/backup /data --compress")
+        await params_suite.inject_private_message("/backup /data --compress")
         params_suite.assert_reply_sent("备份 /data 到 /backup [压缩]")
 
-    def test_backup_multiple_options(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_backup_multiple_options(self, params_suite):
         """测试多个长选项"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/backup /data --compress --encrypt")
+        await params_suite.inject_private_message("/backup /data --compress --encrypt")
         params_suite.assert_reply_sent("备份 /data 到 /backup [压缩, 加密]")
 
 
 class TestNamedParams:
     """命名参数测试"""
 
-    def test_backup_with_dest(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_backup_with_dest(self, params_suite):
         """测试命名参数"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/backup /data --dest=/archive")
+        await params_suite.inject_private_message("/backup /data --dest=/archive")
         params_suite.assert_reply_sent("备份 /data 到 /archive")
 
 
 class TestOptionGroups:
     """选项组测试"""
 
-    def test_export_default_format(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_export_default_format(self, params_suite):
         """测试默认格式"""
-        params_suite.inject_private_message_sync("/export users")
+        await params_suite.inject_private_message("/export users")
         params_suite.assert_reply_sent("导出 users 数据为 json 格式")
 
-    def test_export_csv_format(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_export_csv_format(self, params_suite):
         """测试 CSV 格式"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/export users --csv")
+        await params_suite.inject_private_message("/export users --csv")
         params_suite.assert_reply_sent("导出 users 数据为 csv 格式")
 
-    def test_export_xml_format(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_export_xml_format(self, params_suite):
         """测试 XML 格式"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/export users --xml")
+        await params_suite.inject_private_message("/export users --xml")
         params_suite.assert_reply_sent("导出 users 数据为 xml 格式")
 
 
 class TestComplexCombinations:
     """复杂组合测试"""
 
-    def test_process_basic(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_process_basic(self, params_suite):
         """测试基础处理命令"""
-        params_suite.inject_private_message_sync("/process data.csv")
+        await params_suite.inject_private_message("/process data.csv")
         params_suite.assert_reply_sent("处理文件: data.csv → result.txt (json格式)")
 
-    def test_process_with_output(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_process_with_output(self, params_suite):
         """测试指定输出"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/process data.csv --output=out.xml --format=xml")
+        await params_suite.inject_private_message("/process data.csv --output=out.xml --format=xml")
         params_suite.assert_reply_sent("处理文件: data.csv → out.xml (xml格式)")
 
-    def test_process_with_flags(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_process_with_flags(self, params_suite):
         """测试带标志的处理命令"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync("/process data.csv -v --force")
+        await params_suite.inject_private_message("/process data.csv -v --force")
         params_suite.assert_reply_sent("[详细模式]")
         params_suite.assert_reply_sent("[强制模式]")
 
-    def test_process_quoted_filename(self, params_suite):
+    @pytest.mark.asyncio
+    async def test_process_quoted_filename(self, params_suite):
         """测试引用文件名"""
         params_suite.clear_call_history()
-        params_suite.inject_private_message_sync('/process "my file.txt" -v')
+        await params_suite.inject_private_message('/process "my file.txt" -v')
         params_suite.assert_reply_sent("处理文件: my file.txt")
         params_suite.assert_reply_sent("[详细模式]")

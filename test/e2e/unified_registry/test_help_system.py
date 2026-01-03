@@ -10,6 +10,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 from ncatbot.utils.testing import E2ETestSuite
 from ncatbot.core.service.builtin.unified_registry.command_system.registry.help_system import (
     HelpGenerator,
@@ -36,15 +38,16 @@ def _cleanup_modules():
 class TestHelpSystemE2E:
     """帮助系统 E2E 测试 - 使用真实插件"""
 
-    def test_plugin_loads_successfully(self):
+    @pytest.mark.asyncio
+    async def test_plugin_loads_successfully(self):
         """测试插件加载成功"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             # 验证命令已注册
             all_commands = command_registry.get_all_commands()
@@ -55,15 +58,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_help_for_basic_command(self):
+    @pytest.mark.asyncio
+    async def test_help_for_basic_command(self):
         """测试基础命令的帮助生成"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             # 获取命令规格
             all_commands = command_registry.get_all_commands()
@@ -85,15 +89,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_help_for_command_without_description(self):
+    @pytest.mark.asyncio
+    async def test_help_for_command_without_description(self):
         """测试无描述命令的帮助生成"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             all_commands = command_registry.get_all_commands()
             cmd_spec = None
@@ -112,15 +117,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_help_for_command_with_aliases(self):
+    @pytest.mark.asyncio
+    async def test_help_for_command_with_aliases(self):
         """测试带别名命令的帮助生成"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             all_commands = command_registry.get_all_commands()
             cmd_spec = None
@@ -141,15 +147,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_help_for_command_with_params(self):
+    @pytest.mark.asyncio
+    async def test_help_for_command_with_params(self):
         """测试带参数命令的帮助生成"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             all_commands = command_registry.get_all_commands()
             cmd_spec = None
@@ -172,15 +179,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_help_for_command_with_param_choices(self):
+    @pytest.mark.asyncio
+    async def test_help_for_command_with_param_choices(self):
         """测试带选择值参数的帮助生成"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             all_commands = command_registry.get_all_commands()
             cmd_spec = None
@@ -198,15 +206,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_help_for_command_with_options(self):
+    @pytest.mark.asyncio
+    async def test_help_for_command_with_options(self):
         """测试带选项命令的帮助生成"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             all_commands = command_registry.get_all_commands()
             cmd_spec = None
@@ -230,15 +239,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_help_for_command_with_option_groups(self):
+    @pytest.mark.asyncio
+    async def test_help_for_command_with_option_groups(self):
         """测试带选项组命令的帮助生成"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             all_commands = command_registry.get_all_commands()
             cmd_spec = None
@@ -261,15 +271,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_help_for_complex_command(self):
+    @pytest.mark.asyncio
+    async def test_help_for_complex_command(self):
         """测试复杂组合命令的帮助生成"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             all_commands = command_registry.get_all_commands()
             cmd_spec = None
@@ -299,15 +310,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_generate_command_list_from_registry(self):
+    @pytest.mark.asyncio
+    async def test_generate_command_list_from_registry(self):
         """测试从注册表生成命令列表"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             all_commands = command_registry.get_all_commands()
 
@@ -329,15 +341,16 @@ class TestHelpSystemE2E:
 
         _cleanup_modules()
 
-    def test_format_error_with_registered_command(self):
+    @pytest.mark.asyncio
+    async def test_format_error_with_registered_command(self):
         """测试使用注册命令的错误格式化"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(HELP_PLUGIN_DIR))
-            suite.register_plugin_sync("help_test_plugin")
+            await suite.register_plugin("help_test_plugin")
 
             all_commands = command_registry.get_all_commands()
             cmd_spec = None

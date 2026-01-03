@@ -329,15 +329,16 @@ class TestBaseFilterUnit:
 class TestFilterSystemE2E:
     """过滤器系统 E2E 测试"""
 
-    def test_plugin_loads_successfully(self):
+    @pytest.mark.asyncio
+    async def test_plugin_loads_successfully(self):
         """测试插件加载成功"""
         _cleanup_modules()
 
         from ncatbot.core.service.builtin.unified_registry import command_registry
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(FILTER_PLUGIN_DIR))
-            suite.register_plugin_sync("filter_test_plugin")
+            await suite.register_plugin("filter_test_plugin")
 
             all_commands = command_registry.get_all_commands()
             assert any("group_only" in path for path in all_commands.keys())
@@ -346,90 +347,93 @@ class TestFilterSystemE2E:
 
         _cleanup_modules()
 
-    def test_true_filter_always_passes(self):
+    @pytest.mark.asyncio
+    async def test_true_filter_always_passes(self):
         """测试 TrueFilter 命令总是可用"""
         _cleanup_modules()
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(FILTER_PLUGIN_DIR))
-            suite.register_plugin_sync("filter_test_plugin")
+            await suite.register_plugin("filter_test_plugin")
 
             # 群聊中可用
-            suite.inject_group_message_sync("/always_pass")
+            await suite.inject_group_message("/always_pass")
             suite.assert_reply_sent("总是通过")
 
             suite.clear_call_history()
 
             # 私聊中也可用
-            suite.inject_private_message_sync("/always_pass")
+            await suite.inject_private_message("/always_pass")
             suite.assert_reply_sent("总是通过")
 
         _cleanup_modules()
 
-    def test_combined_or_filter(self):
+    @pytest.mark.asyncio
+    async def test_combined_or_filter(self):
         """测试组合过滤器 (OR)"""
         _cleanup_modules()
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(FILTER_PLUGIN_DIR))
-            suite.register_plugin_sync("filter_test_plugin")
+            await suite.register_plugin("filter_test_plugin")
 
             # any_chat 使用 GroupFilter | PrivateFilter
             # 群聊中可用
-            suite.inject_group_message_sync("/any_chat")
+            await suite.inject_group_message("/any_chat")
             suite.assert_reply_sent("任意聊天类型")
 
             suite.clear_call_history()
 
             # 私聊中也可用
-            suite.inject_private_message_sync("/any_chat")
+            await suite.inject_private_message("/any_chat")
             suite.assert_reply_sent("任意聊天类型")
 
         _cleanup_modules()
 
-    def test_specified_group_filter(self):
+    @pytest.mark.asyncio
+    async def test_specified_group_filter(self):
         """测试指定群号过滤器"""
         _cleanup_modules()
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(FILTER_PLUGIN_DIR))
-            suite.register_plugin_sync("filter_test_plugin")
+            await suite.register_plugin("filter_test_plugin")
 
             # 在指定群 123456 中可用
-            suite.inject_group_message_sync("/special_group", group_id=123456)
+            await suite.inject_group_message("/special_group", group_id=123456)
             suite.assert_reply_sent("这是特定群专用命令")
 
             suite.clear_call_history()
 
             # 在其他群中不可用
-            suite.inject_group_message_sync("/special_group", group_id=999999)
+            await suite.inject_group_message("/special_group", group_id=999999)
             suite.assert_no_reply()
 
         _cleanup_modules()
 
-    def test_multiple_group_filter(self):
+    @pytest.mark.asyncio
+    async def test_multiple_group_filter(self):
         """测试多群号过滤器"""
         _cleanup_modules()
 
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(FILTER_PLUGIN_DIR))
-            suite.register_plugin_sync("filter_test_plugin")
+            await suite.register_plugin("filter_test_plugin")
 
             # 在群 123456 中可用
-            suite.inject_group_message_sync("/multi_group", group_id=123456)
+            await suite.inject_group_message("/multi_group", group_id=123456)
             suite.assert_reply_sent("这是多群专用命令")
 
             suite.clear_call_history()
 
             # 在群 789012 中也可用
-            suite.inject_group_message_sync("/multi_group", group_id=789012)
+            await suite.inject_group_message("/multi_group", group_id=789012)
             suite.assert_reply_sent("这是多群专用命令")
 
             suite.clear_call_history()
 
             # 在其他群中不可用
-            suite.inject_group_message_sync("/multi_group", group_id=999999)
+            await suite.inject_group_message("/multi_group", group_id=999999)
             suite.assert_no_reply()
 
         _cleanup_modules()
-
