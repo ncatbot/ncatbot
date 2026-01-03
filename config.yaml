@@ -7,7 +7,7 @@ check_ncatbot_update: true
 skip_ncatbot_install_check: false
 websocket_timeout: 15
 napcat:
-  ws_uri: ws://localhost:16925
+  ws_uri: ws://localhost:3001
   ws_token: NcatBot
   ws_listen_ip: localhost
   webui_uri: http://localhost:6099
@@ -19,7 +19,7 @@ napcat:
   report_self_message: false
   report_forward_message_detail: true
 plugin:
-  plugins_dir: /home/dev/workspace/projects/qq-bot/ncatbot/test/e2e/hot_reload/fixtures/empty_plugins
+  plugins_dir: plugins
   plugin_whitelist: []
   plugin_blacklist: []
   skip_plugin_load: true

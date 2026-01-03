@@ -9,9 +9,10 @@
 # pyright: reportOptionalMemberAccess=false
 
 from typing import List, Optional, TYPE_CHECKING
+from copy import deepcopy
 from contextlib import asynccontextmanager
 
-from ncatbot.utils import get_log
+from ncatbot.utils import get_log, ncatbot_config
 from .mixins import PluginMixin, InjectorMixin, AssertionMixin
 
 if TYPE_CHECKING:
@@ -49,6 +50,7 @@ class E2ETestSuite(PluginMixin, InjectorMixin, AssertionMixin):
     """
 
     _port_counter = 16700
+    _origin_config = None
 
     def __init__(
         self,
@@ -80,7 +82,6 @@ class E2ETestSuite(PluginMixin, InjectorMixin, AssertionMixin):
             use_shared_server: 是否使用已提供的共享 MockServer（优化性能）
         """
         from ncatbot.core import BotClient
-        from ncatbot.utils import ncatbot_config
         from .mock_server import NapCatMockServer, get_standard_data
 
         # 自动创建 MockServer（仅在未提供时）
@@ -96,6 +97,10 @@ class E2ETestSuite(PluginMixin, InjectorMixin, AssertionMixin):
             )
             await self._mock_server.start()
             self._owns_mock_server = True
+
+        # 配置类级别变量以保证只在第一次运行时保存
+        if E2ETestSuite._origin_config is None:
+            E2ETestSuite._origin_config = deepcopy(ncatbot_config)
 
         # 配置 WebSocket URI 指向 MockServer
         ncatbot_config.napcat.ws_uri = self._mock_server.uri
@@ -128,7 +133,7 @@ class E2ETestSuite(PluginMixin, InjectorMixin, AssertionMixin):
             await self._mock_server.stop()
             self._mock_server = None
             self._owns_mock_server = False
-
+        self._origin_config.save()
         LOG.info("测试套件已清理")
 
     async def __aenter__(self) -> "E2ETestSuite":

@@ -8,6 +8,7 @@
 """
 
 import pytest
+import asyncio
 import pytest_asyncio
 import re
 import sys
@@ -125,14 +126,11 @@ async def test_suite():
     # 重置插件文件到原始状态
     _reset_plugin_file()
 
-    # 保存原始配置
-    original_plugins_dir = ncatbot_config.plugin.plugins_dir
-
     # 设置为不存在的空目录，避免自动加载
-    ncatbot_config.plugin.plugins_dir = str(FIXTURES_DIR / "empty_plugins")
-
     suite = E2ETestSuite()
+
     await suite.setup()
+    ncatbot_config.plugin.plugins_dir = str(FIXTURES_DIR / "empty_plugins")
 
     # 暂停 watcher，防止检测到初始化阶段的文件操作
     file_watcher = suite.services.file_watcher
@@ -143,15 +141,6 @@ async def test_suite():
 
     # 索引测试插件（不会自动加载）
     suite.index_plugin(str(RELOAD_PLUGIN_DIR))
-
-    # 重置插件文件的 mtime（在 FileWatcher 恢复之前）
-    # 确保 mtime 不是"未来"时间，并清除可能已经被缓存的值
-    import os
-    import time
-    import asyncio
-
-    current_time = time.time()
-    os.utime(str(RELOAD_PLUGIN_MAIN), (current_time, current_time))
 
     # 清除 FileWatcher 的文件缓存，确保下次扫描会重新读取 mtime
     file_watcher._file_cache.clear()
@@ -182,10 +171,6 @@ async def test_suite():
     # 清空 pending 队列，防止后续处理
     with file_watcher._pending_lock:
         file_watcher._pending_dirs.clear()
-
-    # 关键：在 teardown 之前恢复原始配置
-    # 这样 PluginConfigService 保存时不会写入测试目录路径
-    ncatbot_config.plugin.plugins_dir = original_plugins_dir
 
     await suite.teardown()
 
