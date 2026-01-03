@@ -1,9 +1,5 @@
 """Config package - exports the public configuration API."""
 
-from .config import config, ncatbot_config
+from .config import ncatbot_config, Config
 
-__all__ = [
-    "ncatbot_config",
-    "config",
-    "configCONFIG_PATH",
-]
+__all__ = ["ncatbot_config", "Config"]

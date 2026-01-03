@@ -167,4 +167,3 @@ ATTRIBUTE_IGNORE = {
 }
 
 ncatbot_config = Config.load()
-config = ncatbot_config

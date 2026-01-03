@@ -40,13 +40,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# 测试依赖。使用 pip install '.[test]' 安装
-test = [
-  "pytest>=7.0",
-  "pytest-asyncio>=0.21",
-  "pytest-cov>=4.0",
-  "pytest-html>=4.0",
-]
 # 开发依赖。使用 pip install '.[dev]' 安装（包含测试依赖）
 dev = [
   "ncatbot[test]",
@@ -61,6 +54,10 @@ dev = [
   "ruff",
   "mypy",
   "isort",
+  "pytest>=7.0",
+  "pytest-asyncio>=0.21",
+  "pytest-cov>=4.0",
+  "pytest-html>=4.0",
 ]
 
 [tool.setuptools.packages.find]

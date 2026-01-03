@@ -31,7 +31,7 @@ class TestInitialLoad:
 
         # 通过正常流程加载插件
         await loader.load_external_plugins(PLUGIN_ROOT)
-        await asyncio.sleep(0.01)
+        # await asyncio.sleep(0.01)
 
         plugin = loader.get_plugin(PLUGIN_NAME)
         assert plugin is not None, f"插件 {PLUGIN_NAME} 应该已加载"
@@ -56,7 +56,6 @@ class TestInitialLoad:
         """测试加载时别名正确注册"""
         loader = test_suite.client.plugin_loader
         await loader.load_external_plugins(PLUGIN_ROOT)
-        await asyncio.sleep(0.01)
 
         assert check_alias_registered("hrt"), "别名 'hrt' 应该已注册"
         assert check_alias_registered("hrc"), "别名 'hrc' 应该已注册"
@@ -66,7 +65,6 @@ class TestInitialLoad:
         """测试加载时配置正确注册"""
         loader = test_suite.client.plugin_loader
         await loader.load_external_plugins(PLUGIN_ROOT)
-        await asyncio.sleep(0.01)
 
         assert check_config_registered(test_suite, PLUGIN_NAME), "插件配置应该已注册"
 
@@ -80,7 +78,6 @@ class TestInitialLoad:
         """测试加载时事件处理器正确注册"""
         loader = test_suite.client.plugin_loader
         await loader.load_external_plugins(PLUGIN_ROOT)
-        await asyncio.sleep(0.01)
 
         handler_count = check_handler_registered(test_suite, PLUGIN_NAME)
         assert handler_count > 0, "应该有至少一个事件处理器已注册"
@@ -90,10 +87,8 @@ class TestInitialLoad:
         """测试加载后命令能正常工作"""
         loader = test_suite.client.plugin_loader
         await loader.load_external_plugins(PLUGIN_ROOT)
-        await asyncio.sleep(0.01)
 
         await test_suite.inject_group_message("/reload_test_cmd")
-        await asyncio.sleep(0.01)
 
         test_suite.assert_reply_sent()
         calls = test_suite.get_api_calls("send_group_msg")
