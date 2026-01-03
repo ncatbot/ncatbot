@@ -36,6 +36,10 @@ from .rules import (
     ImportReplacementRule,
     SelectiveImportReplacementRule,
     SymbolRenameRule,
+    AbsoluteToRelativeImportRule,
+    RemoveDeprecatedCodeRule,
+    SelectiveImportRemovalRule,
+    DeprecatedDecoratorReplacementRule,
 )
 from .migrator import CodeMigrator
 from .presets import create_default_migrator
@@ -49,6 +53,10 @@ __all__ = [
     "ImportReplacementRule",
     "SelectiveImportReplacementRule",
     "SymbolRenameRule",
+    "AbsoluteToRelativeImportRule",
+    "RemoveDeprecatedCodeRule",
+    "SelectiveImportRemovalRule",
+    "DeprecatedDecoratorReplacementRule",
     # 迁移器
     "CodeMigrator",
     # 预设
