@@ -2,7 +2,7 @@
 RBAC 实体管理模块 - 处理权限、角色、用户的管理
 """
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .service import RBACService
@@ -115,10 +115,17 @@ class EntityManager:
             return
 
         roles = [self._service._default_role] if self._service._default_role else []
-        self._service._users[user] = {"whitelist": set(), "blacklist": set(), "roles": roles}
+        self._service._users[user] = {
+            "whitelist": set(),
+            "blacklist": set(),
+            "roles": roles,
+        }
 
         # 添加到默认角色的用户列表
-        if self._service._default_role and self._service._default_role in self._service._role_users:
+        if (
+            self._service._default_role
+            and self._service._default_role in self._service._role_users
+        ):
             self._service._role_users[self._service._default_role].add(user)
 
     def remove_user(self, user: str) -> None:
@@ -138,14 +145,37 @@ class EntityManager:
         return user in self._service._users
 
     def user_has_role(self, user: str, role: str, create_user: bool = True) -> bool:
-        """检查用户是否拥有角色"""
-        if user not in self._service._users:
+        """
+        检查用户是否拥有指定角色（包括继承的角色）
+
+        Args:
+            user: 用户 ID
+            role: 角色名
+            create_user: 用户不存在时是否自动创建
+
+        Returns:
+            用户是否拥有该角色
+        """
+        if not self.user_exists(user):
             if create_user:
-                self.add_user(user, exist_ok=True)
+                self.add_user(user)
             else:
                 return False
 
-        return role in self._service._users[user]["roles"]
+        # 获取用户所有角色（包括继承的）
+        all_roles = set()
+
+        def collect_roles(r: str):
+            if r in all_roles:
+                return
+            all_roles.add(r)
+            for parent in self._service._role_inheritance.get(r, []):
+                collect_roles(parent)
+
+        for r in self._service._users[user]["roles"]:
+            collect_roles(r)
+
+        return role in all_roles
 
     def assign_role(
         self,

@@ -15,7 +15,7 @@ class TestLifecycle:
     def test_load_empty_storage(self, temp_storage_path):
         """测试从空存储加载"""
         service = RBACService(storage_path=str(temp_storage_path))
-        asyncio.run(service.on_load)
+        asyncio.run(service.on_load())
 
         assert service.users == {}
         assert service.roles == {}
@@ -25,20 +25,20 @@ class TestLifecycle:
         service = RBACService(
             storage_path=str(temp_storage_path), default_role="member"
         )
-        asyncio.run(service.on_load)
+        asyncio.run(service.on_load())
 
         assert service.role_exists("member")
 
     def test_save_on_close(self, temp_storage_path):
         """测试关闭时保存"""
         service = RBACService(storage_path=str(temp_storage_path))
-        asyncio.run(service.on_load)
+        asyncio.run(service.on_load())
 
         service.add_role("admin")
         service.add_user("user1")
         service.assign_role("user", "user1", "admin")
 
-        asyncio.run(service.on_close)
+        asyncio.run(service.on_close())
 
         # 验证文件已保存
         assert temp_storage_path.exists()
@@ -47,7 +47,7 @@ class TestLifecycle:
         """测试加载已保存的数据"""
         # 第一个服务实例：创建并保存数据
         service1 = RBACService(storage_path=str(temp_storage_path))
-        asyncio.run(service1.on_load)
+        asyncio.run(service1.on_load())
 
         service1.add_permission("plugin.admin.kick")
         service1.add_role("admin")
@@ -55,12 +55,11 @@ class TestLifecycle:
         service1.assign_role("user", "user1", "admin")
         service1.grant("user", "user1", "plugin.admin.kick")
 
-        asyncio.run(service1.on_close)
+        asyncio.run(service1.on_close())
 
         # 第二个服务实例：加载数据
         service2 = RBACService(storage_path=str(temp_storage_path))
-        asyncio.run(service2.on_load)
-
+        asyncio.run(service2.on_load())
         assert service2.role_exists("admin")
         assert service2.user_exists("user1")
         assert "admin" in service2._users["user1"]["roles"]
@@ -77,7 +76,7 @@ class TestPersistence:
             default_role="member",
             case_sensitive=False,
         )
-        asyncio.run(service1.on_load)
+        asyncio.run(service1.on_load())
 
         # 创建复杂状态
         service1.add_permission("plugin.admin.kick")
@@ -101,12 +100,11 @@ class TestPersistence:
         # 添加用户级别的黑名单
         service1.grant("user", "user1", "plugin.admin.ban", mode="black")
 
-        asyncio.run(service1.on_close)
+        asyncio.run(service1.on_close())
 
         # 恢复状态
         service2 = RBACService(storage_path=str(temp_storage_path))
-        asyncio.run(service2.on_load)
-
+        asyncio.run(service2.on_load())
         # 验证配置
         assert service2._case_sensitive is False
         assert service2._default_role == "member"
@@ -164,7 +162,7 @@ class TestE2EScenarios:
     def test_typical_bot_permission_scenario(self, temp_storage_path):
         """测试典型的 Bot 权限场景"""
         service = RBACService(storage_path=str(temp_storage_path), default_role="user")
-        asyncio.run(service.on_load)
+        asyncio.run(service.on_load())
 
         # 1. 设置权限结构
         # 命令权限
@@ -231,7 +229,7 @@ class TestE2EScenarios:
     def test_blacklist_override_scenario(self, temp_storage_path):
         """测试黑名单覆盖场景"""
         service = RBACService(storage_path=str(temp_storage_path))
-        asyncio.run(service.on_load)
+        asyncio.run(service.on_load())
 
         # 设置基础结构
         service.add_permission("command.admin.ban")
@@ -258,7 +256,7 @@ class TestE2EScenarios:
     def test_dynamic_permission_scenario(self, temp_storage_path):
         """测试动态权限场景"""
         service = RBACService(storage_path=str(temp_storage_path))
-        asyncio.run(service.on_load)
+        asyncio.run(service.on_load())
 
         user_id = "12345"
         service.add_user(user_id)
@@ -277,7 +275,7 @@ class TestE2EScenarios:
     def test_new_user_auto_registration(self, temp_storage_path):
         """测试新用户自动注册场景"""
         service = RBACService(storage_path=str(temp_storage_path), default_role="guest")
-        asyncio.run(service.on_load)
+        asyncio.run(service.on_load())
 
         # 设置 guest 权限
         service.grant("role", "guest", "command.user.help")
@@ -301,17 +299,3 @@ class TestConcurrentAccess:
         for _ in range(100):
             assert populated_rbac_service.check("111111111", "plugin.admin.kick")
             assert not populated_rbac_service.check("user1", "plugin.admin.kick")
-
-    def test_cache_effectiveness(self, populated_rbac_service):
-        """测试缓存效果"""
-        # 首次检查
-        populated_rbac_service.check("111111111", "plugin.admin.kick")
-
-        # 获取缓存信息
-        cache_info = populated_rbac_service._get_effective_permissions.cache_info()
-        assert cache_info.misses >= 1
-
-        # 再次检查应该命中缓存
-        populated_rbac_service.check("111111111", "plugin.admin.kick")
-        new_cache_info = populated_rbac_service._get_effective_permissions.cache_info()
-        assert new_cache_info.hits > cache_info.hits

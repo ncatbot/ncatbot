@@ -6,7 +6,7 @@
 """
 
 import traceback
-from typing import Dict, Any, TYPE_CHECKING
+from typing import Dict, Any, Optional, TYPE_CHECKING
 
 from ncatbot.utils import get_log
 
@@ -62,7 +62,7 @@ class TaskExecutor:
         """检查执行条件"""
         return all(cond() for cond in job_info["conditions"])
 
-    def _publish_task_event(self, plugin_name: str | None, task_name: str) -> None:
+    def _publish_task_event(self, plugin_name: Optional[str], task_name: str) -> None:
         """
         发布任务执行事件（线程安全）
 
