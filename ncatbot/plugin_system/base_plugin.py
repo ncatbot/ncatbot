@@ -50,6 +50,7 @@ class BasePlugin:
     workspace: Path
     services: ServiceManager
     api: "BotAPI"
+    data: Dict[str, Any]  # 持久化数据字典
 
     # -------- 内部属性 --------
     _debug: bool

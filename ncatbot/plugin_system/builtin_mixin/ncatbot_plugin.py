@@ -113,6 +113,9 @@ class NcatBotPlugin(BasePlugin, TimeTaskMixin, ConfigMixin):
             self.name, self._legacy_data_file
         )
 
+        # 加载持久化数据
+        self.data = await self.services.plugin_data.load_plugin_data(self.name)
+
         self._init_()
         await self.on_load()
 
@@ -131,7 +134,12 @@ class NcatBotPlugin(BasePlugin, TimeTaskMixin, ConfigMixin):
             # 清理配置项注册（保留配置值）
             self.services.plugin_config.unregister_plugin_configs(self.name)
             self.services.unified_registry.handle_plugin_unload(self.name)
+
+            # 先执行用户的清理逻辑
             self._close_(*a, **kw)
             await self.on_close(*a, **kw)
+
+            # 然后保存持久化数据（这样 on_close 中的修改也会被保存）
+            await self.services.plugin_data.save_plugin_data(self.name)
         except Exception as e:
             LOG.exception("插件 %s 卸载错误：%s: %s", self.name, type(e), e)

@@ -10,6 +10,7 @@ from .rbac import RBACService, PermissionPath, PermissionTrie
 from .plugin_config import PluginConfigService, ConfigItem, PluginConfig
 from .unified_registry import UnifiedRegistryService
 from .file_watcher import FileWatcherService
+from .plugin_data import PluginDataService
 
 __all__ = [
     "MessageRouter",
@@ -22,4 +23,5 @@ __all__ = [
     "PluginConfig",
     "UnifiedRegistryService",
     "FileWatcherService",
+    "PluginDataService",
 ]
