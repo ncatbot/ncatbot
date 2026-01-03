@@ -1,3 +1,8 @@
+"""插件模块导入器。
+
+负责插件的索引、加载和卸载。
+"""
+
 import sys
 import importlib
 import importlib.util
@@ -13,6 +18,11 @@ from ncatbot.utils import get_log
 
 from ..config import config
 from ..packhelper import PackageHelper
+from .finder import (
+    TOP_PACKAGE_NAME,
+    ensure_finder_installed,
+    register_plugin_path,
+)
 
 LOG = get_log("ModuleImporter")
 _AUTO_INSTALL = config.auto_install_pip_pack
@@ -28,6 +38,8 @@ class _ModuleImporter:
         self._plugin_folders: Dict[str, Path] = {}
         # 原始插件名 -> sanitized 名称（用于生成合法的包名）
         self._sanitized_names: Dict[str, str] = {}
+        # 插件名 -> 文件夹名称
+        self._folder_names: Dict[str, str] = {}
         self._used_sanitized: set = set()
 
     def _ensure_sanitized(self, plugin_name: str) -> str:
@@ -125,9 +137,20 @@ class _ModuleImporter:
 
             self._plugin_folders[plugin_name] = plugin_dir
             self._manifests[plugin_name] = manifest
-            self._ensure_sanitized(plugin_name)
+            folder_name = plugin_dir.name
+            self._folder_names[plugin_name] = folder_name
+            sanitized = self._ensure_sanitized(plugin_name)
 
-            LOG.debug("已索引插件: %s (路径: %s)", plugin_name, plugin_dir)
+            # 关键：在索引阶段就注册插件路径到 Finder
+            # 这样其他插件在加载时可以通过相对导入找到此插件
+            register_plugin_path(sanitized, str(plugin_dir), folder_name)
+
+            LOG.debug(
+                "已索引插件: %s (路径: %s, 文件夹: %s)",
+                plugin_name,
+                plugin_dir,
+                folder_name,
+            )
             return plugin_name
 
         except Exception:
@@ -136,6 +159,8 @@ class _ModuleImporter:
 
     def index_all_plugins(self, plugin_root: Path) -> List[str]:
         """扫描并索引 directory 下所有合法的插件，返回插件名列表"""
+        # 确保 Finder 已安装
+        ensure_finder_installed()
         for entry in plugin_root.iterdir():
             self._index_single_plugin(entry)
         return list(self._plugin_folders.keys())
@@ -149,6 +174,7 @@ class _ModuleImporter:
         Returns:
             插件名称，如果索引失败则返回 None
         """
+        ensure_finder_installed()
         return self._index_single_plugin(plugin_dir)
 
     def get_plugin_name_by_folder(self, folder_name: str) -> Optional[str]:
@@ -181,6 +207,11 @@ class _ModuleImporter:
 
         pkg_name = self._get_plugin_pkg_name(plugin_name)
 
+        # 从 Finder 中注销插件（可选，保留以支持重新加载）
+        # sanitized_name = self._sanitized_names.get(plugin_name, plugin_name)
+        # folder_name = self._folder_names.get(plugin_name)
+        # unregister_plugin_path(sanitized_name, folder_name)
+
         # Collect candidates: modules that are the plugin package or its submodules.
         modules_to_remove = [
             module_name
@@ -212,6 +243,9 @@ class _ModuleImporter:
         return True
 
     def load_plugin_module(self, plugin_name: str) -> Optional[ModuleType]:
+        # 确保自定义 Finder 已安装
+        ensure_finder_installed()
+
         # 清除导入缓存，确保读取最新的源文件
         importlib.invalidate_caches()
 
@@ -236,6 +270,17 @@ class _ModuleImporter:
 
             pkg_name = self._get_plugin_pkg_name(plugin_name)
             module_name = self._get_plugin_main_module_name(plugin_name)
+
+            # 首先确保顶级虚拟包 ncatbot_plugin 存在
+            if TOP_PACKAGE_NAME not in sys.modules:
+                top_pkg_module = importlib.util.module_from_spec(
+                    importlib.machinery.ModuleSpec(
+                        TOP_PACKAGE_NAME, None, is_package=True
+                    )
+                )
+                # 顶级虚拟包的 __path__ 为空，因为它只是一个命名空间包
+                top_pkg_module.__path__ = []
+                sys.modules[TOP_PACKAGE_NAME] = top_pkg_module
 
             if pkg_name not in sys.modules:
                 # 创建一个空的模块作为包
@@ -276,11 +321,13 @@ class _ModuleImporter:
                     sys.modules.pop(module_name, None)
                 if created_pkg:
                     sys.modules.pop(pkg_name, None)
+                # 注意：不回滚顶级包 ncatbot_plugin，因为它可能被其他插件使用
+                # 顶级包是一个轻量级的命名空间包，保留它不会有负面影响
                 raise
 
             return module
         except Exception as e:
-            LOG.error("导入模块 %s 时出错: %s", plugin_name, e)
+            LOG.exception(e)
             raise
         finally:
             sys.path = original_sys_path
@@ -288,7 +335,7 @@ class _ModuleImporter:
     def _get_plugin_pkg_name(self, name: str) -> str:
         # 使用 sanitized 名称生成包名，若未记录则退回到原始 name
         sanitized = self._sanitized_names.get(name, name)
-        return f"ncatbot_plugin.{sanitized}"
+        return f"{TOP_PACKAGE_NAME}.{sanitized}"
 
     def _get_plugin_entry_stem(self, name: str) -> str:
         """手滑把 .py 漏了也无所谓了"""
@@ -319,41 +366,42 @@ class _ModuleImporter:
         """获取插件目录路径"""
         return self._plugin_folders[name]
 
-    def _maybe_install_deps(self, plugin_path: Path) -> None:
-        if not _AUTO_INSTALL:
-            return
 
-        def ensure_req_from_requirements():
-            req_file = (
-                plugin_path / "requirements.txt"
-                if plugin_path.is_dir()
-                else plugin_path.with_suffix(".requirements.txt")
-            )
-            if not req_file.exists():
-                return
+# 依赖解析和加载相关的功能
+class _DependencyResolver:
+    """插件依赖解析器。"""
 
-            for line in req_file.read_text(encoding="utf-8").splitlines():
-                req = line.strip()
-                if not req or req.startswith("#") or req.startswith("-"):
-                    continue
-                self._ensure_package(req)
+    def __init__(self, importer: _ModuleImporter):
+        self._importer = importer
 
-        def ensure_req_from_pyproject():
-            pyproject = (
-                plugin_path / "pyproject.toml"
-                if plugin_path.is_dir()
-                else plugin_path.with_suffix(".pyproject.toml")
-            )
-            if not pyproject.exists():
-                return
-            data = toml.load(pyproject)
-            requires = data.get("project", {}).get("dependencies", [])
-            for req in requires:
-                self._ensure_package(req)
+    def resolve_load_order(self, plugin_names: List[str]) -> List[str]:
+        """解析插件加载顺序，考虑依赖关系。
 
-        ensure_req_from_pyproject()
-        ensure_req_from_requirements()
+        返回按依赖顺序排列的插件列表。
+        """
+        # 简单实现：目前不处理复杂依赖，直接返回原列表
+        # 未来可以实现拓扑排序
+        return list(plugin_names)
 
-    def _ensure_package(self, req: str) -> None:
-        """检查包是否存在，不存在则安装。"""
-        PackageHelper.ensure(req)
+
+def _install_pip_deps(manifest: dict) -> bool:
+    """安装插件的 pip 依赖"""
+    deps = manifest.get("pip_dependencies", [])
+    if not deps:
+        return True
+
+    if not _AUTO_INSTALL:
+        LOG.info("需要安装的依赖: %s (自动安装已禁用)", deps)
+        return True
+
+    LOG.info("正在安装插件依赖: %s", deps)
+    return PackageHelper().install_packages(deps)
+
+
+# 为了向后兼容，保留这些导出
+__all__ = [
+    "_ModuleImporter",
+    "_DependencyResolver",
+    "_install_pip_deps",
+    "TOP_PACKAGE_NAME",
+]
