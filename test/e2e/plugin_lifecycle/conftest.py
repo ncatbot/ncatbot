@@ -3,6 +3,7 @@
 """
 
 import pytest
+import pytest_asyncio
 import sys
 from pathlib import Path
 
@@ -38,11 +39,11 @@ def reset_plugin_counters(plugin_name: str):
         plugin_class.reset_counters()
 
 
-@pytest.fixture
-def test_suite():
+@pytest_asyncio.fixture
+async def test_suite():
     """创建测试套件并索引所有测试插件"""
     suite = E2ETestSuite()
-    suite.setup()
+    await suite.setup()
     
     # 索引所有测试插件
     for plugin_dir in PLUGINS_DIR.iterdir():
@@ -50,14 +51,14 @@ def test_suite():
             suite.index_plugin(str(plugin_dir))
     
     yield suite
-    suite.teardown()
+    await suite.teardown()
 
 
-@pytest.fixture
-def test_suite_skip_builtin():
+@pytest_asyncio.fixture
+async def test_suite_skip_builtin():
     """创建跳过内置插件的测试套件"""
-    suite = E2ETestSuite(skip_builtin_plugins=True)
-    suite.setup()
+    suite = E2ETestSuite()
+    await suite.setup()
     
     # 索引所有测试插件
     for plugin_dir in PLUGINS_DIR.iterdir():
@@ -65,7 +66,7 @@ def test_suite_skip_builtin():
             suite.index_plugin(str(plugin_dir))
     
     yield suite
-    suite.teardown()
+    await suite.teardown()
 
 
 # ==================== 插件名 fixtures ====================
