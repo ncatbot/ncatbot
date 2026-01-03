@@ -309,20 +309,20 @@ class TestConcurrentAccess:
         """测试多次权限检查"""
         # 模拟多次快速检查
         for _ in range(100):
-            assert populated_rbac_service.check("admin_user", "plugin.admin.kick")
+            assert populated_rbac_service.check("111111111", "plugin.admin.kick")
             assert not populated_rbac_service.check("user1", "plugin.admin.kick")
 
     def test_cache_effectiveness(self, populated_rbac_service):
         """测试缓存效果"""
         # 首次检查
-        populated_rbac_service.check("admin_user", "plugin.admin.kick")
+        populated_rbac_service.check("111111111", "plugin.admin.kick")
         
         # 获取缓存信息
         cache_info = populated_rbac_service._get_effective_permissions.cache_info()
         assert cache_info.misses >= 1
         
         # 再次检查应该命中缓存
-        populated_rbac_service.check("admin_user", "plugin.admin.kick")
+        populated_rbac_service.check("111111111", "plugin.admin.kick")
         new_cache_info = populated_rbac_service._get_effective_permissions.cache_info()
         assert new_cache_info.hits > cache_info.hits
 

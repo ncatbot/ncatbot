@@ -321,7 +321,7 @@ class TestPermissionCheck:
     def test_check_whitelist(self, populated_rbac_service):
         """测试白名单权限检查"""
         # admin_user 有 admin 角色，有 plugin.admin.kick 权限
-        assert populated_rbac_service.check("admin_user", "plugin.admin.kick")
+        assert populated_rbac_service.check("111111111", "plugin.admin.kick")
 
     def test_check_blacklist_priority(self, rbac_service):
         """测试黑名单优先"""

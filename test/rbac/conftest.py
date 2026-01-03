@@ -82,12 +82,12 @@ def populated_rbac_service(rbac_service):
     # 添加用户
     rbac_service.add_user("user1")
     rbac_service.add_user("user2")
-    rbac_service.add_user("admin_user")
+    rbac_service.add_user("111111111")
     
     # 分配角色
     rbac_service.assign_role("user", "user1", "member")
     rbac_service.assign_role("user", "user2", "moderator")
-    rbac_service.assign_role("user", "admin_user", "admin")
+    rbac_service.assign_role("user", "111111111", "admin")
     
     yield rbac_service
 

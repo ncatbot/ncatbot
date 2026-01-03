@@ -3,6 +3,9 @@
 测试多种过滤器组合（AdminFilter + GroupFilter 等）与 RBAC 的配合。
 """
 
+import pytest
+import pytest_asyncio
+
 from ncatbot.utils.testing import E2ETestSuite
 from ncatbot.utils.assets.literals import PermissionGroup
 
@@ -12,7 +15,8 @@ from .conftest import RBAC_PLUGIN_DIR, cleanup_modules
 class TestRoleInheritanceWithFilters:
     """测试角色继承对过滤器的影响"""
     
-    def test_inherited_admin_role(self, rbac_service_for_e2e):
+    @pytest.mark.asyncio
+    async def test_inherited_admin_role(self, rbac_service_for_e2e):
         """测试继承的管理员角色可以通过 AdminFilter"""
         cleanup_modules()
         
@@ -24,18 +28,18 @@ class TestRoleInheritanceWithFilters:
         rbac.set_role_inheritance("custom_role", PermissionGroup.ADMIN.value)
         
         # 用户只有 custom_role
-        rbac.add_user("custom_user")
-        rbac.assign_role("user", "custom_user", "custom_role")
+        rbac.add_user("777777777")
+        rbac.assign_role("user", "777777777", "custom_role")
         
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(RBAC_PLUGIN_DIR))
-            suite.register_plugin_sync("rbac_test_plugin")
+            await suite.register_plugin("rbac_test_plugin")
             
             # 应该可以执行 admin_cmd（因为继承了 admin 角色）
-            suite.inject_group_message_sync(
+            await suite.inject_group_message(
                 "/admin_cmd",
-                user_id="custom_user",
-                group_id="test_group"
+                user_id="777777777",
+                group_id="111222333"
             )
             suite.assert_reply_sent()
             
@@ -45,7 +49,8 @@ class TestRoleInheritanceWithFilters:
         
         cleanup_modules()
     
-    def test_inherited_root_role(self, rbac_service_for_e2e):
+    @pytest.mark.asyncio
+    async def test_inherited_root_role(self, rbac_service_for_e2e):
         """测试继承的 root 角色可以通过 RootFilter"""
         cleanup_modules()
         
@@ -56,18 +61,18 @@ class TestRoleInheritanceWithFilters:
         rbac.add_role("super_admin", exist_ok=True)
         rbac.set_role_inheritance("super_admin", PermissionGroup.ROOT.value)
         
-        rbac.add_user("super_user")
-        rbac.assign_role("user", "super_user", "super_admin")
+        rbac.add_user("555555555")
+        rbac.assign_role("user", "555555555", "super_admin")
         
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(RBAC_PLUGIN_DIR))
-            suite.register_plugin_sync("rbac_test_plugin")
+            await suite.register_plugin("rbac_test_plugin")
             
             # 应该可以执行 root_cmd（因为继承了 root 角色）
-            suite.inject_group_message_sync(
+            await suite.inject_group_message(
                 "/root_cmd",
-                user_id="super_user",
-                group_id="test_group"
+                user_id="555555555",
+                group_id="111222333"
             )
             suite.assert_reply_sent()
             
@@ -81,25 +86,26 @@ class TestRoleInheritanceWithFilters:
 class TestCombinedFiltersWithRBAC:
     """测试组合过滤器与 RBAC 的联动"""
     
-    def test_admin_and_group_filter(self, rbac_service_for_e2e):
+    @pytest.mark.asyncio
+    async def test_admin_and_group_filter(self, rbac_service_for_e2e):
         """测试 AdminFilter + GroupFilter 组合"""
         cleanup_modules()
         
         rbac = rbac_service_for_e2e
         
         rbac.add_role(PermissionGroup.ADMIN.value, exist_ok=True)
-        rbac.add_user("admin_user")
-        rbac.assign_role("user", "admin_user", PermissionGroup.ADMIN.value)
+        rbac.add_user("111111111")
+        rbac.assign_role("user", "111111111", PermissionGroup.ADMIN.value)
         
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(RBAC_PLUGIN_DIR))
-            suite.register_plugin_sync("rbac_test_plugin")
+            await suite.register_plugin("rbac_test_plugin")
             
             # 群聊中的管理员应该可以执行
-            suite.inject_group_message_sync(
+            await suite.inject_group_message(
                 "/group_admin_cmd",
-                user_id="admin_user",
-                group_id="test_group"
+                user_id="111111111",
+                group_id="111222333"
             )
             suite.assert_reply_sent()
             
@@ -109,24 +115,25 @@ class TestCombinedFiltersWithRBAC:
         
         cleanup_modules()
     
-    def test_admin_in_private_fails_group_filter(self, rbac_service_for_e2e):
+    @pytest.mark.asyncio
+    async def test_admin_in_private_fails_group_filter(self, rbac_service_for_e2e):
         """测试管理员在私聊中无法通过 GroupFilter"""
         cleanup_modules()
         
         rbac = rbac_service_for_e2e
         
         rbac.add_role(PermissionGroup.ADMIN.value, exist_ok=True)
-        rbac.add_user("admin_user")
-        rbac.assign_role("user", "admin_user", PermissionGroup.ADMIN.value)
+        rbac.add_user("111111111")
+        rbac.assign_role("user", "111111111", PermissionGroup.ADMIN.value)
         
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(RBAC_PLUGIN_DIR))
-            suite.register_plugin_sync("rbac_test_plugin")
+            await suite.register_plugin("rbac_test_plugin")
             
             # 私聊中执行 group_admin_cmd 应该失败（不满足 GroupFilter）
-            suite.inject_private_message_sync(
+            await suite.inject_private_message(
                 "/group_admin_cmd",
-                user_id="admin_user"
+                user_id="111111111"
             )
             
             # 检查没有执行成功的回复
@@ -137,24 +144,25 @@ class TestCombinedFiltersWithRBAC:
         
         cleanup_modules()
     
-    def test_root_and_private_filter(self, rbac_service_for_e2e):
+    @pytest.mark.asyncio
+    async def test_root_and_private_filter(self, rbac_service_for_e2e):
         """测试 RootFilter + PrivateFilter 组合"""
         cleanup_modules()
         
         rbac = rbac_service_for_e2e
         
         rbac.add_role(PermissionGroup.ROOT.value, exist_ok=True)
-        rbac.add_user("root_user")
-        rbac.assign_role("user", "root_user", PermissionGroup.ROOT.value)
+        rbac.add_user("222222222")
+        rbac.assign_role("user", "222222222", PermissionGroup.ROOT.value)
         
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(RBAC_PLUGIN_DIR))
-            suite.register_plugin_sync("rbac_test_plugin")
+            await suite.register_plugin("rbac_test_plugin")
             
             # 私聊中的 root 应该可以执行
-            suite.inject_private_message_sync(
+            await suite.inject_private_message(
                 "/private_root_cmd",
-                user_id="root_user"
+                user_id="222222222"
             )
             suite.assert_reply_sent()
             
@@ -164,25 +172,26 @@ class TestCombinedFiltersWithRBAC:
         
         cleanup_modules()
     
-    def test_root_in_group_fails_private_filter(self, rbac_service_for_e2e):
+    @pytest.mark.asyncio
+    async def test_root_in_group_fails_private_filter(self, rbac_service_for_e2e):
         """测试 root 在群聊中无法通过 PrivateFilter"""
         cleanup_modules()
         
         rbac = rbac_service_for_e2e
         
         rbac.add_role(PermissionGroup.ROOT.value, exist_ok=True)
-        rbac.add_user("root_user")
-        rbac.assign_role("user", "root_user", PermissionGroup.ROOT.value)
+        rbac.add_user("222222222")
+        rbac.assign_role("user", "222222222", PermissionGroup.ROOT.value)
         
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(RBAC_PLUGIN_DIR))
-            suite.register_plugin_sync("rbac_test_plugin")
+            await suite.register_plugin("rbac_test_plugin")
             
             # 群聊中执行 private_root_cmd 应该失败
-            suite.inject_group_message_sync(
+            await suite.inject_group_message(
                 "/private_root_cmd",
-                user_id="root_user",
-                group_id="test_group"
+                user_id="222222222",
+                group_id="111222333"
             )
             
             calls = suite.get_api_calls("send_group_msg")
@@ -196,19 +205,20 @@ class TestCombinedFiltersWithRBAC:
 class TestPublicCommandsWithRBAC:
     """测试无权限要求的命令"""
     
-    def test_public_command_no_rbac(self, rbac_service_for_e2e):
+    @pytest.mark.asyncio
+    async def test_public_command_no_rbac(self, rbac_service_for_e2e):
         """测试公开命令不需要 RBAC 权限"""
         cleanup_modules()
         
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(RBAC_PLUGIN_DIR))
-            suite.register_plugin_sync("rbac_test_plugin")
+            await suite.register_plugin("rbac_test_plugin")
             
             # 任何用户都应该可以执行 public_cmd
-            suite.inject_group_message_sync(
+            await suite.inject_group_message(
                 "/public_cmd",
-                user_id="random_user",
-                group_id="test_group"
+                user_id="19260817",
+                group_id="111222333"
             )
             suite.assert_reply_sent()
             
@@ -218,19 +228,20 @@ class TestPublicCommandsWithRBAC:
         
         cleanup_modules()
     
-    def test_group_filter_only_no_rbac(self, rbac_service_for_e2e):
+    @pytest.mark.asyncio
+    async def test_group_filter_only_no_rbac(self, rbac_service_for_e2e):
         """测试只有 GroupFilter 的命令"""
         cleanup_modules()
         
-        with E2ETestSuite(skip_builtin_plugins=False) as suite:
+        async with E2ETestSuite() as suite:
             suite.index_plugin(str(RBAC_PLUGIN_DIR))
-            suite.register_plugin_sync("rbac_test_plugin")
+            await suite.register_plugin("rbac_test_plugin")
             
             # 群聊中任何用户都应该可以执行
-            suite.inject_group_message_sync(
+            await suite.inject_group_message(
                 "/group_cmd",
-                user_id="random_user",
-                group_id="test_group"
+                user_id="19260817",
+                group_id="111222333"
             )
             suite.assert_reply_sent()
             
@@ -284,4 +295,3 @@ class TestUserHasRoleMethod:
         # 用户不存在，create_user=False 时不创建
         assert rbac.user_has_role("another_user", "test_role", create_user=False) is False
         assert rbac.user_exists("another_user") is False
-
