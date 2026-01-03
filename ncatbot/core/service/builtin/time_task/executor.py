@@ -2,13 +2,13 @@
 任务执行器
 
 提供定时任务的执行逻辑。
+通过发布事件 ncatbot.[plugin_name].[task_name] 触发任务执行。
 """
 
-import asyncio
 import traceback
-from typing import Dict, Any, Callable, TYPE_CHECKING
+from typing import Dict, Any, TYPE_CHECKING
 
-from ncatbot.utils import run_coroutine, get_log
+from ncatbot.utils import get_log
 
 if TYPE_CHECKING:
     from .service import TimeTaskService
@@ -22,9 +22,8 @@ class TaskExecutor:
 
     负责执行定时任务，包括：
     - 条件检查
-    - 参数处理
-    - 执行任务函数
-    - 事件发布
+    - 执行次数检查
+    - 发布任务事件（由订阅者执行实际逻辑）
     """
 
     def __init__(self, service: "TimeTaskService"):
@@ -34,10 +33,14 @@ class TaskExecutor:
         """
         执行任务
 
+        通过发布 ncatbot.[plugin_name].[task_name] 事件来触发任务。
+        实际的任务逻辑由订阅该事件的处理器执行。
+
         Args:
             job_info: 任务信息字典
         """
         name = job_info["name"]
+        plugin_name = job_info.get("plugin_name")
 
         # 执行次数检查
         if job_info["max_runs"] and job_info["run_count"] >= job_info["max_runs"]:
@@ -48,63 +51,52 @@ class TaskExecutor:
         if not self._check_conditions(job_info):
             return
 
-        # 执行任务
-        final_args, final_kwargs = self._prepare_arguments(job_info)
-
         try:
-            self._run_task(job_info["func"], final_args, final_kwargs)
+            self._publish_task_event(plugin_name, name)
             job_info["run_count"] += 1
-            self._publish_event(name)
-
         except Exception as e:
-            LOG.error(f"定时任务执行失败 [{name}]: {e}")
-            LOG.debug(f"任务执行异常堆栈:\n{traceback.format_exc()}")
+            LOG.error(f"定时任务事件发布失败 [{name}]: {e}")
+            LOG.debug(f"任务事件发布异常堆栈:\n{traceback.format_exc()}")
 
     def _check_conditions(self, job_info: Dict[str, Any]) -> bool:
         """检查执行条件"""
         return all(cond() for cond in job_info["conditions"])
 
-    def _prepare_arguments(self, job_info: Dict[str, Any]) -> tuple:
-        """准备任务参数"""
-        # 动态参数
-        dyn_args = job_info["args_provider"]() if job_info["args_provider"] else ()
-        dyn_kwargs = (
-            job_info["kwargs_provider"]() if job_info["kwargs_provider"] else {}
-        )
+    def _publish_task_event(self, plugin_name: str | None, task_name: str) -> None:
+        """
+        发布任务执行事件（线程安全）
 
-        # 合并参数（动态参数优先）
-        final_args = dyn_args or job_info["static_args"] or ()
-        final_kwargs = {**job_info["static_kwargs"], **dyn_kwargs}
-
-        return final_args, final_kwargs
-
-    def _run_task(self, func: Callable, args: tuple, kwargs: dict) -> None:
-        """运行任务函数"""
-        if asyncio.iscoroutinefunction(func):
-            run_coroutine(func, *args, **kwargs)
-        else:
-            func(*args, **kwargs)
-
-    def _publish_event(self, task_name: str) -> None:
-        """发布任务执行事件（线程安全）"""
+        事件类型格式: ncatbot.[plugin_name].[task_name]
+        如果没有 plugin_name，则格式为: ncatbot.time_task.[task_name]
+        """
         service_manager = self._service.service_manager
         if service_manager is None:
+            LOG.debug(f"无法发布任务事件 [{task_name}]: ServiceManager 不可用")
             return
 
         bot_client = getattr(service_manager, "bot_client", None)
         if bot_client is None:
+            LOG.debug(f"无法发布任务事件 [{task_name}]: BotClient 不可用")
             return
 
         event_bus = getattr(bot_client, "event_bus", None)
         if event_bus is None:
+            LOG.debug(f"无法发布任务事件 [{task_name}]: EventBus 不可用")
             return
 
         from ncatbot.core.client.ncatbot_event import NcatBotEvent
 
+        # 构建事件类型: ncatbot.[plugin_name].[task_name]
+        if plugin_name:
+            event_type = f"ncatbot.{plugin_name}.{task_name}"
+        else:
+            event_type = f"ncatbot.time_task.{task_name}"
+
         event = NcatBotEvent(
-            type="ncatbot.time_task_executed",
-            data={"task_name": task_name},
+            type=event_type,
+            data={"task_name": task_name, "plugin_name": plugin_name},
         )
 
         # 使用 EventBus 提供的线程安全接口
         event_bus.publish_threadsafe_wait(event, timeout=1.0)
+        LOG.debug(f"已发布定时任务事件: {event_type}")

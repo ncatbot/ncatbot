@@ -113,12 +113,9 @@ class NcatBotPlugin(BasePlugin, TimeTaskMixin, ConfigMixin):
     async def __unload__(self, *a: Any, **kw: Any) -> None:
         """由框架在卸载插件时调用。"""
         # 清理定时任务
-        if hasattr(self, "_time_task_jobs"):
-            for name in list(self._time_task_jobs.keys()):
-                self.remove_scheduled_task(name)
-
         try:
             self.unregister_all_handler()
+            self.cleanup_scheduled_tasks()
             # 清理配置项注册（保留配置值）
             self.services.plugin_config.unregister_plugin_configs(self.name)
             self.services.unified_registry.handle_plugin_unload(self.name)

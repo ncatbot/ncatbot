@@ -2,12 +2,12 @@
 定时任务服务
 
 提供线程安全的定时任务调度功能。
+通过事件机制触发任务执行。
 """
 
-import functools
 import threading
 import traceback
-from typing import Callable, Optional, List, Tuple, Dict, Any, Union
+from typing import Callable, Optional, List, Dict, Any, Union
 
 from schedule import Scheduler
 
@@ -107,29 +107,24 @@ class TimeTaskService(BaseService):
 
     def add_job(
         self,
-        job_func: Callable,
         name: str,
         interval: Union[str, int, float],
         conditions: Optional[List[Callable[[], bool]]] = None,
         max_runs: Optional[int] = None,
-        args: Optional[Tuple] = None,
-        kwargs: Optional[Dict] = None,
-        args_provider: Optional[Callable[[], Tuple]] = None,
-        kwargs_provider: Optional[Callable[[], Dict[str, Any]]] = None,
+        plugin_name: Optional[str] = None,
     ) -> bool:
         """
         添加定时任务
 
+        任务执行时会发布事件 ncatbot.[plugin_name].[task_name]，
+        由订阅该事件的处理器执行实际任务逻辑。
+
         Args:
-            job_func: 要执行的任务函数
             name: 任务唯一标识名称
             interval: 调度时间参数
             conditions: 执行条件列表
             max_runs: 最大执行次数
-            args: 静态位置参数
-            kwargs: 静态关键字参数
-            args_provider: 动态位置参数生成函数
-            kwargs_provider: 动态关键字参数生成函数
+            plugin_name: 插件名称，用于生成事件类型
 
         Returns:
             是否添加成功
@@ -140,21 +135,13 @@ class TimeTaskService(BaseService):
                 LOG.warning(f"定时任务添加失败: 任务名称 '{name}' 已存在")
                 return False
 
-            # 参数冲突检查
-            if (args and args_provider) or (kwargs and kwargs_provider):
-                raise ValueError("静态参数和动态参数生成器不能同时使用")
-
             try:
                 return self._create_job(
-                    job_func=job_func,
                     name=name,
                     interval=interval,
                     conditions=conditions,
                     max_runs=max_runs,
-                    args=args,
-                    kwargs=kwargs,
-                    args_provider=args_provider,
-                    kwargs_provider=kwargs_provider,
+                    plugin_name=plugin_name,
                 )
             except Exception as e:
                 LOG.error(f"定时任务添加失败: {e}")
@@ -229,15 +216,11 @@ class TimeTaskService(BaseService):
 
     def _create_job(
         self,
-        job_func: Callable,
         name: str,
         interval: Union[str, int, float],
         conditions: Optional[List[Callable[[], bool]]],
         max_runs: Optional[int],
-        args: Optional[Tuple],
-        kwargs: Optional[Dict],
-        args_provider: Optional[Callable[[], Tuple]],
-        kwargs_provider: Optional[Callable[[], Dict[str, Any]]],
+        plugin_name: Optional[str],
     ) -> bool:
         """创建并注册任务（内部方法，已持有锁）"""
         # 解析时间参数
@@ -251,18 +234,13 @@ class TimeTaskService(BaseService):
 
         job_info: Dict[str, Any] = {
             "name": name,
-            "func": job_func,
+            "plugin_name": plugin_name,
             "max_runs": max_runs,
             "run_count": 0,
             "conditions": conditions or [],
-            "static_args": args,
-            "static_kwargs": kwargs or {},
-            "args_provider": args_provider,
-            "kwargs_provider": kwargs_provider,
         }
 
         # 创建包装函数
-        @functools.wraps(job_func)
         def job_wrapper():
             self.executor.execute(job_info)
 
