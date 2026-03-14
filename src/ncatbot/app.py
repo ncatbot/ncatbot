@@ -3,9 +3,20 @@ import inspect
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Coroutine
 from types import UnionType
-from typing import Any, Union, cast, get_args, get_origin, overload
+from typing import Any, Literal, Union, cast, get_args, get_origin, overload
 
-from .adapters import BaseAdapter
+from .adapters import BaseAdapter, InternalEventAdapter
+from .events import (
+    AdapterAdded,
+    AdapterRestartScheduled,
+    AdapterRunExited,
+    AdapterRunFailed,
+    AdapterRunStarting,
+    AppStarted,
+    AppStarting,
+    AppStopping,
+    FrameworkEvent,
+)
 
 type HandlerReturn = Coroutine[Any, Any, None]
 type EventHandler[T] = Callable[[T], HandlerReturn]
@@ -23,6 +34,8 @@ class NcatBotApp:
         self._adapter_tasks: list[asyncio.Task[None]] = []
         self._loop: asyncio.AbstractEventLoop | None = None
         self._adapter_restart_delay = adapter_restart_delay
+        self._internal_adapter = InternalEventAdapter()
+        self._attach_adapter(self._internal_adapter)
 
     def events(self) -> AsyncIterator[object]:
         """返回广播所有 adapter 事件的异步迭代器。"""
@@ -55,8 +68,46 @@ class NcatBotApp:
     def is_running(self) -> bool:
         return self._running
 
-    def add_adapter(self, adapter: BaseAdapter):
+    def _attach_adapter(self, adapter: BaseAdapter):
         self.adapters.append(adapter)
+
+    def _is_internal_adapter(self, adapter: BaseAdapter) -> bool:
+        return adapter is self._internal_adapter
+
+    def _adapter_event_kwargs(self, adapter: BaseAdapter) -> dict[str, str]:
+        return {
+            "adapter_name": adapter.adapter_name,
+            "platform_name": adapter.platform_name,
+            "adapter_version": adapter.adapter_version,
+        }
+
+    def _enqueue_framework_event(self, event: FrameworkEvent):
+        self._internal_adapter.publish_nowait(event)
+
+    def _emit_framework_event(self, event: FrameworkEvent):
+        if self._loop is None:
+            self._enqueue_framework_event(event)
+            return
+
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if current_loop is self._loop:
+            self._enqueue_framework_event(event)
+        else:
+            self._loop.call_soon_threadsafe(self._enqueue_framework_event, event)
+
+    def _is_stop_requested(self) -> bool:
+        return self._stop_event is not None and self._stop_event.is_set()
+
+    def add_adapter(self, adapter: BaseAdapter):
+        self._attach_adapter(adapter)
+        if not self._is_internal_adapter(adapter):
+            self._emit_framework_event(
+                AdapterAdded(**self._adapter_event_kwargs(adapter))
+            )
         if self._running and self._loop is not None:
             try:
                 current_loop = asyncio.get_running_loop()
@@ -177,7 +228,18 @@ class NcatBotApp:
             asyncio.create_task(handler(event_obj))
 
     async def _run_adapter(self, adapter: BaseAdapter):
+        attempt = 0
         while True:
+            attempt += 1
+            if not self._is_internal_adapter(adapter):
+                self._emit_framework_event(
+                    AdapterRunStarting(
+                        **self._adapter_event_kwargs(adapter),
+                        attempt=attempt,
+                    )
+                )
+
+            exit_reason: Literal["completed", "failed", "stopped"] = "completed"
             try:
                 async with adapter:
                     # 现在拿到的是具体的事件对象
@@ -186,11 +248,40 @@ class NcatBotApp:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
+                exit_reason = "failed"
+                if not self._is_internal_adapter(adapter):
+                    self._emit_framework_event(
+                        AdapterRunFailed(
+                            **self._adapter_event_kwargs(adapter),
+                            attempt=attempt,
+                            exception=e,
+                        )
+                    )
                 print(f"Adapter {adapter.adapter_name} 发生错误: {e}")
 
-            if not self._running:
+            if self._is_stop_requested():
+                exit_reason = "stopped"
+
+            if not self._is_internal_adapter(adapter):
+                self._emit_framework_event(
+                    AdapterRunExited(
+                        **self._adapter_event_kwargs(adapter),
+                        attempt=attempt,
+                        reason=exit_reason,
+                    )
+                )
+
+            if not self._running or self._is_stop_requested():
                 return
 
+            if not self._is_internal_adapter(adapter):
+                self._emit_framework_event(
+                    AdapterRestartScheduled(
+                        **self._adapter_event_kwargs(adapter),
+                        attempt=attempt,
+                        delay=self._adapter_restart_delay,
+                    )
+                )
             print(
                 f"Adapter {adapter.adapter_name} 已退出，"
                 f"{self._adapter_restart_delay} 秒后重试"
@@ -205,13 +296,18 @@ class NcatBotApp:
         self._loop = asyncio.get_running_loop()
         self._stop_event = asyncio.Event()
         self._adapter_tasks = []
+        self._emit_framework_event(AppStarting())
 
         try:
             for adapter in self.adapters:
                 self._spawn_adapter_task(adapter)
 
+            self._emit_framework_event(AppStarted())
             await self._stop_event.wait()
         finally:
+            if self._running:
+                self._emit_framework_event(AppStopping())
+                await asyncio.sleep(0)
             self._running = False
             self._stop_event = None
             self._loop = None

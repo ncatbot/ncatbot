@@ -4,6 +4,7 @@ import napcat
 from napcat import NapCatClient, __version__
 
 from .base import BaseAdapter
+from .internal import InternalEventAdapter
 
 
 class NapCatAdapter(NapCatClient, BaseAdapter):
@@ -21,4 +22,4 @@ class NapCatAdapter(NapCatClient, BaseAdapter):
 
 sys.modules[f"{__name__}.napcat"] = napcat
 
-__all__ = ["BaseAdapter", "NapCatAdapter"]
+__all__ = ["BaseAdapter", "InternalEventAdapter", "NapCatAdapter", "napcat"]

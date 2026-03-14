@@ -4,7 +4,15 @@ from collections.abc import AsyncIterator, Iterable
 from types import TracebackType
 
 from ncatbot import NcatBotApp
-from ncatbot.adapters import BaseAdapter, NapCatAdapter, napcat
+from ncatbot.adapters import BaseAdapter, InternalEventAdapter, NapCatAdapter, napcat
+from ncatbot.events import (
+    AdapterAdded,
+    AdapterRestartScheduled,
+    AdapterRunFailed,
+    AppEvent,
+    AppStarted,
+    AppStarting,
+)
 
 
 class SmokeEvent:
@@ -101,11 +109,50 @@ class FlakyAdapter(BaseAdapter):
         return iterator()
 
 
+class IdleAdapter(BaseAdapter):
+    @property
+    def platform_name(self) -> str:
+        return "fake"
+
+    @property
+    def adapter_name(self) -> str:
+        return "tests.IdleAdapter"
+
+    @property
+    def adapter_version(self) -> str:
+        return "0.0"
+
+    async def __aenter__(self) -> "IdleAdapter":
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        return None
+
+    def __aiter__(self) -> AsyncIterator[object]:
+        async def iterator() -> AsyncIterator[object]:
+            while True:
+                await asyncio.sleep(3600)
+                yield object()
+
+        return iterator()
+
+
 class SmokeTests(unittest.IsolatedAsyncioTestCase):
     def test_public_exports_are_available(self) -> None:
         self.assertTrue(issubclass(NapCatAdapter, BaseAdapter))
+        self.assertTrue(issubclass(InternalEventAdapter, BaseAdapter))
         self.assertEqual(NapCatAdapter.platform_name.fget(None), "qq")
         self.assertIsNotNone(getattr(napcat, "NapCatClient", None))
+        self.assertTrue(issubclass(AppStarting, AppEvent))
+
+    def test_internal_adapter_is_registered_by_default(self) -> None:
+        app = NcatBotApp()
+        self.assertIsInstance(app.adapters[0], InternalEventAdapter)
 
     async def test_dispatches_events_to_union_handler(self) -> None:
         app = NcatBotApp()
@@ -186,6 +233,28 @@ class SmokeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(seen, ["boot", "hot-add"])
 
+    async def test_framework_events_are_dispatched(self) -> None:
+        app = NcatBotApp()
+        seen: list[str] = []
+        handled = asyncio.Event()
+
+        @app.on_event
+        async def handle(event: AdapterAdded | AppStarting | AppStarted) -> None:
+            seen.append(type(event).__name__)
+            if isinstance(event, AppStarted):
+                handled.set()
+                app.stop()
+
+        app.add_adapter(IdleAdapter())
+
+        task = asyncio.create_task(app.start())
+        await asyncio.wait_for(handled.wait(), timeout=1)
+        await asyncio.wait_for(task, timeout=1)
+
+        self.assertIn("AdapterAdded", seen)
+        self.assertIn("AppStarting", seen)
+        self.assertIn("AppStarted", seen)
+
     async def test_restarts_adapter_after_failure(self) -> None:
         app = NcatBotApp(adapter_restart_delay=0.01)
         adapter = FlakyAdapter()
@@ -206,3 +275,36 @@ class SmokeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(seen, ["recovered"])
         self.assertEqual(adapter.run_count, 2)
+
+    async def test_emits_framework_restart_events(self) -> None:
+        app = NcatBotApp(adapter_restart_delay=0.01)
+        adapter = FlakyAdapter()
+        seen_failed: AdapterRunFailed | None = None
+        seen_restart: AdapterRestartScheduled | None = None
+        handled = asyncio.Event()
+
+        @app.on_event
+        async def handle(
+            event: AdapterRunFailed | AdapterRestartScheduled,
+        ) -> None:
+            nonlocal seen_failed, seen_restart
+            if isinstance(event, AdapterRunFailed):
+                seen_failed = event
+            else:
+                seen_restart = event
+
+            if seen_failed is not None and seen_restart is not None:
+                handled.set()
+                app.stop()
+
+        app.add_adapter(adapter)
+
+        task = asyncio.create_task(app.start())
+        await asyncio.wait_for(handled.wait(), timeout=1)
+        await asyncio.wait_for(task, timeout=1)
+
+        self.assertIsNotNone(seen_failed)
+        self.assertIsNotNone(seen_restart)
+        self.assertEqual(seen_failed.adapter_name, adapter.adapter_name)
+        self.assertEqual(seen_failed.attempt, 1)
+        self.assertEqual(seen_restart.delay, 0.01)
