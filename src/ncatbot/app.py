@@ -140,6 +140,28 @@ class BotApp:
 
         return decorator
 
+    async def wait_event(
+        self,
+        pred: Callable[[object], bool | Coroutine[Any, Any, bool]],
+        timeout: float | None = None,
+    ) -> Any:
+        async def wait_for_match() -> Any:
+            async for event_obj in self.events():
+                matched = pred(event_obj)
+                if inspect.isawaitable(matched):
+                    matched = await matched
+                if matched:
+                    return event_obj
+            raise RuntimeError("事件流已关闭，未等到匹配事件")
+
+        if timeout is None:
+            return await wait_for_match()
+
+        try:
+            return await asyncio.wait_for(wait_for_match(), timeout=timeout)
+        except TimeoutError as exc:
+            raise TimeoutError("等待事件超时") from exc
+
     async def _dispatch_event(self, event_obj: object):
         """分发事件给对应的 handler"""
         self._publish_event(event_obj)
