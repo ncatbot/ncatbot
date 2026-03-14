@@ -24,21 +24,17 @@ cd ncatbot
 
 ### 准备开发环境
 
-推荐使用 uv 管理环境：
+推荐使用 [uv](https://docs.astral.sh/uv/) 管理环境：
 
 ```bash
-uv venv
-source .venv/bin/activate  # Linux/macOS
-# 或 .venv\Scripts\activate  # Windows
-uv pip install -e '.[dev]'
+uv sync --extra dev
 ```
 
-或使用传统 pip：
+激活虚拟环境：
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev]'
+source .venv/bin/activate    # Linux/macOS
+.venv\Scripts\activate.ps1   # Windows PowerShell
 ```
 
 ### 启用 pre-commit 钩子（只需执行一次）
@@ -82,7 +78,7 @@ uv run pytest --cov=ncatbot --cov-report=term-missing
 
 ### 多版本测试（可选）
 
-如需在多个 Python 版本（3.13, 3.11, 3.9）上运行测试，可使用 tox：
+如需在多个 Python 版本（3.12, 3.13）上运行测试，可使用 tox：
 
 ```bash
 uv run tox
@@ -91,35 +87,35 @@ uv run tox
 也可以只运行特定版本：
 
 ```bash
-uv run tox -e py313
+uv run tox -e py312
 ```
 
 > 注意：多版本测试不是提交 PR 的必要条件，CI 会自动在多版本上运行测试。
 
 ## 依赖管理
 
-本项目使用 pip-tools 工作流管理依赖：
+本项目使用 uv 管理依赖，依赖锁定在 `uv.lock` 中：
 
 - **pyproject.toml**：定义顶层依赖（宽泛版本）
-- **requirements.txt**：由 pip-compile 自动生成的锁定版本文件
+- **uv.lock**：自动生成的锁定版本文件（已纳入版本控制）
 
 ### 更新依赖
 
 如需添加或修改依赖：
 
 1. 编辑 `pyproject.toml` 中的 `dependencies` 列表
-2. 重新生成 requirements.txt：
+2. 重新锁定：
 
 ```bash
-pip-compile pyproject.toml -o requirements.txt --strip-extras
+uv lock
 ```
 
-3. 将两个文件一起提交
+3. 将 `pyproject.toml` 和 `uv.lock` 一起提交
 
 ### 升级所有依赖到最新版本
 
 ```bash
-pip-compile pyproject.toml -o requirements.txt --strip-extras --upgrade
+uv lock --upgrade
 ```
 
 ## 提交 PR
