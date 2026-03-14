@@ -4,11 +4,12 @@ Bot 客户端
 组合各模块，提供统一的 Bot 客户端接口。
 """
 
-from typing import List, Optional, Type, TypeVar, TYPE_CHECKING
+from typing import AsyncIterator, List, Optional, Type, TypeVar, TYPE_CHECKING, Union
 
 from ncatbot.utils import get_log
 from ncatbot.utils.error import NcatBotError
 from ncatbot.core.api.interface import IBotAPI
+from ncatbot.core.event.enums import EventType
 from ncatbot.core.service import ServiceManager
 from ncatbot.core.service.builtin import (
     PluginConfigService,
@@ -22,11 +23,13 @@ from ncatbot.adapter.napcat import NapCatAdapter
 
 from .event_bus import EventBus
 from .dispatcher import EventDispatcher
+from .event_stream import ClientEventStream
 from .registry import EventRegistry
 from .lifecycle import LifecycleManager
 
 if TYPE_CHECKING:
     from ncatbot.plugin_system import BasePlugin
+    from .ncatbot_event import NcatBotEvent
 
 T = TypeVar("T")
 LOG = get_log("Client")
@@ -158,6 +161,40 @@ class BotClient(EventRegistry, LifecycleManager):
         self.on_startup()(lambda e: LOG.info(f"Bot {e.self_id} 启动成功"))
 
     # ==================== 工具方法 ====================
+
+    def events(
+        self,
+        event_type: Optional[Union[str, EventType]] = None,
+        *,
+        priority: int = 0,
+        timeout: Optional[float] = None,
+    ) -> ClientEventStream:
+        """创建一个新的异步事件流订阅。
+
+        每次调用都会创建独立的 EventBus 订阅，因此多个协程可以分别
+        获取完整事件流而不会互相竞争消费。若需要在提前退出循环时
+        确定性释放订阅，推荐配合 `async with` 或显式调用 `aclose()`。
+
+        Args:
+            event_type: 订阅的事件类型。默认订阅全部 `ncatbot.*` 事件。
+                传入 EventType 时会自动映射到 `ncatbot.{value}`。
+                传入字符串时会直接透传给 EventBus，因此同样支持 `re:`
+                正则语法。
+            priority: 订阅优先级。
+            timeout: 单个事件处理回调的超时时间。
+        """
+
+        return ClientEventStream(
+            self.event_bus,
+            event_type,
+            priority=priority,
+            timeout=timeout,
+        )
+
+    def __aiter__(self) -> AsyncIterator["NcatBotEvent"]:
+        """允许直接 `async for event in bot` 遍历全量事件流。"""
+
+        return self.events()
 
     def get_registered_plugins(self) -> List["BasePlugin"]:
         """获取已注册的插件列表"""

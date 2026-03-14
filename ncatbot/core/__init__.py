@@ -4,7 +4,14 @@ NcatBot 核心模块
 提供 Bot 客户端、事件系统和 API 接口。
 """
 
-from .client import BotClient, EventBus, NcatBotEvent, EventType, NcatBotEventFactory
+from .client import (
+    BotClient,
+    ClientEventStream,
+    EventBus,
+    NcatBotEvent,
+    EventType,
+    NcatBotEventFactory,
+)
 from .helper import ForwardConstructor  # noqa: F401
 from .api import BotAPI, IBotAPI
 from .event import GroupMessageEvent as GroupMessage
@@ -26,6 +33,7 @@ __all__ = [
     "BotClient",
     "EventBus",
     "NcatBotEvent",
+    "ClientEventStream",
     "ForwardConstructor",
     "EventType",
     "MessageSentEvent",

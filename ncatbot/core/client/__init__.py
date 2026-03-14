@@ -7,6 +7,7 @@ Client 模块
 from .ncatbot_event import NcatBotEvent, NcatBotEventFactory
 from .event_bus import EventBus, HandlerTimeoutError
 from .dispatcher import EventDispatcher, parse_event_type
+from .event_stream import ClientEventStream, normalize_event_stream_type
 from .registry import EventRegistry
 from .lifecycle import LifecycleManager, StartArgs, LEGAL_ARGS
 from .client import BotClient
@@ -20,6 +21,7 @@ __all__ = [
     "EventDispatcher",
     "EventRegistry",
     "LifecycleManager",
+    "ClientEventStream",
     # 事件
     "NcatBotEvent",
     "NcatBotEventFactory",
@@ -30,4 +32,5 @@ __all__ = [
     # 事件类型
     "EventType",
     "parse_event_type",
+    "normalize_event_stream_type",
 ]
