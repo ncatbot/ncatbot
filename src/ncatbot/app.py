@@ -2,6 +2,8 @@ import asyncio
 import inspect
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Coroutine
+from itertools import count
+from time import perf_counter
 from types import UnionType
 from typing import Any, Literal, TypedDict, Union, cast, get_args, get_origin, overload
 
@@ -15,7 +17,16 @@ from .events import (
     AppStarted,
     AppStarting,
     AppStopping,
+    EventReceived,
     FrameworkEvent,
+    HandlerCompleted,
+    HandlerFailed,
+    HandlerScheduled,
+    HandlersResolved,
+    WaitCancelled,
+    WaitMatched,
+    WaitRegistered,
+    WaitTimedOut,
 )
 
 type HandlerReturn = Coroutine[Any, Any, None]
@@ -40,6 +51,7 @@ class NcatBotApp:
         self._adapter_tasks: list[asyncio.Task[None]] = []
         self._loop: asyncio.AbstractEventLoop | None = None
         self._adapter_restart_delay = adapter_restart_delay
+        self._waiter_ids = count(1)
         self._internal_adapter = InternalEventAdapter()
         self._attach_adapter(self._internal_adapter)
 
@@ -77,8 +89,22 @@ class NcatBotApp:
     def _attach_adapter(self, adapter: BaseAdapter):
         self.adapters.append(adapter)
 
+    def _callable_name(self, func: Callable[..., Any]) -> str:
+        module = getattr(func, "__module__", "")
+        qualname = getattr(func, "__qualname__", type(func).__qualname__)
+        if module:
+            return f"{module}.{qualname}"
+        return qualname
+
+    def _event_type_name(self, event_obj: object) -> str:
+        event_type = type(event_obj)
+        return f"{event_type.__module__}.{event_type.__qualname__}"
+
     def _is_internal_adapter(self, adapter: BaseAdapter) -> bool:
         return adapter is self._internal_adapter
+
+    def _is_framework_event(self, event_obj: object) -> bool:
+        return isinstance(event_obj, FrameworkEvent)
 
     def _adapter_event_kwargs(self, adapter: BaseAdapter) -> AdapterEventKwargs:
         return {
@@ -107,6 +133,9 @@ class NcatBotApp:
 
     def _is_stop_requested(self) -> bool:
         return self._stop_event is not None and self._stop_event.is_set()
+
+    def _should_observe_event(self, event_obj: object) -> bool:
+        return not self._is_framework_event(event_obj)
 
     def add_adapter(self, adapter: BaseAdapter):
         self._attach_adapter(adapter)
@@ -203,25 +232,114 @@ class NcatBotApp:
         pred: Callable[[object], bool | Coroutine[Any, Any, bool]],
         timeout: float | None = None,
     ) -> Any:
+        waiter_id = next(self._waiter_ids)
+        predicate_name = self._callable_name(pred)
+        self._emit_framework_event(
+            WaitRegistered(
+                waiter_id=waiter_id,
+                predicate_name=predicate_name,
+                timeout=timeout,
+            )
+        )
+
         async def wait_for_match() -> Any:
             async for event_obj in self.events():
                 matched = pred(event_obj)
                 if inspect.isawaitable(matched):
                     matched = await matched
                 if matched:
+                    self._emit_framework_event(
+                        WaitMatched(
+                            waiter_id=waiter_id,
+                            predicate_name=predicate_name,
+                            timeout=timeout,
+                            event_type=self._event_type_name(event_obj),
+                            is_framework_event=self._is_framework_event(event_obj),
+                        )
+                    )
                     return event_obj
             raise RuntimeError("事件流已关闭，未等到匹配事件")
 
-        if timeout is None:
-            return await wait_for_match()
+        try:
+            if timeout is None:
+                return await wait_for_match()
+
+            async with asyncio.timeout(timeout):
+                return await wait_for_match()
+        except TimeoutError as exc:
+            self._emit_framework_event(
+                WaitTimedOut(
+                    waiter_id=waiter_id,
+                    predicate_name=predicate_name,
+                    timeout=timeout,
+                )
+            )
+            raise TimeoutError("等待事件超时") from exc
+        except asyncio.CancelledError:
+            self._emit_framework_event(
+                WaitCancelled(
+                    waiter_id=waiter_id,
+                    predicate_name=predicate_name,
+                    timeout=timeout,
+                )
+            )
+            raise
+
+    async def _run_handler(
+        self,
+        handler: HandlerType,
+        event_obj: object,
+        *,
+        observe: bool,
+    ) -> None:
+        event_type = self._event_type_name(event_obj)
+        handler_name = self._callable_name(handler)
+        started_at = perf_counter()
 
         try:
-            return await asyncio.wait_for(wait_for_match(), timeout=timeout)
-        except TimeoutError as exc:
-            raise TimeoutError("等待事件超时") from exc
+            await handler(event_obj)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            duration_ms = (perf_counter() - started_at) * 1000
+            if observe:
+                self._emit_framework_event(
+                    HandlerFailed(
+                        event_type=event_type,
+                        is_framework_event=False,
+                        handler_name=handler_name,
+                        duration_ms=duration_ms,
+                        exception=exc,
+                    )
+                )
+            print(f"Handler {handler_name} 处理 {event_type} 发生错误: {exc}")
+            return
 
-    async def _dispatch_event(self, event_obj: object):
+        if observe:
+            duration_ms = (perf_counter() - started_at) * 1000
+            self._emit_framework_event(
+                HandlerCompleted(
+                    event_type=event_type,
+                    is_framework_event=False,
+                    handler_name=handler_name,
+                    duration_ms=duration_ms,
+                )
+            )
+
+    async def _dispatch_event(self, event_obj: object, source_adapter: BaseAdapter):
         """分发事件给对应的 handler"""
+        observe = self._should_observe_event(event_obj)
+        event_type = self._event_type_name(event_obj)
+
+        if observe:
+            self._emit_framework_event(
+                EventReceived(
+                    **self._adapter_event_kwargs(source_adapter),
+                    event_type=event_type,
+                    is_framework_event=False,
+                )
+            )
+
         self._publish_event(event_obj)
 
         # 查找监听该类型的 handlers
@@ -230,8 +348,29 @@ class NcatBotApp:
             if isinstance(event_obj, registered_type):
                 handlers.extend(funcs)
 
+        if observe:
+            handler_names = tuple(self._callable_name(handler) for handler in handlers)
+            self._emit_framework_event(
+                HandlersResolved(
+                    event_type=event_type,
+                    is_framework_event=False,
+                    handler_count=len(handler_names),
+                    handler_names=handler_names,
+                )
+            )
+
         for handler in handlers:
-            asyncio.create_task(handler(event_obj))
+            if observe:
+                self._emit_framework_event(
+                    HandlerScheduled(
+                        event_type=event_type,
+                        is_framework_event=False,
+                        handler_name=self._callable_name(handler),
+                    )
+                )
+            asyncio.create_task(
+                self._run_handler(handler, event_obj, observe=observe)
+            )
 
     async def _run_adapter(self, adapter: BaseAdapter):
         attempt = 0
@@ -250,7 +389,7 @@ class NcatBotApp:
                 async with adapter:
                     # 现在拿到的是具体的事件对象
                     async for event_obj in adapter:
-                        await self._dispatch_event(event_obj)
+                        await self._dispatch_event(event_obj, adapter)
             except asyncio.CancelledError:
                 raise
             except Exception as e:

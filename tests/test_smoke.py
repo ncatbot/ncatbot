@@ -12,6 +12,15 @@ from ncatbot.events import (
     AppEvent,
     AppStarted,
     AppStarting,
+    EventReceived,
+    HandlerCompleted,
+    HandlerFailed,
+    HandlersResolved,
+    HandlerScheduled,
+    WaitCancelled,
+    WaitMatched,
+    WaitRegistered,
+    WaitTimedOut,
 )
 
 
@@ -203,6 +212,134 @@ class SmokeTests(unittest.IsolatedAsyncioTestCase):
         app.stop()
         await asyncio.wait_for(task, timeout=1)
 
+    async def test_wait_event_emits_registered_and_matched_events(self) -> None:
+        app = NcatBotApp()
+        entered = asyncio.Event()
+        seen_registered: WaitRegistered | None = None
+        seen_matched: WaitMatched | None = None
+        handled = asyncio.Event()
+        app.add_adapter(
+            FakeAdapter(
+                [SmokeEvent("ready")],
+                delay=0.05,
+                entered_event=entered,
+            )
+        )
+
+        @app.on_event
+        async def handle_wait_events(
+            event: WaitRegistered | WaitMatched,
+        ) -> None:
+            nonlocal seen_registered, seen_matched
+            if isinstance(event, WaitRegistered):
+                seen_registered = event
+            else:
+                seen_matched = event
+
+            if seen_registered is not None and seen_matched is not None:
+                handled.set()
+
+        task = asyncio.create_task(app.start())
+        await asyncio.wait_for(entered.wait(), timeout=1)
+
+        matched = await app.wait_event(
+            lambda item: isinstance(item, SmokeEvent),
+            timeout=1,
+        )
+
+        await asyncio.wait_for(handled.wait(), timeout=1)
+        app.stop()
+        await asyncio.wait_for(task, timeout=1)
+
+        self.assertIsInstance(matched, SmokeEvent)
+        self.assertIsNotNone(seen_registered)
+        self.assertIsNotNone(seen_matched)
+        self.assertEqual(seen_registered.waiter_id, seen_matched.waiter_id)
+        self.assertEqual(
+            seen_matched.event_type,
+            f"{SmokeEvent.__module__}.{SmokeEvent.__qualname__}",
+        )
+        self.assertFalse(seen_matched.is_framework_event)
+
+    async def test_wait_event_emits_timeout_event(self) -> None:
+        app = NcatBotApp()
+        seen_registered: WaitRegistered | None = None
+        seen_timed_out: WaitTimedOut | None = None
+        handled = asyncio.Event()
+        app.add_adapter(IdleAdapter())
+
+        @app.on_event
+        async def handle_wait_events(
+            event: WaitRegistered | WaitTimedOut,
+        ) -> None:
+            nonlocal seen_registered, seen_timed_out
+            if isinstance(event, WaitRegistered):
+                seen_registered = event
+            else:
+                seen_timed_out = event
+
+            if seen_registered is not None and seen_timed_out is not None:
+                handled.set()
+
+        task = asyncio.create_task(app.start())
+
+        with self.assertRaises(TimeoutError):
+            await app.wait_event(
+                lambda item: isinstance(item, SmokeEvent),
+                timeout=0.01,
+            )
+
+        await asyncio.wait_for(handled.wait(), timeout=1)
+        app.stop()
+        await asyncio.wait_for(task, timeout=1)
+
+        self.assertIsNotNone(seen_registered)
+        self.assertIsNotNone(seen_timed_out)
+        self.assertEqual(seen_registered.waiter_id, seen_timed_out.waiter_id)
+        self.assertEqual(seen_timed_out.timeout, 0.01)
+
+    async def test_wait_event_emits_cancelled_event(self) -> None:
+        app = NcatBotApp()
+        seen_registered: WaitRegistered | None = None
+        seen_cancelled: WaitCancelled | None = None
+        registered = asyncio.Event()
+        handled = asyncio.Event()
+        app.add_adapter(IdleAdapter())
+
+        @app.on_event
+        async def handle_wait_events(
+            event: WaitRegistered | WaitCancelled,
+        ) -> None:
+            nonlocal seen_registered, seen_cancelled
+            if isinstance(event, WaitRegistered):
+                seen_registered = event
+                registered.set()
+            else:
+                seen_cancelled = event
+                handled.set()
+
+        task = asyncio.create_task(app.start())
+        wait_task = asyncio.create_task(
+            app.wait_event(
+                lambda item: isinstance(item, SmokeEvent),
+                timeout=1,
+            )
+        )
+
+        await asyncio.wait_for(registered.wait(), timeout=1)
+        wait_task.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await wait_task
+
+        await asyncio.wait_for(handled.wait(), timeout=1)
+        app.stop()
+        await asyncio.wait_for(task, timeout=1)
+
+        self.assertIsNotNone(seen_registered)
+        self.assertIsNotNone(seen_cancelled)
+        self.assertEqual(seen_registered.waiter_id, seen_cancelled.waiter_id)
+        self.assertEqual(seen_cancelled.timeout, 1)
+
     async def test_can_add_adapter_while_running(self) -> None:
         app = NcatBotApp()
         seen: list[str] = []
@@ -233,9 +370,85 @@ class SmokeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(seen, ["boot", "hot-add"])
 
+    async def test_emits_event_and_handler_lifecycle_events(self) -> None:
+        app = NcatBotApp()
+        received: EventReceived | None = None
+        resolved: HandlersResolved | None = None
+        scheduled: list[HandlerScheduled] = []
+        completed: HandlerCompleted | None = None
+        failed: HandlerFailed | None = None
+        handled = asyncio.Event()
+
+        @app.on_event
+        async def handle_success(event: SmokeEvent) -> None:
+            await asyncio.sleep(0)
+
+        @app.on_event
+        async def handle_failure(event: SmokeEvent) -> None:
+            raise RuntimeError("handler boom")
+
+        @app.on_event
+        async def observe_framework(
+            event: (
+                EventReceived
+                | HandlersResolved
+                | HandlerScheduled
+                | HandlerCompleted
+                | HandlerFailed
+            ),
+        ) -> None:
+            nonlocal received, resolved, completed, failed
+            if isinstance(event, EventReceived):
+                received = event
+            elif isinstance(event, HandlersResolved):
+                resolved = event
+            elif isinstance(event, HandlerScheduled):
+                scheduled.append(event)
+            elif isinstance(event, HandlerCompleted):
+                completed = event
+            else:
+                failed = event
+
+            if (
+                received is not None
+                and resolved is not None
+                and len(scheduled) == 2
+                and completed is not None
+                and failed is not None
+            ):
+                handled.set()
+                app.stop()
+
+        app.add_adapter(FakeAdapter([SmokeEvent("payload")], delay=0.01))
+
+        task = asyncio.create_task(app.start())
+        await asyncio.wait_for(handled.wait(), timeout=1)
+        await asyncio.wait_for(task, timeout=1)
+
+        event_type = f"{SmokeEvent.__module__}.{SmokeEvent.__qualname__}"
+        self.assertIsNotNone(received)
+        self.assertEqual(received.event_type, event_type)
+        self.assertEqual(received.adapter_name, "tests.FakeAdapter")
+        self.assertIsNotNone(resolved)
+        self.assertEqual(resolved.event_type, event_type)
+        self.assertEqual(resolved.handler_count, 2)
+        self.assertEqual(len(scheduled), 2)
+        self.assertTrue(
+            any(item.handler_name.endswith("handle_success") for item in scheduled)
+        )
+        self.assertTrue(
+            any(item.handler_name.endswith("handle_failure") for item in scheduled)
+        )
+        self.assertIsNotNone(completed)
+        self.assertTrue(completed.handler_name.endswith("handle_success"))
+        self.assertIsNotNone(failed)
+        self.assertTrue(failed.handler_name.endswith("handle_failure"))
+        self.assertEqual(failed.event_type, event_type)
+
     async def test_framework_events_are_dispatched(self) -> None:
         app = NcatBotApp()
         seen: list[str] = []
+        observed: list[str] = []
         handled = asyncio.Event()
 
         @app.on_event
@@ -244,6 +457,12 @@ class SmokeTests(unittest.IsolatedAsyncioTestCase):
             if isinstance(event, AppStarted):
                 handled.set()
                 app.stop()
+
+        @app.on_event
+        async def handle_observed(
+            event: EventReceived | HandlersResolved | HandlerScheduled,
+        ) -> None:
+            observed.append(type(event).__name__)
 
         app.add_adapter(IdleAdapter())
 
@@ -254,6 +473,7 @@ class SmokeTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("AdapterAdded", seen)
         self.assertIn("AppStarting", seen)
         self.assertIn("AppStarted", seen)
+        self.assertEqual(observed, [])
 
     async def test_restarts_adapter_after_failure(self) -> None:
         app = NcatBotApp(adapter_restart_delay=0.01)

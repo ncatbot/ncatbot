@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 type AdapterExitReason = Literal["completed", "failed", "stopped"]
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)
@@ -71,6 +71,73 @@ class AdapterRestartScheduled(AdapterRunEvent):
     delay: float
 
 
+@dataclass(slots=True, frozen=True, kw_only=True)
+class EventObservationEvent(FrameworkEvent):
+    event_type: str
+    is_framework_event: bool
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class EventReceived(AdapterEvent):
+    event_type: str
+    is_framework_event: bool
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class HandlersResolved(EventObservationEvent):
+    handler_count: int
+    handler_names: tuple[str, ...]
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class HandlerEvent(EventObservationEvent):
+    handler_name: str
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class HandlerScheduled(HandlerEvent):
+    pass
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class HandlerCompleted(HandlerEvent):
+    duration_ms: float
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class HandlerFailed(HandlerEvent):
+    duration_ms: float
+    exception: BaseException
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class WaitLifecycleEvent(FrameworkEvent):
+    waiter_id: int
+    predicate_name: str
+    timeout: float | None
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class WaitRegistered(WaitLifecycleEvent):
+    pass
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class WaitMatched(WaitLifecycleEvent):
+    event_type: str
+    is_framework_event: bool
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class WaitTimedOut(WaitLifecycleEvent):
+    pass
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class WaitCancelled(WaitLifecycleEvent):
+    pass
+
+
 __all__ = [
     "AdapterAdded",
     "AdapterEvent",
@@ -84,5 +151,17 @@ __all__ = [
     "AppStarted",
     "AppStarting",
     "AppStopping",
+    "EventObservationEvent",
+    "EventReceived",
     "FrameworkEvent",
+    "HandlerCompleted",
+    "HandlerEvent",
+    "HandlerFailed",
+    "HandlerScheduled",
+    "HandlersResolved",
+    "WaitCancelled",
+    "WaitLifecycleEvent",
+    "WaitMatched",
+    "WaitRegistered",
+    "WaitTimedOut",
 ]
