@@ -1,4 +1,4 @@
 from .base import BaseAdapter
-from .napcat import NapcatAdapter
+from .napcat import NapCatAdapter
 
-__all__ = ["BaseAdapter", "NapcatAdapter"]
+__all__ = ["BaseAdapter", "NapCatAdapter"]
