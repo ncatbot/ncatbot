@@ -3,7 +3,7 @@ import inspect
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Coroutine
 from types import UnionType
-from typing import Any, Literal, Union, cast, get_args, get_origin, overload
+from typing import Any, Literal, TypedDict, Union, cast, get_args, get_origin, overload
 
 from .adapters import BaseAdapter, InternalEventAdapter
 from .events import (
@@ -21,6 +21,12 @@ from .events import (
 type HandlerReturn = Coroutine[Any, Any, None]
 type EventHandler[T] = Callable[[T], HandlerReturn]
 type HandlerType = Callable[..., HandlerReturn]
+
+
+class AdapterEventKwargs(TypedDict):
+    adapter_name: str
+    platform_name: str
+    adapter_version: str
 
 class NcatBotApp:
     def __init__(self, adapter_restart_delay: float = 5.0):
@@ -74,7 +80,7 @@ class NcatBotApp:
     def _is_internal_adapter(self, adapter: BaseAdapter) -> bool:
         return adapter is self._internal_adapter
 
-    def _adapter_event_kwargs(self, adapter: BaseAdapter) -> dict[str, str]:
+    def _adapter_event_kwargs(self, adapter: BaseAdapter) -> AdapterEventKwargs:
         return {
             "adapter_name": adapter.adapter_name,
             "platform_name": adapter.platform_name,
