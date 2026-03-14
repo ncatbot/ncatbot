@@ -167,6 +167,10 @@ class LifecycleManager:
         if hasattr(self, "registry_engine") and self.registry_engine:
             self.registry_engine.clear()
 
+        # 5. 关闭事件总线
+        if self.event_bus:
+            await self.event_bus.close()
+
         LOG.info("Bot 资源已释放")
 
     # ================= 启动入口 =================

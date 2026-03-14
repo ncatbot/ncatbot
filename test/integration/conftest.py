@@ -184,7 +184,9 @@ class TestPlugin:
 @pytest.fixture
 def event_bus():
     """创建事件总线"""
-    return EventBus(default_timeout=10.0)
+    bus = EventBus(default_timeout=10.0)
+    yield bus
+    bus.shutdown()
 
 
 @pytest.fixture

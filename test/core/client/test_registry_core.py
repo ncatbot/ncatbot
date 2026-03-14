@@ -29,7 +29,7 @@ class TestEventRegistrySubscribe:
             pass
 
         event_registry.subscribe(EventType.MESSAGE, handler)
-        assert "message_event" in event_registry.event_bus._exact
+        assert "ncatbot.message_event" in event_registry.event_bus._exact
 
     def test_subscribe_with_string(self, event_registry):
         """使用字符串订阅"""
@@ -76,7 +76,7 @@ class TestEventRegistryRegisterHandler:
 
         mock_event_data = MagicMock()
         mock_event_data.user_id = 12345
-        ncatbot_event = NcatBotEvent("message_event", mock_event_data)
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", mock_event_data)
 
         await event_registry.event_bus.publish(ncatbot_event)
 
@@ -101,33 +101,26 @@ class TestEventRegistryRegisterHandler:
         # 发布被过滤的事件
         mock_event1 = MagicMock()
         mock_event1.user_id = 500
-        ncatbot_event1 = NcatBotEvent("message_event", mock_event1)
+        ncatbot_event1 = NcatBotEvent("ncatbot.message_event", mock_event1)
         await event_registry.event_bus.publish(ncatbot_event1)
 
         # 发布通过过滤的事件
         mock_event2 = MagicMock()
         mock_event2.user_id = 2000
-        ncatbot_event2 = NcatBotEvent("message_event", mock_event2)
+        ncatbot_event2 = NcatBotEvent("ncatbot.message_event", mock_event2)
         await event_registry.event_bus.publish(ncatbot_event2)
 
         assert len(received_data) == 1
         assert received_data[0].user_id == 2000
 
-    @pytest.mark.asyncio
-    async def test_register_handler_sync_handler(self, event_registry):
-        """同步处理器正确执行"""
-        received_data = []
+    def test_register_handler_rejects_sync_handler(self, event_registry):
+        """同步处理器会在注册时被拒绝"""
 
         def sync_handler(event):
-            received_data.append(event)
+            return None
 
-        event_registry.register_handler(EventType.MESSAGE, sync_handler)
-
-        mock_event_data = MagicMock()
-        ncatbot_event = NcatBotEvent("message_event", mock_event_data)
-        await event_registry.event_bus.publish(ncatbot_event)
-
-        assert len(received_data) == 1
+        with pytest.raises(TypeError, match="仅支持异步事件处理器"):
+            event_registry.register_handler(EventType.MESSAGE, sync_handler)
 
 
 class TestEventRegistryAddHandler:

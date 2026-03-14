@@ -19,13 +19,17 @@ from ncatbot.core.client.registry import EventRegistry
 @pytest.fixture
 def event_bus():
     """创建一个新的 EventBus 实例"""
-    return EventBus(default_timeout=5.0)
+    bus = EventBus(default_timeout=5.0)
+    yield bus
+    bus.shutdown()
 
 
 @pytest.fixture
 def event_bus_short_timeout():
     """创建一个短超时的 EventBus 实例（用于超时测试）"""
-    return EventBus(default_timeout=0.1)
+    bus = EventBus(default_timeout=0.1)
+    yield bus
+    bus.shutdown()
 
 
 # ==================== Mock Fixtures ====================

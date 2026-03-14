@@ -1,28 +1,38 @@
 """
-事件总线
+异步事件总线
 
-统一的事件分发中心，支持精确匹配、前缀匹配和正则匹配。
+负责两类工作：
+1. 接收 adapter 上报的标准 BaseEvent，并转为 NcatBotEvent 分发
+2. 发布/消费框架内部自定义事件
 """
+
+from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-import re
 import uuid
-from functools import lru_cache
-from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
+from copy import copy
+from dataclasses import dataclass
+from inspect import isawaitable, iscoroutinefunction
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 from ncatbot.utils import get_log
+
+from ..event.enums import EventType, PostType
+from ..event.events import BaseEvent
+from .ncatbot_event import NcatBotEvent
 
 if TYPE_CHECKING:
     from ncatbot.plugin_system import BasePlugin
 
-from .ncatbot_event import NcatBotEvent
-
 LOG = get_log("EventBus")
+_STOP = object()
+
+AdapterEventPredicate = Callable[[BaseEvent], bool]
 
 
 class HandlerTimeoutError(Exception):
-    """处理器超时异常"""
+    """保留旧异常类型，兼容仍引用该名字的代码。"""
 
     def __init__(self, meta_data: dict, handler: str, time: float):
         super().__init__()
@@ -30,45 +40,56 @@ class HandlerTimeoutError(Exception):
         self.handler = handler
         self.time = time
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"来自 {self.meta_data['name']} 的处理器 {self.handler} 执行超时 {self.time}"
+
+
+@dataclass(slots=True)
+class _QueuedEvent:
+    event: NcatBotEvent
+    completion: asyncio.Future[List[Any]] | None = None
+    adapter_event: BaseEvent | None = None
+
+
+@dataclass(slots=True)
+class _Waiter:
+    token: object
+    predicate: AdapterEventPredicate
+    future: asyncio.Future[BaseEvent]
 
 
 class EventBus:
     """
-    事件总线
+    异步事件总线。
 
-    统一的事件分发中心，支持：
-    - 精确匹配：event_type 完全匹配
-    - 前缀匹配：如 ncatbot.notice.group_increase 也触发 ncatbot.notice
-    - 正则匹配：使用 "re:" 前缀
-    - 优先级控制：数值越大优先级越高
+    设计目标：
+    - adapter 事件通过单一回调入口进入
+    - 所有事件在单个分发协程中顺序处理，避免并发乱序
+    - 为 BotClient 提供 `async for` 与 `wait_event` 能力
     """
 
-    def __init__(self, default_timeout: float = 120) -> None:
-        """
-        初始化事件总线
-
-        Args:
-            default_timeout: 默认处理器超时时间（秒）
-        """
-        self._exact: Dict[str, List[Tuple]] = {}
-        self._regex: List[Tuple] = []
+    def __init__(
+        self,
+        default_timeout: float = 120,
+        stream_queue_size: int = 500,
+    ) -> None:
+        # 复用旧字段名，减少外围代码的侵入式修改
+        self._exact: Dict[str, List[Tuple[None, int, Callable[[NcatBotEvent], Any], uuid.UUID, float]]] = {}
+        self._handler_meta: Dict[uuid.UUID, Dict[str, Any]] = {}
         self.default_timeout = default_timeout
-        self._handler_meta: Dict[uuid.UUID, Dict] = {}
-        # 主事件循环引用（用于跨线程发布）
+
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._incoming: asyncio.Queue[_QueuedEvent | object] = asyncio.Queue()
+        self._dispatch_task: Optional[asyncio.Task[None]] = None
+        self._startup_lock = asyncio.Lock()
+        self._closed = False
+
+        self._stream_queue_size = stream_queue_size
+        self._stream_queues: set[asyncio.Queue[BaseEvent | object]] = set()
+        self._waiters: List[_Waiter] = []
 
     def bind_loop(self, loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
-        """
-        绑定事件循环
-
-        在异步上下文中调用此方法绑定当前事件循环，以支持跨线程发布。
-        如果不传参数，则自动获取当前运行的事件循环。
-
-        Args:
-            loop: 事件循环，None 则自动获取
-        """
+        """绑定主事件循环，供跨线程发布使用。"""
         if loop is None:
             try:
                 loop = asyncio.get_running_loop()
@@ -77,8 +98,6 @@ class EventBus:
                 return
         self._loop = loop
         LOG.debug("EventBus 已绑定事件循环")
-
-    # ==================== 订阅管理 ====================
 
     def subscribe(
         self,
@@ -89,122 +108,124 @@ class EventBus:
         plugin: Optional["BasePlugin"] = None,
     ) -> uuid.UUID:
         """
-        订阅事件处理程序
+        订阅事件处理程序。
 
-        Args:
-            event_type: 事件类型，支持精确匹配或 "re:" 前缀的正则表达式
-            handler: 事件处理函数（支持同步和异步）
-            priority: 处理优先级，数值越大优先级越高
-            timeout: 处理器超时时间（秒），None 则使用默认值
-            plugin: 插件实例，用于记录元数据
-
-        Returns:
-            处理器唯一标识符
+        仅支持精确事件名匹配，处理器必须是异步函数。
         """
+        if event_type.startswith("re:"):
+            raise ValueError("EventBus 不再支持正则事件订阅")
+        if not self._is_async_handler(handler):
+            raise TypeError("EventBus 仅支持异步事件处理器")
+
         hid = uuid.uuid4()
         timeout_val = timeout if timeout is not None else self.default_timeout
 
         if plugin:
             self._handler_meta[hid] = plugin.meta_data
 
-        if event_type.startswith("re:"):
-            pattern = _compile_regex(event_type[3:])
-            self._regex.append((pattern, priority, handler, hid, timeout_val))
-            self._regex.sort(key=lambda t: (-t[1], t[2].__name__))
-        else:
-            bucket = self._exact.setdefault(event_type, [])
-            bucket.append((None, priority, handler, hid, timeout_val))
-            bucket.sort(key=lambda t: (-t[1], t[2].__name__))
-
+        bucket = self._exact.setdefault(event_type, [])
+        bucket.append((None, priority, handler, hid, timeout_val))
+        bucket.sort(key=lambda item: (-item[1], item[2].__name__))
         return hid
 
     def unsubscribe(self, handler_id: uuid.UUID) -> bool:
-        """
-        取消订阅事件处理程序
-
-        Args:
-            handler_id: subscribe() 返回的处理器标识符
-
-        Returns:
-            是否成功移除处理器
-        """
+        """取消订阅事件处理程序。"""
         removed = False
 
-        if handler_id in self._handler_meta:
-            del self._handler_meta[handler_id]
+        self._handler_meta.pop(handler_id, None)
 
-        for typ in list(self._exact.keys()):
-            original_len = len(self._exact[typ])
-            self._exact[typ] = [h for h in self._exact[typ] if h[3] != handler_id]
-            removed |= len(self._exact[typ]) != original_len
-            if not self._exact[typ]:
-                del self._exact[typ]
-
-        original_len = len(self._regex)
-        self._regex = [h for h in self._regex if h[3] != handler_id]
-        removed |= len(self._regex) != original_len
+        for event_type in list(self._exact.keys()):
+            original_len = len(self._exact[event_type])
+            self._exact[event_type] = [
+                item for item in self._exact[event_type] if item[3] != handler_id
+            ]
+            removed |= len(self._exact[event_type]) != original_len
+            if not self._exact[event_type]:
+                del self._exact[event_type]
 
         return removed
 
-    # ==================== 事件发布 ====================
-
     async def publish(self, event: NcatBotEvent) -> List[Any]:
-        """
-        发布事件并执行所有匹配的处理器
+        """发布自定义事件，并等待其处理完成。"""
+        await self._ensure_runtime()
 
-        Args:
-            event: 要发布的事件
+        loop = asyncio.get_running_loop()
+        completion: asyncio.Future[List[Any]] = loop.create_future()
+        await self._incoming.put(_QueuedEvent(event=event, completion=completion))
+        return await completion
 
-        Returns:
-            所有处理器的返回结果列表
-        """
-        LOG.debug(
-            f"发布事件: {event.type} 数据: {str(event.data)[:50]}{'...' if len(str(event.data)) > 50 else ''}"
+    async def on_adapter_event(self, event: BaseEvent, wait: bool = False) -> None:
+        """adapter 事件入口：标准事件进入总线的唯一回调。"""
+        await self._ensure_runtime()
+
+        event_type = self._get_event_type_from_event(event)
+        if event_type is None:
+            LOG.debug("忽略未知事件类型: %s", getattr(event, "post_type", None))
+            return
+
+        completion: asyncio.Future[List[Any]] | None = None
+        if wait:
+            completion = asyncio.get_running_loop().create_future()
+
+        await self._incoming.put(
+            _QueuedEvent(
+                event=NcatBotEvent(f"ncatbot.{event_type.value}", event),
+                completion=completion,
+                adapter_event=event,
+            )
         )
-        handlers = self._collect_handlers(event.type)
 
-        for _, priority, handler, hid, timeout in handlers:
-            if event._propagation_stopped:
-                break
+        if completion is not None:
+            await completion
 
-            try:
-                result = await asyncio.wait_for(
-                    self._run_handler(handler, event), timeout=timeout
-                )
-                event._results.append(result)
-            except asyncio.TimeoutError:
-                LOG.error(f"处理器 {handler.__name__} (ID: {hid}) 超时({timeout}秒)")
-                meta_data = self._handler_meta.get(hid, {"name": "Unknown"})
-                event.add_exception(
-                    HandlerTimeoutError(
-                        meta_data=meta_data, handler=handler.__name__, time=timeout
-                    )
-                )
-            except Exception as e:
-                event.add_exception(e)
+    async def wait_event(
+        self,
+        predicate: AdapterEventPredicate,
+        timeout: Optional[float] = None,
+    ) -> BaseEvent:
+        """等待下一条满足条件的 adapter 事件。"""
+        await self._ensure_runtime()
 
-        return event._results.copy()
+        loop = asyncio.get_running_loop()
+        token = object()
+        future: asyncio.Future[BaseEvent] = loop.create_future()
+        self._waiters.append(_Waiter(token=token, predicate=predicate, future=future))
+
+        try:
+            if timeout is None:
+                return await future
+            return await asyncio.wait_for(future, timeout)
+        finally:
+            self._remove_waiter(token)
+
+    async def events(self) -> AsyncGenerator[BaseEvent, None]:
+        """按事件流方式消费 adapter 事件。"""
+        await self._ensure_runtime()
+
+        queue: asyncio.Queue[BaseEvent | object] = asyncio.Queue(
+            maxsize=self._stream_queue_size
+        )
+        self._stream_queues.add(queue)
+        try:
+            while True:
+                item = await queue.get()
+                if item is _STOP:
+                    break
+                if isinstance(item, BaseEvent):
+                    yield item
+        finally:
+            self._stream_queues.discard(queue)
+
+    def __aiter__(self) -> AsyncGenerator[BaseEvent, None]:
+        return self.events()
 
     def publish_threadsafe(
         self, event: NcatBotEvent
-    ) -> Optional[concurrent.futures.Future]:
-        """
-        线程安全的事件发布（非阻塞）
-
-        从非异步线程中安全地发布事件到主事件循环。
-        此方法立即返回一个 Future，不会阻塞调用线程。
-
-        Args:
-            event: 要发布的事件
-
-        Returns:
-            Future 对象，可用于获取结果或检查状态；
-            如果事件循环不可用则返回 None
-        """
+    ) -> Optional[concurrent.futures.Future[List[Any]]]:
+        """从非事件循环线程安全地发布自定义事件。"""
         if self._loop is None or self._loop.is_closed():
             LOG.warning("事件循环不可用，无法发布事件")
             return None
-
         return asyncio.run_coroutine_threadsafe(self.publish(event), self._loop)
 
     def publish_threadsafe_wait(
@@ -212,18 +233,7 @@ class EventBus:
         event: NcatBotEvent,
         timeout: Optional[float] = 5.0,
     ) -> Optional[List[Any]]:
-        """
-        线程安全的事件发布（阻塞等待结果）
-
-        从非异步线程中安全地发布事件，并阻塞等待所有处理器执行完成。
-
-        Args:
-            event: 要发布的事件
-            timeout: 等待超时时间（秒），None 表示无限等待
-
-        Returns:
-            处理器返回结果列表；如果超时或事件循环不可用则返回 None
-        """
+        """从非事件循环线程发布自定义事件并阻塞等待结果。"""
         future = self.publish_threadsafe(event)
         if future is None:
             return None
@@ -231,75 +241,191 @@ class EventBus:
         try:
             return future.result(timeout=timeout)
         except concurrent.futures.TimeoutError:
-            LOG.error(f"事件发布超时: {event.type}")
+            LOG.error("事件发布超时: %s", event.type)
             return None
-        except Exception as e:
-            LOG.error(f"事件发布失败: {e}")
+        except Exception as exc:
+            LOG.error("事件发布失败: %s", exc)
             return None
 
-    async def _run_handler(self, handler: Callable, event: NcatBotEvent) -> Any:
-        """
-        执行处理器
+    async def close(self) -> None:
+        """异步关闭事件总线。"""
+        if self._closed:
+            return
 
-        对于异步处理器：直接 await
-        对于同步处理器：使用 asyncio.to_thread() 避免阻塞
-        """
+        self._closed = True
+
+        if self._dispatch_task and not self._dispatch_task.done():
+            await self._incoming.put(_STOP)
+            try:
+                await self._dispatch_task
+            except asyncio.CancelledError:
+                pass
+        else:
+            self._finalize_shutdown()
+
+    def shutdown(self) -> None:
+        """同步关闭，仅适用于尚未启动分发协程的场景。"""
+        self._closed = True
+        if self._dispatch_task and not self._dispatch_task.done():
+            self._dispatch_task.cancel()
+            return
+        self._finalize_shutdown()
+
+    async def _ensure_runtime(self) -> None:
+        if self._closed:
+            raise RuntimeError("EventBus 已关闭")
+
+        loop = asyncio.get_running_loop()
+        if self._loop is None:
+            self._loop = loop
+        elif self._loop is not loop:
+            raise RuntimeError("EventBus 不能跨多个事件循环复用")
+
+        if self._dispatch_task and not self._dispatch_task.done():
+            return
+
+        async with self._startup_lock:
+            if self._dispatch_task and not self._dispatch_task.done():
+                return
+            self._dispatch_task = asyncio.create_task(self._dispatch_loop())
+
+    async def _dispatch_loop(self) -> None:
         try:
-            if asyncio.iscoroutinefunction(handler):
-                return await handler(event)
-            else:
-                return await asyncio.to_thread(handler, event)
-        except Exception as e:
-            LOG.exception(f"执行处理程序 {handler.__name__} 时发生错误: {e}")
-            raise e
+            while True:
+                queued = await self._incoming.get()
+                if queued is _STOP:
+                    break
 
-    def _collect_handlers(self, event_type: str) -> List[Tuple]:
-        """
-        收集匹配的事件处理程序
+                assert isinstance(queued, _QueuedEvent)
 
-        Args:
-            event_type: 事件类型
+                if queued.adapter_event is not None:
+                    self._broadcast_adapter_event(queued.adapter_event)
+                    self._resolve_waiters(queued.adapter_event)
 
-        Returns:
-            匹配的处理器列表（已按优先级排序）
-        """
-        # 精确匹配
-        exact_handlers = self._exact.get(event_type, [])[:]
+                results = await self._dispatch_handlers(queued.event)
+                if queued.completion is not None and not queued.completion.done():
+                    queued.completion.set_result(results)
+        except asyncio.CancelledError:
+            raise
+        finally:
+            self._finalize_shutdown()
 
-        # 前缀匹配（如 ncatbot.notice.group_increase 也触发 ncatbot.notice）
-        prefix_handlers = []
-        parts = event_type.split(".")
-        for i in range(len(parts) - 1, 0, -1):
-            prefix = ".".join(parts[:i])
-            if prefix in self._exact:
-                prefix_handlers.extend(self._exact[prefix])
+    async def _dispatch_handlers(self, event: NcatBotEvent) -> List[Any]:
+        LOG.debug(
+            "发布事件: %s 数据: %s",
+            event.type,
+            f"{str(event.data)[:50]}..." if len(str(event.data)) > 50 else str(event.data),
+        )
+        handlers = self._collect_handlers(event.type)
 
-        # 正则匹配
-        regex_handlers = []
-        for pattern, priority, handler, hid, timeout in self._regex:
-            if pattern and pattern.match(event_type):
-                regex_handlers.append((pattern, priority, handler, hid, timeout))
+        for _, _, handler, _, _ in handlers:
+            if event._propagation_stopped:
+                break
 
-        # 合并并排序（按优先级降序）
-        all_handlers = exact_handlers + prefix_handlers + regex_handlers
-        all_handlers.sort(key=lambda t: (-t[1], t[2].__name__))
-        return all_handlers
+            try:
+                result = await self._run_handler(handler, event)
+                event.add_result(result)
+            except Exception as exc:
+                LOG.exception("处理器 %s 执行失败: %s", handler.__name__, exc)
+                event.add_exception(exc)
 
-    # ==================== 生命周期 ====================
+        return event.results
 
-    def shutdown(self):
-        """关闭事件总线并清理资源"""
+    async def _run_handler(
+        self,
+        handler: Callable[[NcatBotEvent], Any],
+        event: NcatBotEvent,
+    ) -> Any:
+        result = handler(event)
+        if not isawaitable(result):
+            raise TypeError("EventBus 仅支持异步事件处理器")
+        return await result
+
+    def _collect_handlers(
+        self,
+        event_type: str,
+    ) -> List[Tuple[None, int, Callable[[NcatBotEvent], Any], uuid.UUID, float]]:
+        return list(self._exact.get(event_type, ()))
+
+    def _broadcast_adapter_event(self, event: BaseEvent) -> None:
+        for queue in tuple(self._stream_queues):
+            if queue.full():
+                try:
+                    queue.get_nowait()
+                    LOG.debug("事件流队列已满，已丢弃最旧事件")
+                except asyncio.QueueEmpty:
+                    pass
+            try:
+                queue.put_nowait(copy(event))
+            except Exception:
+                LOG.exception("写入事件流队列失败")
+
+    def _resolve_waiters(self, event: BaseEvent) -> None:
+        for waiter in tuple(self._waiters):
+            if waiter.future.done():
+                continue
+
+            try:
+                matched = bool(waiter.predicate(event))
+            except Exception as exc:
+                waiter.future.set_exception(exc)
+                continue
+
+            if matched:
+                waiter.future.set_result(copy(event))
+
+    def _remove_waiter(self, token: object) -> None:
+        for index, waiter in enumerate(self._waiters):
+            if waiter.token is token:
+                del self._waiters[index]
+                break
+
+    def _finalize_shutdown(self) -> None:
+        closed_error = RuntimeError("EventBus 已关闭")
+
+        for waiter in self._waiters:
+            if not waiter.future.done():
+                waiter.future.set_exception(closed_error)
+        self._waiters.clear()
+
+        for queue in tuple(self._stream_queues):
+            try:
+                queue.put_nowait(_STOP)
+            except Exception:
+                pass
+        self._stream_queues.clear()
+
+        while not self._incoming.empty():
+            try:
+                queued = self._incoming.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            if isinstance(queued, _QueuedEvent) and queued.completion is not None:
+                if not queued.completion.done():
+                    queued.completion.set_exception(closed_error)
+
+        self._dispatch_task = None
         self._exact.clear()
-        self._regex.clear()
         self._handler_meta.clear()
         self._loop = None
-        LOG.info("EventBus 已关闭，所有处理器已清理")
 
+    @staticmethod
+    def _is_async_handler(handler: Callable[[NcatBotEvent], Any]) -> bool:
+        return iscoroutinefunction(handler) or iscoroutinefunction(
+            getattr(handler, "__call__", None)
+        )
 
-@lru_cache(maxsize=128)
-def _compile_regex(pattern: str) -> re.Pattern:
-    """编译正则表达式并缓存"""
-    try:
-        return re.compile(pattern)
-    except re.error as e:
-        raise ValueError(f"无效正则表达式: {pattern}") from e
+    @staticmethod
+    def _get_event_type_from_event(event: BaseEvent) -> Optional[EventType]:
+        post_type = getattr(event, "post_type", None)
+        if post_type == PostType.MESSAGE or post_type == "message":
+            return EventType.MESSAGE
+        if post_type == PostType.MESSAGE_SENT or post_type == "message_sent":
+            return EventType.MESSAGE_SENT
+        if post_type == PostType.NOTICE or post_type == "notice":
+            return EventType.NOTICE
+        if post_type == PostType.REQUEST or post_type == "request":
+            return EventType.REQUEST
+        if post_type == PostType.META_EVENT or post_type == "meta_event":
+            return EventType.META
+        return None

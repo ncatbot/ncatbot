@@ -145,7 +145,7 @@ class BaseAdapter(ABC):
         """设置事件回调
 
         由 BotClient 在启动阶段调用，将转换后的标准 Event
-        传递给 Core 层的 EventDispatcher。
+        传递给 Core 层的 EventBus 入口。
 
         Args:
             callback: 接收标准 Event 的异步回调函数

@@ -18,7 +18,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "message_event" in event_registry.event_bus._exact
+        assert "ncatbot.message_event" in event_registry.event_bus._exact
 
     def test_on_group_message_returns_function(self, event_registry):
         """装饰器返回原函数"""
@@ -36,7 +36,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "message_event" in event_registry.event_bus._exact
+        assert "ncatbot.message_event" in event_registry.event_bus._exact
 
     def test_on_notice_decorator(self, event_registry):
         """@on_notice() 装饰器"""
@@ -45,7 +45,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "notice_event" in event_registry.event_bus._exact
+        assert "ncatbot.notice_event" in event_registry.event_bus._exact
 
     def test_on_notice_with_type(self, event_registry):
         """@on_notice(notice_type="group_increase")"""
@@ -54,7 +54,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "notice.group_increase" in event_registry.event_bus._exact
+        assert "ncatbot.notice_event" in event_registry.event_bus._exact
 
     def test_on_request_decorator_deprecated(self, event_registry):
         """@on_request() 弃用装饰器"""
@@ -63,7 +63,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "request_event" in event_registry.event_bus._exact
+        assert "ncatbot.request_event" in event_registry.event_bus._exact
 
     def test_on_group_request_decorator(self, event_registry):
         """@on_group_request() 装饰器"""
@@ -72,7 +72,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "request_event" in event_registry.event_bus._exact
+        assert "ncatbot.request_event" in event_registry.event_bus._exact
 
     def test_on_friend_request_decorator(self, event_registry):
         """@on_friend_request() 装饰器"""
@@ -81,7 +81,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "request_event" in event_registry.event_bus._exact
+        assert "ncatbot.request_event" in event_registry.event_bus._exact
 
     def test_on_startup_decorator(self, event_registry):
         """@on_startup() 装饰器"""
@@ -90,7 +90,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "meta_event" in event_registry.event_bus._exact
+        assert "ncatbot.meta_event" in event_registry.event_bus._exact
 
     def test_on_shutdown_decorator(self, event_registry):
         """@on_shutdown() 装饰器"""
@@ -99,7 +99,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "meta_event" in event_registry.event_bus._exact
+        assert "ncatbot.meta_event" in event_registry.event_bus._exact
 
     def test_on_heartbeat_decorator(self, event_registry):
         """@on_heartbeat() 装饰器"""
@@ -108,7 +108,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "meta_event" in event_registry.event_bus._exact
+        assert "ncatbot.meta_event" in event_registry.event_bus._exact
 
     def test_on_message_sent_decorator(self, event_registry):
         """@on_message_sent() 装饰器"""
@@ -117,7 +117,7 @@ class TestEventRegistryDecorators:
         async def handler(event):
             pass
 
-        assert "message_sent_event" in event_registry.event_bus._exact
+        assert "ncatbot.message_sent_event" in event_registry.event_bus._exact
 
 
 class TestEventRegistryIntegration:
@@ -138,7 +138,7 @@ class TestEventRegistryIntegration:
 
         mock_event = MagicMock()
         mock_event.message_type = "group"
-        ncatbot_event = NcatBotEvent("message_event", mock_event)
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", mock_event)
 
         await event_registry.event_bus.publish(ncatbot_event)
 
@@ -162,7 +162,7 @@ class TestEventRegistryIntegration:
         mock_event.message = MagicMock()
         mock_event.message.filter = MagicMock(return_value=[MagicMock()])
 
-        ncatbot_event = NcatBotEvent("message_event", mock_event)
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", mock_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(results) == 1

@@ -300,14 +300,14 @@ class TestEventDispatcherCallable:
             event_dispatcher.event_bus.subscribe("ncatbot.message_event", capture_call)
             await event_dispatcher(sample_message_event_data)
 
-            # 清除订阅
-            event_dispatcher.event_bus.shutdown()
+            # 使用新的 EventBus/Dispatcher 再调用 dispatch
+            from ncatbot.core.client.event_bus import EventBus
 
-            # 使用 dispatch
-            event_dispatcher.event_bus.subscribe(
-                "ncatbot.message_event", capture_dispatch
-            )
-            await event_dispatcher.dispatch(sample_message_event_data)
+            second_bus = EventBus()
+            second_bus.subscribe("ncatbot.message_event", capture_dispatch)
+            second_dispatcher = EventDispatcher(second_bus, event_dispatcher.api)
+            await second_dispatcher.dispatch(sample_message_event_data)
+            await second_bus.close()
 
         assert events_via_call == events_via_dispatch
 

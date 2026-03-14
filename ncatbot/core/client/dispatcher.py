@@ -1,10 +1,9 @@
 """
 事件分发器
 
-负责接收事件，分发到 EventBus。
-支持两种模式：
-1. 接收原始 dict 数据（传统模式）
-2. 接收已转换的 BaseEvent 对象（新 Adapter 模式）
+保留为一个薄桥接层：
+1. 接收原始 dict 数据时，负责解析为标准事件
+2. 接收 BaseEvent 时，直接转交给 EventBus 的 adapter 回调入口
 """
 
 import traceback
@@ -88,15 +87,7 @@ class EventDispatcher:
             data_or_event: 原始数据 dict 或已转换的 BaseEvent
         """
         if isinstance(data_or_event, BaseEvent):
-            # 新 Adapter 模式：事件已转换
-            event = data_or_event
-            event_type = self._get_event_type_from_event(event)
-            if not event_type:
-                LOG.debug(f"未知事件类型: {event.post_type}")
-                return
-
-            ncatbot_event = NcatBotEvent(f"ncatbot.{event_type.value}", event)
-            await self.event_bus.publish(ncatbot_event)
+            await self.event_bus.on_adapter_event(data_or_event, wait=True)
             return
 
         # 传统模式：从 dict 解析
@@ -108,32 +99,12 @@ class EventDispatcher:
 
         try:
             event = EventParser.parse(data, self.api)
-            ncatbot_event = NcatBotEvent(f"ncatbot.{event_type.value}", event)
-            await self.event_bus.publish(ncatbot_event)
+            await self.event_bus.publish(NcatBotEvent(f"ncatbot.{event_type.value}", event))
 
         except ValueError as e:
             LOG.warning(f"事件解析失败: {e}")
         except Exception as e:
             LOG.error(f"事件处理出错: {e}\n{traceback.format_exc()}")
-
-    @staticmethod
-    def _get_event_type_from_event(event: BaseEvent) -> Optional[EventType]:
-        """从 BaseEvent 对象获取事件类型"""
-        post_type = getattr(event, "post_type", None)
-        if not post_type:
-            return None
-
-        if post_type == PostType.MESSAGE or post_type == "message":
-            return EventType.MESSAGE
-        if post_type == "message_sent":
-            return EventType.MESSAGE_SENT
-        if post_type == PostType.NOTICE or post_type == "notice":
-            return EventType.NOTICE
-        if post_type == PostType.REQUEST or post_type == "request":
-            return EventType.REQUEST
-        if post_type == PostType.META_EVENT or post_type == "meta_event":
-            return EventType.META
-        return None
 
     async def __call__(self, data_or_event: Union[dict, BaseEvent]) -> None:
         """支持作为回调函数使用"""

@@ -9,7 +9,7 @@ NcatBot Event: 订阅的事件触发的回调是 NcatBotEvent(带类型 type 和
 --- CustomEvent
 """
 
-import inspect
+from inspect import iscoroutinefunction
 from typing import Callable, Optional, Type, Literal, TYPE_CHECKING, Union
 
 from ..event.enums import EventType
@@ -65,7 +65,7 @@ class EventRegistry:
             priority: 优先级，数值越大越先执行
             timeout: 超时时间
         """
-        key = event_type.value if isinstance(event_type, EventType) else event_type
+        key = self._normalize_event_type(event_type)
         self.event_bus.subscribe(key, handler, priority, timeout)
 
     def register_handler(
@@ -89,6 +89,8 @@ class EventRegistry:
             filter_func: 可选的过滤函数，接收 Event，返回 bool
         """
 
+        self._ensure_async_handler(handler)
+
         async def wrapper(ncatbot_event: NcatBotEvent):
             # 从 NcatBotEvent 提取真实的 Event
             event = ncatbot_event.data
@@ -98,10 +100,7 @@ class EventRegistry:
                 return
 
             # 调用用户的 handler
-            if inspect.iscoroutinefunction(handler):
-                await handler(event)
-            else:
-                handler(event)
+            await handler(event)
 
         self.subscribe(event_type, wrapper, priority, timeout)
 
@@ -249,8 +248,18 @@ class EventRegistry:
 
         def decorator(f):
             if notice_type:
-                # 直接使用 register_handler 而不是不存在的 _wrap_handler
-                self.register_handler(f"notice.{notice_type}", f, priority=priority)
+                def filter_func(event) -> bool:
+                    value = getattr(event, "notice_type", None)
+                    if hasattr(value, "value"):
+                        value = value.value
+                    return value == notice_type
+
+                self.register_handler(
+                    EventType.NOTICE,
+                    f,
+                    priority=priority,
+                    filter_func=filter_func,
+                )
             else:
                 self.add_notice_handler(f)
             return f
@@ -306,3 +315,15 @@ class EventRegistry:
             return f
 
         return decorator
+
+    @staticmethod
+    def _normalize_event_type(event_type: Union[str, EventType]) -> str:
+        if isinstance(event_type, EventType):
+            return f"ncatbot.{event_type.value}"
+        return event_type
+
+    @staticmethod
+    def _ensure_async_handler(handler: Callable) -> None:
+        if iscoroutinefunction(handler) or iscoroutinefunction(getattr(handler, "__call__", None)):
+            return
+        raise TypeError("EventRegistry 仅支持异步事件处理器")

@@ -23,7 +23,7 @@ class TestEventRegistryMessageHandlers:
 
         event_registry.add_group_message_handler(handler)
 
-        ncatbot_event = NcatBotEvent("message_event", mock_group_message_event)
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", mock_group_message_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 1
@@ -40,7 +40,7 @@ class TestEventRegistryMessageHandlers:
 
         event_registry.add_group_message_handler(handler)
 
-        ncatbot_event = NcatBotEvent("message_event", mock_private_message_event)
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", mock_private_message_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 0
@@ -57,7 +57,7 @@ class TestEventRegistryMessageHandlers:
 
         event_registry.add_private_message_handler(handler)
 
-        ncatbot_event = NcatBotEvent("message_event", mock_private_message_event)
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", mock_private_message_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 1
@@ -74,7 +74,7 @@ class TestEventRegistryMessageHandlers:
 
         event_registry.add_private_message_handler(handler)
 
-        ncatbot_event = NcatBotEvent("message_event", mock_group_message_event)
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", mock_group_message_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 0
@@ -96,7 +96,7 @@ class TestEventRegistryMessageHandlers:
 
         event_registry.add_group_message_handler(handler, filter=MessageSegment)
 
-        ncatbot_event = NcatBotEvent("message_event", mock_event)
+        ncatbot_event = NcatBotEvent("ncatbot.message_event", mock_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 1
@@ -115,7 +115,7 @@ class TestEventRegistryNoticeHandler:
 
         event_registry.add_notice_handler(handler)
 
-        ncatbot_event = NcatBotEvent("notice_event", mock_notice_event)
+        ncatbot_event = NcatBotEvent("ncatbot.notice_event", mock_notice_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 1
@@ -136,7 +136,7 @@ class TestEventRegistryRequestHandlers:
 
         event_registry.add_group_request_handler(handler)
 
-        ncatbot_event = NcatBotEvent("request_event", mock_group_request_event)
+        ncatbot_event = NcatBotEvent("ncatbot.request_event", mock_group_request_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 1
@@ -153,7 +153,7 @@ class TestEventRegistryRequestHandlers:
 
         event_registry.add_friend_request_handler(handler)
 
-        ncatbot_event = NcatBotEvent("request_event", mock_friend_request_event)
+        ncatbot_event = NcatBotEvent("ncatbot.request_event", mock_friend_request_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 1
@@ -170,7 +170,7 @@ class TestEventRegistryRequestHandlers:
 
         event_registry.add_group_request_handler(handler)
 
-        ncatbot_event = NcatBotEvent("request_event", mock_friend_request_event)
+        ncatbot_event = NcatBotEvent("ncatbot.request_event", mock_friend_request_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 0
@@ -182,7 +182,7 @@ class TestEventRegistryRequestHandlers:
             pass
 
         event_registry.add_request_handler(handler, filter="group")
-        assert "request_event" in event_registry.event_bus._exact
+        assert "ncatbot.request_event" in event_registry.event_bus._exact
 
     def test_add_request_handler_deprecated_friend(self, event_registry):
         """弃用的 add_request_handler 好友过滤"""
@@ -191,7 +191,7 @@ class TestEventRegistryRequestHandlers:
             pass
 
         event_registry.add_request_handler(handler, filter="friend")
-        assert "request_event" in event_registry.event_bus._exact
+        assert "ncatbot.request_event" in event_registry.event_bus._exact
 
 
 class TestEventRegistryMetaHandlers:
@@ -207,7 +207,7 @@ class TestEventRegistryMetaHandlers:
 
         event_registry.add_startup_handler(handler)
 
-        ncatbot_event = NcatBotEvent("meta_event", mock_startup_event)
+        ncatbot_event = NcatBotEvent("ncatbot.meta_event", mock_startup_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 1
@@ -222,7 +222,7 @@ class TestEventRegistryMetaHandlers:
 
         event_registry.add_heartbeat_handler(handler)
 
-        ncatbot_event = NcatBotEvent("meta_event", mock_heartbeat_event)
+        ncatbot_event = NcatBotEvent("ncatbot.meta_event", mock_heartbeat_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 1
@@ -239,7 +239,7 @@ class TestEventRegistryMetaHandlers:
 
         event_registry.add_startup_handler(handler)
 
-        ncatbot_event = NcatBotEvent("meta_event", mock_heartbeat_event)
+        ncatbot_event = NcatBotEvent("ncatbot.meta_event", mock_heartbeat_event)
         await event_registry.event_bus.publish(ncatbot_event)
 
         assert len(received) == 0

@@ -4,7 +4,7 @@ Bot 客户端
 组合各模块，提供统一的 Bot 客户端接口。
 """
 
-from typing import List, Optional, Type, TypeVar, TYPE_CHECKING
+from typing import AsyncGenerator, Callable, List, Optional, Type, TypeVar, TYPE_CHECKING
 
 from ncatbot.utils import get_log
 from ncatbot.utils.error import NcatBotError
@@ -27,6 +27,7 @@ from .lifecycle import LifecycleManager
 
 if TYPE_CHECKING:
     from ncatbot.plugin_system import BasePlugin
+    from ncatbot.core.event import BaseEvent
 
 T = TypeVar("T")
 LOG = get_log("Client")
@@ -46,12 +47,12 @@ class BotClient(EventRegistry, LifecycleManager):
     │       │             │             │             │       │
     │       └─────────────┴─────────────┴─────────────┘       │
     │                         ↓                               │
-    │                   EventDispatcher                       │
-    │                    (解析 & 分发)                         │
+    │                    EventBus Callback                    │
+    │                    (Adapter 事件入口)                    │
     └─────────────────────────────────────────────────────────┘
 
     事件流：
-    MessageRouter → Dispatcher → EventBus → Handlers/Plugins
+    Adapter → EventBus → Handlers/Plugins
 
     继承：
     - EventRegistry: 提供事件注册和装饰器接口
@@ -83,17 +84,26 @@ class BotClient(EventRegistry, LifecycleManager):
         # 2. 注册引擎（直接订阅 EventBus）
         self.registry_engine = RegistryEngine()
 
-        self.event_bus.subscribe(
-            "re:ncatbot\\.group_message_event|ncatbot\\.private_message_event"
-            "|ncatbot\\.message_sent_event",
-            self._on_message_for_registry,
-            priority=0,
-        )
-        self.event_bus.subscribe(
-            "re:ncatbot\\.notice_event|ncatbot\\.request_event|ncatbot\\.meta_event",
-            self._on_legacy_for_registry,
-            priority=0,
-        )
+        for event_type in (
+            "ncatbot.group_message_event",
+            "ncatbot.private_message_event",
+            "ncatbot.message_sent_event",
+        ):
+            self.event_bus.subscribe(
+                event_type,
+                self._on_message_for_registry,
+                priority=0,
+            )
+        for event_type in (
+            "ncatbot.notice_event",
+            "ncatbot.request_event",
+            "ncatbot.meta_event",
+        ):
+            self.event_bus.subscribe(
+                event_type,
+                self._on_legacy_for_registry,
+                priority=0,
+            )
 
         # 3. 服务管理器（注入 EventBus）
         self.services = ServiceManager(event_bus=self.event_bus)
@@ -131,16 +141,14 @@ class BotClient(EventRegistry, LifecycleManager):
 
     async def _setup_api(self) -> None:
         """设置 API（在 adapter.connect() 后调用）"""
-        from .dispatcher import EventDispatcher
-
         # 从适配器获取 IBotAPI
         self.api = self.adapter.get_api()
 
-        # 创建事件分发器
+        # 保留一个薄分发器，便于测试和手动注入 dict 事件
         self.dispatcher = EventDispatcher(self.event_bus, self.api)
 
-        # 将适配器的事件输出连接到分发器
-        self.adapter.set_event_callback(self.dispatcher.dispatch)
+        # adapter 直接将标准事件交给 EventBus
+        self.adapter.set_event_callback(self.event_bus.on_adapter_event)
 
         # 注入 BotClient 引用到 RegistryEngine（过渡期）
         self.registry_engine.set_bot_client(self)
@@ -155,7 +163,24 @@ class BotClient(EventRegistry, LifecycleManager):
 
     def _register_builtin_handlers(self):
         """注册内置处理器"""
-        self.on_startup()(lambda e: LOG.info(f"Bot {e.self_id} 启动成功"))
+        @self.on_startup()
+        async def _log_startup(event) -> None:
+            LOG.info("Bot %s 启动成功", event.self_id)
+
+    def events(self) -> AsyncGenerator["BaseEvent", None]:
+        """按异步事件流消费 adapter 事件。"""
+        return self.event_bus.events()
+
+    def __aiter__(self) -> AsyncGenerator["BaseEvent", None]:
+        return self.events()
+
+    async def wait_event(
+        self,
+        predicate: Callable[["BaseEvent"], bool],
+        timeout: Optional[float] = None,
+    ) -> "BaseEvent":
+        """等待下一条满足条件的 adapter 事件。"""
+        return await self.event_bus.wait_event(predicate, timeout)
 
     # ==================== 工具方法 ====================
 

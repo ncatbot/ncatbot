@@ -2,6 +2,7 @@
 BotClient 集成测试
 """
 
+import asyncio
 import pytest
 from unittest.mock import MagicMock
 
@@ -102,7 +103,7 @@ class TestBotClientInheritance:
         async def handler(event):
             pass
 
-        assert "message_event" in client.event_bus._exact
+        assert "ncatbot.message_event" in client.event_bus._exact
 
 
 class TestBotClientPluginManagement:
@@ -185,4 +186,48 @@ class TestBotClientBuiltinHandlers:
 
         client = BotClient()
 
-        assert "meta_event" in client.event_bus._exact
+        assert "ncatbot.meta_event" in client.event_bus._exact
+
+
+class TestBotClientEventStream:
+    """测试 BotClient 事件流能力"""
+
+    @pytest.mark.asyncio
+    async def test_client_wait_event(self, mock_api, sample_message_event_data):
+        from ncatbot.core.client.client import BotClient
+        from ncatbot.core.event import EventParser
+
+        client = BotClient()
+        waiter = asyncio.create_task(
+            client.wait_event(lambda event: event.post_type == "message", timeout=1.0)
+        )
+
+        message_event = EventParser.parse(sample_message_event_data, mock_api)
+        await client.event_bus.on_adapter_event(message_event)
+
+        received = await waiter
+
+        assert received.raw_message == "Hello, world!"
+        await client.event_bus.close()
+
+    @pytest.mark.asyncio
+    async def test_client_async_for(self, mock_api, sample_message_event_data):
+        from ncatbot.core.client.client import BotClient
+        from ncatbot.core.event import EventParser
+
+        client = BotClient()
+
+        async def consume_one():
+            async for event in client:
+                return event
+            return None
+
+        consumer = asyncio.create_task(consume_one())
+
+        message_event = EventParser.parse(sample_message_event_data, mock_api)
+        await client.event_bus.on_adapter_event(message_event)
+
+        received = await asyncio.wait_for(consumer, timeout=1.0)
+
+        assert received.raw_message == "Hello, world!"
+        await client.event_bus.close()
