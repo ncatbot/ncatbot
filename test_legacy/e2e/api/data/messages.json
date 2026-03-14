@@ -1,0 +1,44 @@
+{
+  "_comment": "消息相关测试数据，请复制为 messages.json",
+  "text_messages": {
+    "private": {
+      "simple": "[E2E 测试] 私聊文本消息测试",
+      "with_emoji": "[E2E 测试] 表情消息测试 😊🎉",
+      "long": "[E2E 测试] 这是一条较长的测试消息，用于测试长文本处理能力。NcatBot 是一个基于 Python 的 QQ 机器人框架，支持多种消息类型和丰富的 API 功能。"
+    },
+    "group": {
+      "simple": "[E2E 测试] 群聊文本消息测试",
+      "with_at": "[E2E 测试] @ 消息测试",
+      "announcement": "[E2E 测试] 群公告测试消息"
+    }
+  },
+  "forward_messages": {
+    "source_message_ids": [],
+    "test_content": "[E2E 测试] 转发消息测试",
+    "nested_forward_content": "[E2E 测试] 嵌套转发消息测试"
+  },
+  "test_images": {
+    "_comment": "测试图片路径，可以是本地路径或 URL",
+    "local_image": "/tmp/test_image.png",
+    "url_image": "https://storage.moegirl.org.cn/moegirl/commons/3/30/%E6%B4%9B%E5%A4%A9%E4%BE%9DV4%E5%AE%98%E6%96%B9%E6%B8%B2%E6%9F%932.png",
+    "create_test_image": true
+  },
+  "music_messages": {
+    "qq_music": {
+      "type": "qq",
+      "id": "003aAYrm3GE0Ac"
+    },
+    "custom_music": {
+      "type": "custom",
+      "url": "https://music.163.com/song/media/outer/url?id=1824020873",
+      "audio": "https://music.163.com/song/media/outer/url?id=1824020873",
+      "title": "测试音乐",
+      "content": "测试歌手",
+      "image": "https://via.placeholder.com/300"
+    }
+  },
+  "history_query": {
+    "count": 10,
+    "message_seq": null
+  }
+}

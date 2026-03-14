@@ -1,0 +1,25 @@
+{
+  "_comment": "文件相关测试数据，请复制为 files.json",
+  "group_files": {
+    "test_folder_name": "E2E测试文件夹",
+    "test_file_path": "/tmp/test_group_file.txt",
+    "test_file_content": "这是一个 E2E 测试群文件",
+    "rename_to": "renamed_e2e_test.txt"
+  },
+  "file_operations": {
+    "_note": "文件操作需要的临时数据，测试时自动填充",
+    "last_uploaded_file_id": null,
+    "last_created_folder_id": null,
+    "test_folder_id": null
+  },
+  "private_files": {
+    "test_file_path": "/tmp/test_private_file.txt",
+    "test_file_content": "这是一个 E2E 测试私聊文件"
+  },
+  "media_files": {
+    "_note": "图片和语音文件测试",
+    "test_image_path": "/tmp/test_image.png",
+    "test_record_path": "/tmp/test_record.amr",
+    "test_image_url": "https://via.placeholder.com/300"
+  }
+}

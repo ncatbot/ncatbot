@@ -1,0 +1,6 @@
+name = "no_reply_plugin"
+version = "1.0.0"
+main = "plugin.py"
+entry_class = "NoReplyPlugin"
+author = "test"
+description = "无回复插件 - 测试不发送回复的情况"

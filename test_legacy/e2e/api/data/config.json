@@ -1,0 +1,20 @@
+{
+  "_comment": "端到端测试主配置文件，请复制为 config.json 并填写实际值",
+  "targets": {
+    "test_group": 123456,
+    "test_user": 123456,
+    "test_admin_group": 123456
+  },
+  "test_data_files": {
+    "messages": "messages.json",
+    "friends": "friends.json",
+    "groups": "groups.json",
+    "files": "files.json"
+  },
+  "options": {
+    "auto_cleanup": true,
+    "skip_destructive": false,
+    "verbose": true,
+    "timeout_seconds": 30
+  }
+}

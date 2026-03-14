@@ -1,0 +1,6 @@
+name = "simple_reply_plugin"
+version = "1.0.0"
+main = "plugin.py"
+entry_class = "SimpleReplyPlugin"
+author = "test"
+description = "简单回复插件 - 测试 reply 功能"

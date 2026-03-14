@@ -1,0 +1,21 @@
+{
+  "_comment": "好友相关测试数据，请复制为 friends.json",
+  "friend_operations": {
+    "send_like_count": 10,
+    "poke_count": 1
+  },
+  "friend_requests": {
+    "_note": "设置好友申请处理参数",
+    "approve": true,
+    "remark": "E2E测试添加"
+  },
+  "private_file": {
+    "test_file_path": "/tmp/test_upload.txt",
+    "test_file_content": "这是一个 E2E 测试文件",
+    "file_name": "test_e2e_upload.txt"
+  },
+  "message_history": {
+    "count": 20,
+    "message_seq": null
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "_comment": "群组相关测试数据，请复制为 groups.json",
+  "member_operations": {
+    "ban_duration": 60,
+    "special_title": "E2E测试头衔",
+    "card": "E2E测试名片"
+  },
+  "essence_messages": {
+    "_note": "精华消息测试，需要管理员权限",
+    "test_message_id": null
+  },
+  "group_sign": {
+    "enable": true
+  },
+  "album": {
+    "_note": "群相册测试",
+    "test_image_path": "/tmp/test_album.png",
+    "album_id": null
+  },
+  "shut_list": {
+    "include_all": true
+  }
+}

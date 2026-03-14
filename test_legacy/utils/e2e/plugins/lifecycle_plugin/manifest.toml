@@ -1,0 +1,6 @@
+name = "lifecycle_plugin"
+version = "1.0.0"
+main = "plugin.py"
+entry_class = "LifecyclePlugin"
+author = "test"
+description = "生命周期插件 - 测试 on_load/on_close"
