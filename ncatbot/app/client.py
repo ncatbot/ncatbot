@@ -169,13 +169,17 @@ class BotClient:
 
     async def _startup(self) -> None:
         """引导启动：adapter → API → dispatcher → 服务 → 插件 → 热重载"""
+        await self._startup_core()
+        await self._setup_plugins()
+        self._running = True
+
+    async def _startup_core(self) -> None:
+        """核心启动（不含插件加载）：adapter → API → dispatcher → 服务"""
         await self._setup_adapter()
         self._setup_api()
         self._setup_dispatcher()
         self._setup_handler_dispatcher()
         await self._setup_services()
-        await self._setup_plugins()
-        self._running = True
 
     async def _setup_adapter(self) -> None:
         """准备并连接 Adapter。"""

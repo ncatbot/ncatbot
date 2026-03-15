@@ -93,6 +93,53 @@ class PluginLoader:
         LOG.info("已加载 %d/%d 个插件", len(loaded), len(manifests))
         return loaded
 
+    async def load_selected(
+        self,
+        plugin_dir: Path,
+        names: List[str],
+        *,
+        skip_pip: bool = True,
+    ) -> List[str]:
+        """只加载指定插件及其传递依赖。
+
+        Args:
+            plugin_dir: 插件根目录
+            names: 需要加载的目标插件名列表
+            skip_pip: 是否跳过 pip 依赖检查（测试环境默认跳过）
+
+        Returns:
+            成功加载的插件名列表
+        """
+        self._importer.add_plugin_root(plugin_dir)
+
+        manifests = self._indexer.scan(plugin_dir)
+        if not manifests:
+            LOG.info("未在 %s 中发现插件", plugin_dir)
+            return []
+
+        # 解析目标插件及其传递依赖的加载顺序
+        load_order = self._resolver.resolve_subset(manifests, names)
+        # 只对子集做版本验证
+        subset = {n: manifests[n] for n in load_order}
+        self._resolver.validate_versions(subset)
+
+        # pip 依赖检查
+        skip_plugins: set = set()
+        if not skip_pip:
+            skip_plugins = await self._check_pip_deps_batch(subset)
+
+        loaded = []
+        for name in load_order:
+            if name in skip_plugins:
+                LOG.warning("跳过插件 %s（pip 依赖未满足）", name)
+                continue
+            plugin = await self.load_plugin(name)
+            if plugin is not None:
+                loaded.append(name)
+
+        LOG.info("已选择性加载 %d/%d 个插件", len(loaded), len(load_order))
+        return loaded
+
     # ------------------------------------------------------------------
     # 单个插件操作
     # ------------------------------------------------------------------

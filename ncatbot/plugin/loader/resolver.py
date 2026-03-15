@@ -84,6 +84,43 @@ class DependencyResolver:
 
         return order
 
+    def resolve_subset(
+        self,
+        manifests: Dict[str, PluginManifest],
+        target_names: List[str],
+    ) -> List[str]:
+        """解析 target_names 及其传递依赖，返回按依赖排序的加载列表。
+
+        Args:
+            manifests: 全部已索引的插件清单
+            target_names: 需要加载的目标插件名
+
+        Raises:
+            PluginMissingDependencyError: 目标或其依赖不在 manifests 中
+            PluginCircularDependencyError: 子集内检测到循环依赖
+        """
+        # 递归收集传递依赖
+        needed: Set[str] = set()
+
+        def _collect(name: str) -> None:
+            if name in needed:
+                return
+            manifest = manifests.get(name)
+            if manifest is None:
+                raise PluginMissingDependencyError(name, name)
+            needed.add(name)
+            for dep in manifest.dependencies:
+                if dep not in manifests:
+                    raise PluginMissingDependencyError(name, dep)
+                _collect(dep)
+
+        for t in target_names:
+            _collect(t)
+
+        # 对子集跑拓扑排序
+        subset = {n: manifests[n] for n in needed}
+        return self.resolve(subset)
+
     def validate_versions(self, manifests: Dict[str, PluginManifest]) -> None:
         """检查所有已加载插件间的版本约束是否满足。
 
