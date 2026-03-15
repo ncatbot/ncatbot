@@ -38,9 +38,9 @@ python -m pytest tests/ --cov=ncatbot --cov-report=term-missing -v
 # 指定模块
 python -m pytest tests/unit/core/ -v
 
-# NapCat E2E (需要真实连接，通过环境变量配置)
+# NapCat E2E (需要真实连接，不使用 pytest，引导式执行)
 # $env:NAPCAT_TEST_GROUP="123456"; $env:NAPCAT_TEST_USER="654321"
-python -m pytest tests/e2e/napcat/ -m napcat -v
+python tests/e2e/napcat/run.py
 
 # 数据驱动测试 (需要 dev/data.txt 或设置 NCATBOT_TEST_DATA_FILE)
 python -m pytest tests/unit/adapter/test_real_data.py -v

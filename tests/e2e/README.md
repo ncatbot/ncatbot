@@ -22,16 +22,17 @@
 ## NapCat E2E (`napcat/`)
 
 需要真实 NapCat WebSocket 连接的端到端测试。
-来源: `test_legacy/e2e/api/` 场景化测试的精简迁移。
+不使用 pytest，直接通过 `BotClient` 框架管理会话，引导式顺序执行。
 
-### 配置 (环境变量)
+### 配置
+
+连接参数从 `config.yaml` 读取（`napcat.ws_uri` / `napcat.ws_token`）。
+测试目标通过环境变量指定：
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `NAPCAT_WS_URI` | WebSocket 地址 | `ws://localhost:3001` |
 | `NAPCAT_TEST_GROUP` | 测试群号 (必填) | — |
 | `NAPCAT_TEST_USER` | 测试用户 QQ (必填) | — |
-| `NAPCAT_API_TIMEOUT` | API 超时秒数 | `30` |
 
 ### 验证规范
 
@@ -46,6 +47,7 @@
 | NC-10 | 群消息 | 发送群文本消息 |
 | NC-11 | 群消息 | 查询消息详情 |
 | NC-12 | 群消息 | 撤回消息 |
+| NC-13 | 群消息 | 发送简单文本 |
 | NC-20 | 好友互动 | 发送私聊消息 |
 
 ### 运行方式
@@ -55,9 +57,6 @@
 $env:NAPCAT_TEST_GROUP = "123456"
 $env:NAPCAT_TEST_USER = "654321"
 
-# 运行 NapCat E2E 测试
-python -m pytest tests/e2e/napcat/ -m napcat -v
-
-# 未配置环境变量时所有 napcat 标记的测试自动 skip
-python -m pytest tests/e2e/ -v
+# 运行 NapCat E2E 测试 (需要 NapCat 服务已启动)
+python tests/e2e/napcat/run.py
 ```

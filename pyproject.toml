@@ -60,9 +60,7 @@ testpaths = ["tests"]
 python_classes = ["Test*"]
 # 忽略 examples 目录
 addopts = "--ignore=examples --cov=ncatbot --cov-report=term-missing --cov-report=html"
-markers = [
-    "napcat: 需要真实 NapCat WebSocket 连接的 E2E 测试",
-]
+markers = []
 
 [tool.coverage.run]
 source = ["ncatbot"]

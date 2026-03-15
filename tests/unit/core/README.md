@@ -29,6 +29,21 @@
 | K-05 | `HookContext` 传递 | 正确传递上下文信息 |
 | K-06 | `MessageTypeFilter` | 内置消息类型过滤 Hook |
 | K-07 | `PostTypeFilter` | 内置 post_type 过滤 Hook |
+| K-08 | `StartsWithHook` | 前缀匹配过滤，不匹配 → SKIP |
+| K-09 | `KeywordHook` | 任一关键词命中 → CONTINUE，全不匹配 → SKIP |
+| K-10 | `RegexHook` | 正则匹配 → CONTINUE + 注入 `match`，否则 SKIP |
+| K-11 | `NoticeTypeFilter` | `notice_type` 枚举匹配过滤 |
+| K-12 | `RequestTypeFilter` | `request_type` 枚举匹配过滤 |
+| K-13 | `CommandHook` 精确匹配 | 无额外参数时 `text.strip() == name` |
+| K-14 | `CommandHook` ignore_case | 大小写不敏感匹配 |
+| K-15 | `CommandHook` str 参数绑定 | 前缀匹配 + 剩余文本提取 |
+| K-16 | `CommandHook` At 参数绑定 | 从 `message.filter_at()` 按序提取 At |
+| K-17 | `CommandHook` int/float 转换 | 文本 token 中查找可转换值 |
+| K-18 | `CommandHook` 可选参数 | 有默认值的参数缺失时使用默认值 |
+| K-19 | `CommandHook` 必选参数缺失 | 必选参数缺失 → SKIP |
+| K-20 | `on_group_command` 等便捷方法 | 单装饰器封装 `MessageTypeFilter` + `CommandHook` |
+| K-21 | `on_group_increase` 等通知/请求方法 | 直接注册精确事件类型 |
+| K-22 | 所有文本匹配使用 `message.text` | 统一使用 `MessageArray.text`，不使用 `raw_message` |
 
 ### HandlerDispatcher (`test_handler_dispatcher.py`)
 
