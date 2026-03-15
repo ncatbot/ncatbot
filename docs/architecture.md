@@ -22,6 +22,7 @@
   - [4.8 Utils 工具集](#48-utils-工具集)
   - [4.9 Testing 测试支持](#49-testing-测试支持)
   - [4.10 App 编排层](#410-app-编排层)
+  - [4.11 CLI 命令行工具](#411-cli-命令行工具)
 - [5. 生命周期](#5-生命周期)
   - [5.1 启动流程](#51-启动流程)
   - [5.2 事件处理流程](#52-事件处理流程)
@@ -65,7 +66,14 @@ ncatbot/
 ├── adapter/          # 协议适配器（NapCat、Mock）
 │   ├── base.py       #   BaseAdapter 抽象接口
 │   ├── napcat/       #   NapCat OneBot v11 实现
-│   └── mock/         #   测试用 Mock 适配器
+│   │   ├── adapter.py    #   NapCatAdapter 主类
+│   │   ├── connection/   #   WebSocket + OB11Protocol
+│   │   ├── api/          #   NapCatBotAPI + 分模块实现
+│   │   ├── parser.py     #   NapCatEventParser
+│   │   ├── setup/        #   Launcher / 安装 / 认证 / 平台
+│   │   ├── service/      #   预上传等适配器级服务
+│   │   └── debug/        #   WebSocket / WebUI 诊断工具
+│   └── mock/         #   测试用 Mock 适配器（MockAdapter + MockBotAPI）
 ├── api/              # Bot API 封装
 │   ├── interface.py  #   IBotAPI 抽象接口
 │   ├── client.py     #   BotAPIClient（插件使用的高层客户端）
@@ -82,13 +90,12 @@ ncatbot/
 │   ├── notice.py     #   NoticeEvent 系列
 │   ├── request.py    #   RequestEvent 系列
 │   ├── meta.py       #   MetaEvent
-│   ├── factory.py    #   create_entity() 工厂
-│   └── parser.py     #   事件类型解析
+│   └── factory.py    #   create_entity() 工厂
 ├── plugin/           # 插件框架
 │   ├── base.py       #   BasePlugin 抽象基类
 │   ├── ncatbot_plugin.py  # NcatBotPlugin（推荐基类）
 │   ├── manifest.py   #   manifest.toml 解析
-│   ├── loader/       #   PluginLoader / Indexer / Resolver / Importer
+│   ├── loader/       #   PluginLoader / PluginIndexer / DependencyResolver / ModuleImporter / PipHelper
 │   └── mixin/        #   Event / TimeTask / RBAC / Config / Data 混入
 ├── service/          # 服务层
 │   ├── base.py       #   BaseService 抽象基类
@@ -101,6 +108,9 @@ ncatbot/
 │   ├── notice.py     #   通知事件数据模型
 │   ├── request.py    #   请求事件数据模型
 │   ├── meta.py       #   元事件数据模型
+│   ├── sender.py     #   BaseSender / GroupSender
+│   ├── misc.py       #   Anonymous / FileInfo / Status
+│   ├── helper/       #   ForwardConstructor 等辅助类
 │   └── segment/      #   消息段类型（text/media/rich/forward/array）
 ├── testing/          # 测试工具
 │   ├── factory.py    #   测试数据工厂
@@ -108,8 +118,15 @@ ncatbot/
 ├── utils/            # 公共工具
 │   ├── logger/       #   日志配置
 │   ├── config/       #   ConfigManager / Config 模型
-│   └── network.py    #   HTTP 工具函数
-└── cli/              # CLI 工具（规划中）
+│   ├── network.py    #   HTTP 工具函数
+│   ├── error.py      #   NcatBotError / NcatBotValueError / NcatBotConnectionError
+│   ├── status.py     #   Status 状态追踪
+│   └── prompt.py     #   交互式 CLI 工具（confirm / ask / select）
+└── cli/              # CLI 命令行工具
+    ├── main.py       #   Click 入口，注册子命令
+    ├── commands/     #   run / dev / config / plugin / napcat / init
+    ├── utils/        #   颜色输出 / REPL
+    └── templates/    #   插件脚手架模板
 ```
 
 ---
@@ -262,6 +279,17 @@ graph LR
 | **NapCatEventParser** | 原始 JSON → `BaseEventData` Pydantic 模型 |
 | **NapCatLauncher** | NapCat 进程的启动与关闭 |
 | **MockAdapter** | 测试用适配器，支持 `inject_event()` 注入事件 |
+| **MockBotAPI** | 测试用 API 实现，记录所有调用，支持 `set_response()` / `called()` / `call_count()` |
+
+**NapCat 适配器内部子模块：**
+
+| 子目录 | 内容 |
+|---|---|
+| `connection/` | `NapCatWebSocket` + `OB11Protocol` |
+| `api/` | `NapCatBotAPI` + 分模块实现（account / group / message / file / query） |
+| `setup/` | `NapCatLauncher` + 安装器 / 认证 / 配置 / 平台检测 |
+| `service/` | 预上传等适配器级服务 |
+| `debug/` | WebSocket / WebUI 连通性诊断工具 |
 
 ### 4.2 Types 类型模型
 
@@ -296,9 +324,12 @@ graph TB
 | 类型 | 说明 |
 |---|---|
 | `MessageSegment` | 抽象基类，类型注册机制 |
-| `TextSegment` | 纯文本 |
-| `ImageSegment` / `RecordSegment` / `VideoSegment` / `FileSegment` | 多媒体 |
-| `AtSegment` / `FaceSegment` / `ReplySegment` / `ForwardSegment` | 富文本 |
+| `PlainText` | 纯文本 |
+| `DownloadableSegment` | 可下载段基类 |
+| `Image` / `Record` / `Video` / `File` | 多媒体 |
+| `At` / `Face` / `Reply` | 富文本 |
+| `Share` / `Location` / `Music` / `Json` / `Markdown` | 扩展富文本 |
+| `Forward` / `ForwardNode` | 合并转发 |
 | `MessageArray` | 消息段容器，支持链式构造 |
 
 ### 4.3 Event 事件实体
@@ -313,7 +344,6 @@ graph TB
 | **PrivateMessageEvent** | 私聊消息实体 |
 | **NoticeEvent / RequestEvent / MetaEvent** | 各类事件实体 |
 | **create_entity()** | 工厂函数：`BaseEventData` → 对应 EventEntity |
-| **_resolve_type()** | 事件类型解析：`"message.group"`, `"notice.group_increase"` 等 |
 
 ### 4.4 Core 核心引擎
 
@@ -336,7 +366,7 @@ graph LR
 
 | 组件 | 职责 |
 |---|---|
-| **AsyncEventDispatcher** | 接收事件、类型解析、广播到所有活跃 Stream |
+| **AsyncEventDispatcher** | 接收事件、类型解析（内置 `_resolve_type()` 静态方法推导 `"message.group"` 等类型）、广播到所有活跃 Stream |
 | **Event** | 不可变数据类，包含解析后的事件类型 + 原始数据 |
 | **EventStream** | 异步迭代器，支持 `async with` / `async for` |
 
@@ -365,9 +395,14 @@ graph TB
 |---|---|
 | **HandlerDispatcher** | 订阅事件流、通过 `create_entity()` 将数据模型包装为事件实体、匹配处理器、按优先级执行、管理 Hook 链 |
 | **Registrar** | 装饰器工厂：`@bot.on()` / `@bot.on_group_message()` 等收集待注册处理器 |
-| **Hook** | 中间件抽象基类，分三个阶段执行：`BEFORE_CALL` / `AFTER_CALL` / `ON_ERROR` |
+| **Hook** | 中间件抽象基类，通过 `HookStage` 枚举区分三个阶段：`BEFORE_CALL` / `AFTER_CALL` / `ON_ERROR`；返回 `HookAction`（`CONTINUE` / `SKIP`）控制流程 |
 | **HookContext** | Hook 执行上下文：event / handler / services / kwargs / result / error |
-| **内置 Hook** | `MessageTypeFilter` / `PostTypeFilter` / `SubTypeFilter` / `SelfFilter` |
+| **CommandHook** | 命令匹配 Hook：按命令名精确/前缀匹配，支持类型注解参数绑定（`At` / `int` / `float` / `str`），自动从 `MessageArray` 提取并注入 `ctx.kwargs` |
+| **内置过滤 Hook** | `MessageTypeFilter` / `PostTypeFilter` / `SubTypeFilter` / `SelfFilter` / `NoticeTypeFilter` / `RequestTypeFilter` |
+| **内置匹配 Hook** | `StartsWithHook`（前缀匹配）/ `KeywordHook`（关键词匹配）/ `RegexHook`（正则匹配） |
+| **预置实例** | `group_only` / `private_only`（`MessageTypeFilter` 实例）/ `non_self`（`SelfFilter` 实例） |
+| **工厂函数** | `startswith(prefix)` / `keyword(*words)` / `regex(pattern)` — 快速创建对应 Hook |
+| **上下文隔离** | `set_current_plugin()` / `get_current_plugin()` — 利用 ContextVar 隔离并发插件加载的注册上下文 |
 
 ### 4.5 API 接口层
 
@@ -375,7 +410,7 @@ graph TB
 graph TB
     Plugin["插件代码"]
     Client["BotAPIClient"]
-    Sugar["MessageSugarMixin<br/><small>post_text · post_image · post_at</small>"]
+    Sugar["MessageSugarMixin<br/><small>post_group_msg · post_private_msg · send_*</small>"]
     Manage["ManageExtension<br/><small>群管理 · 好友管理</small>"]
     Info["InfoExtension<br/><small>信息查询</small>"]
     Support["SupportExtension<br/><small>文件操作 · 杂项</small>"]
@@ -396,6 +431,7 @@ graph TB
 | 命名空间 | 高频方法 |
 |---|---|
 | *(顶层)* | `send_group_msg()` / `send_private_msg()` / `delete_msg()` |
+| *(Sugar)* | `post_group_msg(text=, at=, image=, ...)` / `post_private_msg(...)` / `send_group_text()` / `send_group_image()` 等 20+ 便捷方法 |
 | `manage.*` | `set_group_kick()` / `set_group_ban()` / `set_group_admin()` / `set_group_card()` |
 | `info.*` | `get_login_info()` / `get_group_list()` / `get_group_member_info()` |
 | `support.*` | `upload_file()` / `delete_file()` / `get_file_url()` |
@@ -426,10 +462,11 @@ graph TB
 
 | 组件 | 职责 |
 |---|---|
-| **PluginLoader** | 主协调器，组合 Indexer + Resolver + Importer |
+| **PluginLoader** | 主协调器，组合 PluginIndexer + DependencyResolver + ModuleImporter |
 | **PluginIndexer** | 扫描 `manifest.toml`，建立插件索引 |
-| **DependencyResolver** | 拓扑排序解析依赖顺序 |
+| **DependencyResolver** | 拓扑排序解析依赖顺序（异常：`PluginCircularDependencyError` / `PluginMissingDependencyError` / `PluginVersionError`） |
 | **ModuleImporter** | 动态导入/卸载 Python 模块，查找插件类 |
+| **pip_helper** | `check_requirements()` 校验 pip 依赖、`install_packages()` 自动安装缺失包（支持 uv / pip 后端） |
 
 ### 4.7 Service 服务层
 
@@ -439,8 +476,8 @@ graph TB
 |---|---|
 | **BaseService** | 抽象基类：`name` / `on_load()` / `on_close()` / `emit_event` |
 | **ServiceManager** | 服务注册、依赖排序加载、统一关闭 |
-| **RBACService** | 角色权限管理，数据存储于 `data/rbac.json` |
-| **TimeTaskService** | 定时任务执行 |
+| **RBACService** | 角色权限管理，数据存储于 `data/rbac.json`；内部组件：`PermissionPath` / `PermissionTrie`（高效权限查询）/ `EntityManager` / `PermissionChecker` / `PermissionAssigner` |
+| **TimeTaskService** | 定时任务执行；内部组件：`TaskExecutor`（异步执行）/ `TimeTaskParser`（解析 `'30s'` / `'HH:MM'` 等时间表达式） |
 | **FileWatcherService** | 文件系统监控，支持插件热重载 |
 
 ### 4.8 Utils 工具集
@@ -450,6 +487,9 @@ graph TB
 | `logger/` | `BoundLogger` 上下文日志 + `setup_logging()` 初始化（控制台 + 滚动文件） |
 | `config/` | `ConfigManager` YAML 配置管理 + `Config` Pydantic 模型（单例） |
 | `network.py` | `post_json()` / `get_json()` / `download_file()` + 代理支持 |
+| `error.py` | `NcatBotError` / `NcatBotValueError` / `NcatBotConnectionError` 异常体系 |
+| `status.py` | `Status` 全局状态追踪 |
+| `prompt.py` | 交互式 CLI 工具：`confirm()` / `ask()` / `select()` + 异步变体；`is_interactive()` / `set_non_interactive()` 控制模式 |
 
 ### 4.9 Testing 测试支持
 
@@ -480,6 +520,28 @@ bot.run()
 - 提供 `run()`（同步阻塞）和 `run_async()`（异步非阻塞）两种启动模式
 - 统一 `shutdown()` 释放资源
 - 作为编排层而非核心层，避免 core → plugin 的反向依赖
+
+### 4.11 CLI 命令行工具
+
+基于 Click 框架的命令行入口，位于 `ncatbot/cli/`：
+
+| 子命令 | 功能 |
+|---|---|
+| `run` | 启动 Bot（可选 `--debug` / `--hot-reload`） |
+| `dev` | 开发模式启动（默认开启 debug + 热重载） |
+| `config` | 配置管理（查看 / 修改） |
+| `plugin` | 插件管理（list / create / remove） |
+| `napcat` | NapCat 安装与控制 |
+| `init` | 初始化项目目录结构 |
+
+**内部结构：**
+
+| 模块 | 职责 |
+|---|---|
+| `main.py` | Click 入口 + `cli()` 根命令组 |
+| `commands/` | 各子命令实现模块 |
+| `utils/` | 颜色输出 + REPL 交互模式 |
+| `templates/` | `plugin create` 使用的插件脚手架模板 |
 
 ---
 
