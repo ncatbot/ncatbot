@@ -46,7 +46,7 @@ class TestEventPipelineBasic:
         """测试消息事件完整流水线"""
         received_events: List[NcatBotEvent] = []
 
-        async def handler(event: NcatBotEvent):
+        def handler(event: NcatBotEvent):
             received_events.append(event)
 
         # 订阅消息事件
@@ -70,10 +70,7 @@ class TestEventPipelineBasic:
         """测试私聊消息流水线"""
         received = []
 
-        async def handler(event):
-            received.append(event)
-
-        event_bus.subscribe(MESSAGE_EVENT, handler)
+        event_bus.subscribe(MESSAGE_EVENT, lambda e: received.append(e))
 
         dispatcher = EventDispatcher(event_bus, mock_api)
         await dispatcher.dispatch(sample_private_message_event)
@@ -89,10 +86,7 @@ class TestEventPipelineBasic:
         """测试通知事件流水线"""
         received = []
 
-        async def handler(event):
-            received.append(event)
-
-        event_bus.subscribe(NOTICE_EVENT, handler)
+        event_bus.subscribe(NOTICE_EVENT, lambda e: received.append(e))
 
         dispatcher = EventDispatcher(event_bus, mock_api)
         await dispatcher.dispatch(sample_notice_event)
@@ -107,10 +101,7 @@ class TestEventPipelineBasic:
         """测试请求事件流水线"""
         received = []
 
-        async def handler(event):
-            received.append(event)
-
-        event_bus.subscribe(REQUEST_EVENT, handler)
+        event_bus.subscribe(REQUEST_EVENT, lambda e: received.append(e))
 
         dispatcher = EventDispatcher(event_bus, mock_api)
         await dispatcher.dispatch(sample_request_event)
@@ -123,10 +114,7 @@ class TestEventPipelineBasic:
         """测试元事件流水线"""
         received = []
 
-        async def handler(event):
-            received.append(event)
-
-        event_bus.subscribe(META_EVENT, handler)
+        event_bus.subscribe(META_EVENT, lambda e: received.append(e))
 
         dispatcher = EventDispatcher(event_bus, mock_api)
         await dispatcher.dispatch(sample_meta_event)
@@ -149,13 +137,13 @@ class TestMultipleHandlers:
         """测试多个处理器都被调用"""
         call_order = []
 
-        async def handler1(e):
+        def handler1(e):
             call_order.append("handler1")
 
-        async def handler2(e):
+        def handler2(e):
             call_order.append("handler2")
 
-        async def handler3(e):
+        def handler3(e):
             call_order.append("handler3")
 
         event_bus.subscribe(MESSAGE_EVENT, handler1)
@@ -177,13 +165,13 @@ class TestMultipleHandlers:
         """测试处理器按优先级执行"""
         call_order = []
 
-        async def low_priority(e):
+        def low_priority(e):
             call_order.append("low")
 
-        async def high_priority(e):
+        def high_priority(e):
             call_order.append("high")
 
-        async def medium_priority(e):
+        def medium_priority(e):
             call_order.append("medium")
 
         # 不同优先级注册
@@ -231,13 +219,13 @@ class TestHandlerExceptions:
         """测试一个处理器异常不影响其他处理器"""
         results = []
 
-        async def good_handler1(e):
+        def good_handler1(e):
             results.append("good1")
 
-        async def bad_handler(e):
+        def bad_handler(e):
             raise ValueError("Handler error")
 
-        async def good_handler2(e):
+        def good_handler2(e):
             results.append("good2")
 
         # 高优先级的好处理器

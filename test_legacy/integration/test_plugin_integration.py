@@ -93,9 +93,9 @@ class GreeterPlugin(MockBasePlugin):
     async def on_load(self):
         await super().on_load()
         # 注册消息处理器
-        self.register_handler("ncatbot.message_event", self._on_message)
+        self.register_handler("ncatbot.message", self._on_message)
 
-    async def _on_message(self, event: NcatBotEvent):
+    def _on_message(self, event: NcatBotEvent):
         self.events_received.append(event)
         self.greet_count += 1
 
@@ -112,9 +112,10 @@ class LoggerPlugin(MockBasePlugin):
 
     async def on_load(self):
         await super().on_load()
-        self.register_handler("ncatbot.message_event", self._log_event, priority=1000)
+        # 注册所有事件
+        self.register_handler("re:ncatbot\\..*", self._log_event, priority=1000)
 
-    async def _log_event(self, event: NcatBotEvent):
+    def _log_event(self, event: NcatBotEvent):
         self.log_entries.append(f"[{event.type}] received")
 
 
@@ -191,7 +192,7 @@ class TestPluginEventHandling:
         await plugin.on_load()
 
         # 发布事件
-        event = NcatBotEvent("ncatbot.message_event", MagicMock())
+        event = NcatBotEvent("ncatbot.message", MagicMock())
         await event_bus.publish(event)
 
         assert plugin.greet_count == 1
