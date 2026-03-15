@@ -20,6 +20,7 @@ if sys.platform == "win32":
     import winreg
 
 from ncatbot.utils import get_log
+from ncatbot.utils.prompt import confirm
 from ncatbot.adapter.napcat.constants import LINUX_NAPCAT_DIR, WINDOWS_NAPCAT_DIR
 
 LOG = get_log("NapCatPlatform")
@@ -77,7 +78,7 @@ class PlatformOps(ABC):
 
     @staticmethod
     def _confirm_action(prompt: str) -> bool:
-        return input(prompt).strip().lower() in ["y", "yes"]
+        return confirm(prompt, default=False)
 
 
 class WindowsOps(PlatformOps):
@@ -250,7 +251,7 @@ class LinuxOps(PlatformOps):
 
         if self.is_napcat_running():
             LOG.warning("NapCat 正在运行, 但运行的不是该 QQ 号")
-            if input("按 y 强制结束当前进程并继续, 按其他键退出: ") == "y":
+            if confirm("强制结束当前 NapCat 进程并继续?", default=False):
                 self.stop_napcat()
             else:
                 raise RuntimeError("NapCat 正在运行, 但运行的不是该 QQ 号")

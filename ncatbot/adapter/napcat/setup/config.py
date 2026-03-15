@@ -11,6 +11,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from ncatbot.utils import get_log, ncatbot_config
+from ncatbot.utils.prompt import confirm
 from .default_webui_config import config as default_webui_config
 from .platform import PlatformOps
 
@@ -100,8 +101,7 @@ class NapCatConfig:
             target_port = expected_server["port"]
             for server in servers[:]:
                 if server.get("port") == target_port:
-                    prompt = f"端口 {target_port} 已存在配置, 是否强制覆盖 (y/n): "
-                    if input(prompt).lower() == "y":
+                    if confirm(f"端口 {target_port} 已存在配置, 是否强制覆盖?", default=False):
                         servers.remove(server)
                     else:
                         raise ValueError(f"端口 {target_port} 已存在, 请更改端口")
