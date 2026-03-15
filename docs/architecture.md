@@ -116,72 +116,118 @@ ncatbot/
 
 ## 3. 分层架构
 
-NcatBot 采用自底向上的分层设计，每层只依赖其下方的层：
+NcatBot 采用自底向上的分层设计，每层只**逻辑上依赖**其下方的层：
 
 ```mermaid
 graph TB
+    %% 最上层：游离的编排层
     App["编排层<br/><small>BotClient（Composition Root）</small>"]
+
+    %% 中间层：保留连线的核心架构
     Plugin["插件层<br/><small>NcatBotPlugin · Mixin</small>"]
     Core["核心层<br/><small>Dispatcher · Registry</small>"]
     Service["服务层<br/><small>ServiceManager · RBAC · Schedule</small>"]
     API["API 层<br/><small>BotAPIClient · IBotAPI</small>"]
     Event["事件层<br/><small>BaseEvent · EventEntity · Factory</small>"]
-    Types["类型层<br/><small>BaseEventData · Segment · Enums</small>"]
     Adapter["适配层<br/><small>NapCatAdapter · WebSocket · OB11Protocol</small>"]
 
-    App --> Plugin
-    App --> Core
-    App --> Service
-    App --> API
-    App --> Adapter
     Plugin --> Core
-    Plugin --> API
-    Plugin --> Service
+    Core --> Service
     Core --> Event
-    Core --> API
     Core --> Adapter
-    Service --> Event
-    API --> Adapter
-    Event --> Types
-    Adapter --> Types
+    Event --> API
+	API --> Adapter
+
+    %% 最下层：游离的类型层
+    Types["类型层<br/><small>BaseEventData · Segment · Enums</small>"]
+
+    %% 【排版核心】使用不可见线控制上下层级
+    %% 将 App 强行撑在 Plugin 等上层模块的上方
+    App ~~~ Plugin
+    App ~~~ Service
+    App ~~~ Core
+
+    %% 将 Types 强行压在 Adapter 和 Event 等底层模块的下方
+    Adapter ~~~ Types
+    Event ~~~ Types
+
+    %% 给游离层加一点背景色区分（可选）
+    style App fill:#e1f5fe,stroke:#03a9f4
+    style Types fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray: 5 5
 ```
 
 ### 模块依赖关系
 
 ```mermaid
 graph LR
-    app["app"]
-    adapter["adapter"]
-    types["types"]
-    event["event"]
-    api["api"]
-    core["core"]
-    plugin["plugin"]
-    service["service"]
-    utils["utils"]
+    %% 最左侧：编排层
+    subgraph LayerApp [编排层]
+        app["app"]
+    end
 
-    app --> core
-    app --> plugin
-    app --> service
-    app --> api
-    app --> adapter
-    adapter --> types
-    event --> types
-    event --> api
-    api --> adapter
-    core --> adapter
-    core --> event
-    core --> api
-    plugin --> core
-    plugin --> service
-    service --> event
-    core --> utils
-    plugin --> utils
-    service --> utils
-    app --> utils
+    %% 中间：核心业务关系
+    subgraph LayerCore [核心逻辑]
+        plugin["plugin"]
+        service["service"]
+        core["core"]
+        event["event"]
+        api["api"]
+        adapter["adapter"]
+
+        plugin --> service
+        plugin --> core
+        plugin --> api
+        plugin --> event
+
+        core --> service
+        core --> event
+        core --> api
+
+        event --> api
+        adapter -.->|implements| api
+    end
+
+    %% 最右侧：公共层
+    subgraph LayerCommon [公共层]
+        types["types"]
+        utils["utils"]
+    end
+
+    %% 【排版核心】使用不可见线强行拉开左右位置
+    app ~~~ plugin
+    adapter ~~~ types
+    adapter ~~~ utils
+
+    %% 样式调整：去掉最左侧和中间的框，保留最右侧的框以示区分
+    style LayerApp fill:none,stroke:none
+    style LayerCore fill:none,stroke:none
+    style LayerCommon fill:#f9f9f9,stroke:#ccc,stroke-dasharray: 5 5
 ```
 
+#### 依赖反转说明
+
+上图中 `adapter -.->|implements| api` 使用了虚线表示 **依赖反转（DIP）** 关系：
+
+```mermaid
+graph LR
+    subgraph "实际依赖方向"
+        adapter2["adapter"] -->|实现 IBotAPI| api2["api"]
+        event2["其它"] -->|引用 IBotAPI| api2
+    end
+```
+
+- `IBotAPI` 抽象接口定义在 `api/interface.py`
+- `NapCatBotAPI` 在 `adapter/napcat/` 中实现该接口
+- 从分层角度看，API 层位于 Adapter 上方，但实际代码中 Adapter 向上引用 API 层的接口
+
+### 补充说明
+
+- Core 没有显式依赖 Adapter，但实际上编排层会将 Adapter 上报的事件移交给 Dispatcher，并进一步交给 Registry，认为逻辑上 Core 依赖 Adapter
+- 插件层在逻辑图上没有显式依赖 API、Service，这是为了画图方便，实际上参考代码依赖图
+
 ---
+
+
 
 ## 4. 核心模块详解
 
@@ -317,7 +363,7 @@ graph TB
 
 | 组件 | 职责 |
 |---|---|
-| **HandlerDispatcher** | 订阅事件流、匹配处理器、按优先级执行、管理 Hook 链 |
+| **HandlerDispatcher** | 订阅事件流、通过 `create_entity()` 将数据模型包装为事件实体、匹配处理器、按优先级执行、管理 Hook 链 |
 | **Registrar** | 装饰器工厂：`@bot.on()` / `@bot.on_group_message()` 等收集待注册处理器 |
 | **Hook** | 中间件抽象基类，分三个阶段执行：`BEFORE_CALL` / `AFTER_CALL` / `ON_ERROR` |
 | **HookContext** | Hook 执行上下文：event / handler / services / kwargs / result / error |
@@ -434,8 +480,6 @@ bot.run()
 - 提供 `run()`（同步阻塞）和 `run_async()`（异步非阻塞）两种启动模式
 - 统一 `shutdown()` 释放资源
 - 作为编排层而非核心层，避免 core → plugin 的反向依赖
-
-> **向后兼容**: `from ncatbot.core import BotClient` 仍可用（re-export），推荐迁移至 `from ncatbot.app import BotClient`。
 
 ---
 
