@@ -14,17 +14,19 @@
   - [4.2 Types 类型模型](#42-types-类型模型)
   - [4.3 Event 事件实体](#43-event-事件实体)
   - [4.4 Core 核心引擎](#44-core-核心引擎)
-    - [4.4.1 Client 启动入口](#441-client-启动入口)
-    - [4.4.2 Dispatcher 事件分发](#442-dispatcher-事件分发)
-    - [4.4.3 Registry 处理器注册与路由](#443-registry-处理器注册与路由)
+    - [4.4.1 Dispatcher 事件分发](#441-dispatcher-事件分发)
+    - [4.4.2 Registry 处理器注册与路由](#442-registry-处理器注册与路由)
   - [4.5 API 接口层](#45-api-接口层)
   - [4.6 Plugin 插件系统](#46-plugin-插件系统)
   - [4.7 Service 服务层](#47-service-服务层)
   - [4.8 Utils 工具集](#48-utils-工具集)
   - [4.9 Testing 测试支持](#49-testing-测试支持)
+  - [4.10 App 编排层](#410-app-编排层)
 - [5. 生命周期](#5-生命周期)
   - [5.1 启动流程](#51-启动流程)
   - [5.2 事件处理流程](#52-事件处理流程)
+    - [5.2.1 上游：事件采集与广播](#521-上游事件采集与广播)
+    - [5.2.2 下游：Handler 匹配与执行](#522-下游handler-匹配与执行)
   - [5.3 关闭流程](#53-关闭流程)
 - [6. 插件开发模型](#6-插件开发模型)
   - [6.1 插件结构](#61-插件结构)
@@ -69,8 +71,9 @@ ncatbot/
 │   ├── client.py     #   BotAPIClient（插件使用的高层客户端）
 │   ├── _sugar.py     #   消息构造语法糖
 │   └── extensions/   #   manage / info / support 扩展
+├── app/              # 应用编排层（Composition Root）
+│   └── client.py     #   BotClient 生命周期管理
 ├── core/             # 核心引擎
-│   ├── client/       #   BotClient 生命周期管理
 │   ├── dispatcher/   #   AsyncEventDispatcher 事件分发
 │   └── registry/     #   HandlerDispatcher / Registrar / Hook
 ├── event/            # 事件实体与工厂
@@ -117,14 +120,20 @@ NcatBot 采用自底向上的分层设计，每层只依赖其下方的层：
 
 ```mermaid
 graph TB
+    App["编排层<br/><small>BotClient（Composition Root）</small>"]
     Plugin["插件层<br/><small>NcatBotPlugin · Mixin</small>"]
-    Core["核心层<br/><small>BotClient · Dispatcher · Registry</small>"]
+    Core["核心层<br/><small>Dispatcher · Registry</small>"]
     Service["服务层<br/><small>ServiceManager · RBAC · Schedule</small>"]
     API["API 层<br/><small>BotAPIClient · IBotAPI</small>"]
     Event["事件层<br/><small>BaseEvent · EventEntity · Factory</small>"]
     Types["类型层<br/><small>BaseEventData · Segment · Enums</small>"]
     Adapter["适配层<br/><small>NapCatAdapter · WebSocket · OB11Protocol</small>"]
 
+    App --> Plugin
+    App --> Core
+    App --> Service
+    App --> API
+    App --> Adapter
     Plugin --> Core
     Plugin --> API
     Plugin --> Service
@@ -141,6 +150,7 @@ graph TB
 
 ```mermaid
 graph LR
+    app["app"]
     adapter["adapter"]
     types["types"]
     event["event"]
@@ -150,6 +160,11 @@ graph LR
     service["service"]
     utils["utils"]
 
+    app --> core
+    app --> plugin
+    app --> service
+    app --> api
+    app --> adapter
     adapter --> types
     event --> types
     event --> api
@@ -157,14 +172,13 @@ graph LR
     core --> adapter
     core --> event
     core --> api
-    core --> plugin
-    core --> service
     plugin --> core
     plugin --> service
     service --> event
     core --> utils
     plugin --> utils
     service --> utils
+    app --> utils
 ```
 
 ---
@@ -257,26 +271,10 @@ graph TB
 
 ### 4.4 Core 核心引擎
 
-#### 4.4.1 Client 启动入口
+> **注意**：`BotClient` 已从 `core/` 迁移至独立的 `app/` 模块（编排层），
+> 详见 [4.10 App 编排层](#410-app-编排层)。`core/` 现在仅包含 Dispatcher 和 Registry。
 
-`BotClient` 是整个 Bot 的入口和生命周期管理器：
-
-```python
-bot = BotClient()
-
-@bot.on("message.group")
-async def on_group_msg(event):
-    await event.reply("hello")
-
-bot.run()
-```
-
-职责：
-- 组装所有核心组件（Adapter / API / Dispatcher / Handler / Service / Plugin）
-- 提供 `run()`（同步阻塞）和 `run_async()`（异步非阻塞）两种启动模式
-- 统一 `shutdown()` 释放资源
-
-#### 4.4.2 Dispatcher 事件分发
+#### 4.4.1 Dispatcher 事件分发
 
 `AsyncEventDispatcher` — 纯异步事件广播器，无业务逻辑：
 
@@ -296,7 +294,7 @@ graph LR
 | **Event** | 不可变数据类，包含解析后的事件类型 + 原始数据 |
 | **EventStream** | 异步迭代器，支持 `async with` / `async for` |
 
-#### 4.4.3 Registry 处理器注册与路由
+#### 4.4.2 Registry 处理器注册与路由
 
 `HandlerDispatcher` — 事件到处理器的路由调度：
 
@@ -414,6 +412,31 @@ graph TB
 | **factory.py** | 测试数据工厂：`group_message()` / `private_message()` / `friend_request()` 等 |
 | **TestHarness** | 测试编排：Bot + MockAdapter + 事件注入 + 响应断言 |
 
+### 4.10 App 编排层
+
+`BotClient` 是整个 Bot 的入口和生命周期管理器（Composition Root），
+位于 `ncatbot/app/` 模块，允许依赖所有其他层：
+
+```python
+from ncatbot.app import BotClient
+
+bot = BotClient()
+
+@bot.on("message.group")
+async def on_group_msg(event):
+    await event.reply("hello")
+
+bot.run()
+```
+
+职责：
+- 组装所有核心组件（Adapter / API / Dispatcher / Handler / Service / Plugin）
+- 提供 `run()`（同步阻塞）和 `run_async()`（异步非阻塞）两种启动模式
+- 统一 `shutdown()` 释放资源
+- 作为编排层而非核心层，避免 core → plugin 的反向依赖
+
+> **向后兼容**: `from ncatbot.core import BotClient` 仍可用（re-export），推荐迁移至 `from ncatbot.app import BotClient`。
+
 ---
 
 ## 5. 生命周期
@@ -424,65 +447,75 @@ graph TB
 sequenceDiagram
     participant User as 用户代码
     participant Client as BotClient
-    participant Adapter as NapCatAdapter
-    participant Disp as AsyncEventDispatcher
-    participant HDis as HandlerDispatcher
+    participant Adapter as Adapter
     participant Svc as ServiceManager
     participant Plug as PluginLoader
 
     User->>Client: bot.run()
-    Client->>Adapter: setup()
-    Client->>Adapter: connect()
-    Adapter-->>Client: IBotAPI
-
-    Client->>Client: 创建 BotAPIClient
-    Client->>Disp: 创建 AsyncEventDispatcher
-    Client->>Adapter: set_event_callback(dispatcher.callback)
-
-    Client->>HDis: 创建 HandlerDispatcher
-    Client->>HDis: start(dispatcher)
-
-    Client->>Svc: register(FileWatcherService)
-    Client->>Svc: load_all()
-
+    Client->>Adapter: setup() + connect()
+    Client->>Client: 创建 API / Dispatcher / HandlerDispatcher
+    Client->>Svc: register_builtin() + load_all()
     Client->>Plug: load_all(plugin_dir)
-    Note over Plug: 扫描 manifest → 依赖排序 → 逐个加载
-
     Client->>Adapter: listen()
-    Note over Adapter: 阻塞接收事件
 ```
 
 ### 5.2 事件处理流程
+
+以 `AsyncEventDispatcher` 为分界，事件处理分为 **上游采集** 和 **下游消费** 两阶段。
+
+#### 5.2.1 上游：事件采集与广播
 
 ```mermaid
 sequenceDiagram
     participant QQ as QQ / NapCat
     participant Adapter as NapCatAdapter
-    participant Parser as EventParser
+    participant Disp as AsyncEventDispatcher
+
+    QQ->>Adapter: WebSocket 事件
+    Adapter->>Adapter: 解析为 BaseEventData
+    Adapter->>Disp: callback(BaseEventData)
+    Disp->>Disp: 推导事件类型（如 "message.group"）
+    Disp->>Disp: 广播 Event 到所有消费者
+```
+
+> `AsyncEventDispatcher` 是纯广播器，不含业务逻辑。
+> 它将 `Event` 同时投递给所有活跃的 `EventStream`（多消费者）和一次性 `wait_event()` waiter。
+
+#### 5.2.2 下游：Handler 匹配与执行
+
+```mermaid
+sequenceDiagram
     participant Disp as AsyncEventDispatcher
     participant HDis as HandlerDispatcher
     participant Hook as Hooks
     participant Handler as Handler 函数
+    participant Plugin as 插件 EventMixin
 
-    QQ->>Adapter: WebSocket 消息
-    Adapter->>Parser: 原始 JSON
-    Parser-->>Adapter: BaseEventData
-    Adapter->>Disp: callback(BaseEventData)
-    Disp->>Disp: 解析事件类型
-    Disp->>HDis: 广播 Event
-
-    HDis->>HDis: 匹配处理器（精确+前缀·按优先级排序）
-    HDis->>Hook: BEFORE_CALL
-    alt Hook 返回 CONTINUE
-        HDis->>Handler: 执行
-        HDis->>Hook: AFTER_CALL
-    else Hook 返回 SKIP
-        Note over HDis: 跳过该处理器
-    end
-    opt 异常
-        HDis->>Hook: ON_ERROR
+    par HandlerDispatcher 消费
+        Disp-->>HDis: Event（全量事件流）
+        HDis->>HDis: 匹配处理器（精确 + 前缀 · 按优先级排序）
+        HDis->>Hook: BEFORE_CALL
+        alt Hook 返回 CONTINUE
+            HDis->>Handler: await handler(event)
+            HDis->>Hook: AFTER_CALL
+        else Hook 返回 SKIP
+            Note over HDis: 跳过该处理器
+        end
+        opt 异常
+            HDis->>Hook: ON_ERROR
+        end
+    and 插件直接消费（EventMixin）
+        Disp-->>Plugin: Event（按类型过滤的事件流）
+        Note over Plugin: async for event in self.events(...)
+    and 一次性等待
+        Disp-->>Plugin: wait_event(predicate, timeout)
     end
 ```
+
+> `AsyncEventDispatcher` 的消费者有三类：
+> 1. **HandlerDispatcher** — 订阅全量事件流，负责 Hook 链 + Handler 路由
+> 2. **插件 EventMixin** — 通过 `self.events()` 创建独立过滤流，自行 `async for`
+> 3. **wait_event()** — 一次性 Future，匹配或超时后自动移除
 
 ### 5.3 关闭流程
 
@@ -597,7 +630,7 @@ graph LR
 | **责任链模式** | `core/registry/` | Hook 链按优先级依次执行，可中断或跳过 |
 | **工厂模式** | `event/factory.py` | `create_entity()` 根据数据类型创建对应事件实体 |
 | **Mixin 模式** | `plugin/mixin/` | 通过多继承组合插件能力，按 MRO 管理生命周期 |
-| **依赖注入** | `core/client/` | `BotClient` 组装并注入 API / Dispatcher / Services 到插件 |
+| **依赖注入** | `app/client.py` | `BotClient` 作为 Composition Root 组装并注入 API / Dispatcher / Services 到插件 |
 | **ContextVar 隔离** | `core/registry/context.py` | 利用 Python ContextVar 隔离并发插件加载的注册上下文 |
 | **命名空间分层** | `api/client.py` | BotAPIClient 将高频 / 低频 API 分层为顶层方法 + `manage` / `info` / `support` 子空间 |
 | **拓扑排序** | `plugin/loader/resolver.py` | 插件依赖解析，确保加载顺序正确 |
