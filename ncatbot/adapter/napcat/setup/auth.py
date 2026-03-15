@@ -278,20 +278,12 @@ class AuthHandler:
     # ==================== 主登录流程 ====================
 
     def login(self) -> None:
-        status = self.report_status()
-        if status == LoginStatus.OK:
-            LOG.info("已登录")
-            return
-        if status > LoginStatus.NOT_LOGGED_IN:
-            LOG.error("登录状态异常, 请物理重启本机")
-            raise AuthError("登录状态异常")
+        """通过 WebUI 执行登录 (快速登录 → 二维码)。
 
+        仅在 launcher 确认 WS 不通 (即未登录) 时调用。
+        """
         if self.quick_login():
             LOG.info("快速登录成功")
             return
 
         self.qrcode_login()
-
-        if self.report_status() != LoginStatus.OK:
-            LOG.error("登录状态异常, 请检查是否使用了正确的 bot 账号扫码登录")
-            raise AuthError("登录状态异常")

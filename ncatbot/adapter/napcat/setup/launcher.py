@@ -1,8 +1,11 @@
 """
 NapCat 启动编排
 
-替代旧的 environment.py + nc_service.py，
-统一管理本地/远程模式的启动流程。
+两种模式:
+- setup 模式 (默认): 保证 NapCat 完整运行环境, 按需安装/配置/启动/登录
+- connect 模式 (skip_setup=true): 直接连接已有服务, 失败报错
+
+详见 README.md
 """
 
 import asyncio
@@ -12,8 +15,8 @@ from typing import Optional
 
 import websockets
 
-from ncatbot.utils import NcatBotError, get_log, ncatbot_config
-from .auth import AuthHandler, LoginStatus
+from ncatbot.utils import NcatBotError, get_log, ncatbot_config  # type: ignore[attr-defined]
+from .auth import AuthHandler
 from .config import NapCatConfig
 from .installer import NapCatInstaller
 from .platform import PlatformOps, UnsupportedPlatformError
@@ -44,7 +47,8 @@ class NapCatLauncher:
     # ==================== WebSocket 连接测试 ====================
 
     @staticmethod
-    async def _test_websocket(report_status: bool = False) -> bool:
+    async def _test_websocket(log_failure: bool = False) -> Optional[int]:
+        """测试 WS 连接, 成功返回 self_id (登录的 QQ 号), 失败返回 None。"""
         uri = ncatbot_config.get_uri_with_token()
         try:
             async with websockets.connect(uri, open_timeout=5) as ws:
@@ -55,17 +59,19 @@ class NapCatLauncher:
                     if retcode == 1403:
                         raise NcatBotError("WebSocket Token 填写错误", False)
                     raise NcatBotError(f"WebSocket 连接失败: {message}", False)
-                return True
+                return data.get("self_id")
         except NcatBotError:
             raise
         except Exception as e:
-            if report_status:
+            if log_failure:
                 LOG.warning(f"测试 WebSocket 连接失败: {e}")
-            return False
+            return None
 
     async def is_service_ok(self, timeout: int = 0, show_info: bool = True) -> bool:
+        """WS 是否连通 (即 QQ 是否已登录)。"""
+        LOG.debug(f"测试 NapCat WebSocket 连接 (timeout={timeout})")
         if timeout == 0:
-            return bool(await self._test_websocket(show_info))
+            return await self._test_websocket(show_info) is not None
 
         expire_time = time.time() + timeout
         while True:
@@ -80,58 +86,39 @@ class NapCatLauncher:
             raise NcatBotError("连接 NapCat WebSocket 服务器超时")
         LOG.info("连接 NapCat WebSocket 服务器成功!")
 
-    # ==================== 远程模式 ====================
+    # ==================== Connect 模式 ====================
 
-    async def _check_remote_service(self) -> bool:
+    async def _connect_only(self) -> None:
+        """直连模式: 连接失败直接报错"""
+        LOG.info("Connect 模式, 正在连接 NapCat 服务...")
         if not await self.is_service_ok():
-            LOG.info("NapCat 服务器离线或未登录")
-            return False
-
-        LOG.info(
-            f"NapCat 服务器 {ncatbot_config.napcat.ws_uri} 在线, 正在检查账号状态..."
-        )
-
-        if not ncatbot_config.napcat.enable_webui:
-            LOG.warning(
-                f"跳过基于 WebUI 交互的检查, "
-                f"请自行确保 NapCat 已登录正确的 QQ {ncatbot_config.bot_uin}"
+            raise NcatBotError(
+                f"无法连接 NapCat WebSocket ({ncatbot_config.napcat.ws_uri}), "
+                f"请检查 NapCat 服务是否已启动"
             )
-            return True
+        LOG.info("NapCat 服务连接成功")
 
-        status = AuthHandler().report_status()
+    # ==================== Setup 模式 ====================
 
-        if status == LoginStatus.OK:
-            return True
-        elif status == LoginStatus.ABNORMAL:
-            LOG.error("登录状态异常, 请检查远端 NapCat 服务")
-            raise NcatBotError("登录状态异常, 请检查远端 NapCat 服务")
-        elif status == LoginStatus.UIN_MISMATCH:
-            LOG.error("远端登录的 QQ 与配置的 QQ 号不匹配")
-            raise NcatBotError("登录的 QQ 号与配置的 QQ 号不匹配")
+    async def _setup_and_connect(self) -> None:
+        """Setup 模式: 保证环境就绪, 按需安装/配置/启动/登录"""
+        LOG.info("Setup 模式, 检查 NapCat 服务...")
 
-        return False
-
-    async def _launch_remote(self) -> None:
-        LOG.info("正在以远端模式运行, 检查中...")
-        if not await self._check_remote_service():
-            raise NcatBotError("远端 NapCat 服务异常, 请检查远端服务或关闭远端模式")
-
-    # ==================== 本地模式 ====================
-
-    async def _launch_local(self) -> None:
-        LOG.info("正在以本地模式运行, 检查中...")
-
+        # 环境已就绪, 跳过准备
         if await self.is_service_ok():
-            if await self._check_remote_service():
-                LOG.debug("NapCat 服务正常")
-                return
+            LOG.info(f"NapCat 服务 {ncatbot_config.napcat.ws_uri} 在线, 跳过环境准备")
+            await self._verify_account()
+            return
 
+        # 环境未就绪, 完整准备流程
         try:
             _ = self.platform
         except UnsupportedPlatformError:
-            raise NcatBotError("本地模式不支持该操作系统, 请使用远端模式")
+            raise NcatBotError("当前操作系统不支持 Setup 模式, 请使用 skip_setup: true")
 
         self._ensure_components()
+        assert self._installer is not None
+        assert self._config is not None
 
         if not self._installer.ensure_installed():
             raise NcatBotError("安装或更新 NapCat 失败")
@@ -139,31 +126,48 @@ class NapCatLauncher:
         self._config.configure_all()
         self.platform.start_napcat(str(ncatbot_config.bot_uin))
 
-        await self._handle_login()
+        await self._wait_and_login()
 
-    async def _handle_login(self) -> None:
-        nc = ncatbot_config.napcat
+    async def _verify_account(self) -> None:
+        """通过 WS self_id 校验当前登录的 QQ 号是否为目标账号。"""
+        self_id = await self._test_websocket()
+        if self_id is None:
+            raise NcatBotError("WebSocket 连接异常, 无法获取登录账号信息")
 
-        if nc.enable_webui:
-            if not await self.is_service_ok(3):
-                LOG.info("登录中...")
-                AuthHandler().login()
-                await self.wait_for_service()
-                LOG.info("连接成功")
-            else:
-                LOG.info("快速登录成功, 跳过登录引导")
-        else:
+        target_uin = int(ncatbot_config.bot_uin)
+        if self_id != target_uin:
+            raise NcatBotError(
+                f"NapCat 当前登录账号 {self_id} 与目标账号 {target_uin} 不匹配"
+            )
+        LOG.info(f"账号验证通过 (QQ {self_id})")
+
+    async def _wait_and_login(self) -> None:
+        """NapCat 刚启动后, 等待服务就绪并完成登录"""
+        # 先等几秒: 有缓存 session 时 NapCat 会自动登录
+        if await self.is_service_ok(5):
+            LOG.info("NapCat 已就绪 (缓存登录)")
+            return
+
+        if not ncatbot_config.napcat.enable_webui:
+            # WebUI 禁用, 只能等待 NapCat 自行完成登录
             timeout = ncatbot_config.websocket_timeout
             if not await self.is_service_ok(timeout):
-                raise TimeoutError(
-                    f"NapCat 未能在 {timeout} 秒内启动, WebSocket 连接失败"
+                raise NcatBotError(
+                    f"NapCat 未能在 {timeout} 秒内完成登录, WebSocket 连接失败"
                 )
+            return
+
+        # 通过 WebUI 引导登录
+        LOG.info("NapCat 未自动登录, 通过 WebUI 引导...")
+        AuthHandler().login()
+        await self.wait_for_service()
+        LOG.info("NapCat 登录成功")
 
     # ==================== 主入口 ====================
 
     async def launch(self) -> None:
         """启动 NapCat 服务（根据配置选择模式）"""
-        if ncatbot_config.napcat.remote_mode:
-            await self._launch_remote()
+        if ncatbot_config.napcat.skip_setup:
+            await self._connect_only()
         else:
-            await self._launch_local()
+            await self._setup_and_connect()
