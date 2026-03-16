@@ -4,8 +4,6 @@ import asyncio
 
 import click
 
-from ..utils.colors import header
-
 
 def _get_manager():
     from ncatbot.utils.config import get_config_manager

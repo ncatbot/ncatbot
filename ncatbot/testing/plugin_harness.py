@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from ncatbot.adapter.mock import MockAdapter
 from ncatbot.app import BotClient
-from ncatbot.plugin import PluginLoader
 
 from .harness import TestHarness
 

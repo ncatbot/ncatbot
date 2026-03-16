@@ -6,7 +6,7 @@ NapCat IBotAPI 实现
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Any, Optional, Union, TYPE_CHECKING
 
 from ncatbot.api.interface import IBotAPI
 from ncatbot.utils import get_log
@@ -36,6 +36,7 @@ class NapCatBotAPI(
     def __init__(self, protocol: "OB11Protocol"):
         self._protocol = protocol
         from ncatbot.adapter.napcat.service.preupload import PreUploadService
+
         self._preupload = PreUploadService(protocol)
 
     async def _call(self, action: str, params: Optional[dict] = None) -> dict:
@@ -57,13 +58,19 @@ class NapCatBotAPI(
     # ---- 重写消息发送，接入预上传 ----
 
     async def send_group_msg(
-        self, group_id: Union[str, int], message: list, **kwargs: Any,
+        self,
+        group_id: Union[str, int],
+        message: list,
+        **kwargs: Any,
     ) -> dict:
         message = await self._preupload_message(message)
         return await super().send_group_msg(group_id, message, **kwargs)
 
     async def send_private_msg(
-        self, user_id: Union[str, int], message: list, **kwargs: Any,
+        self,
+        user_id: Union[str, int],
+        message: list,
+        **kwargs: Any,
     ) -> dict:
         message = await self._preupload_message(message)
         return await super().send_private_msg(user_id, message, **kwargs)
@@ -81,7 +88,9 @@ class NapCatBotAPI(
         if result.errors:
             LOG.warning(f"转发消息预上传部分失败: {result.errors}")
         messages = result.data.get("message", messages) if result.data else messages
-        return await super().send_forward_msg(message_type, target_id, messages, **kwargs)
+        return await super().send_forward_msg(
+            message_type, target_id, messages, **kwargs
+        )
 
     # ---- 辅助功能 ----
 
@@ -89,8 +98,14 @@ class NapCatBotAPI(
         await self._call("send_like", {"user_id": int(user_id), "times": times})
 
     async def send_poke(
-        self, group_id: Union[str, int], user_id: Union[str, int],
+        self,
+        group_id: Union[str, int],
+        user_id: Union[str, int],
     ) -> None:
-        await self._call("group_poke", {
-            "group_id": int(group_id), "user_id": int(user_id),
-        })
+        await self._call(
+            "group_poke",
+            {
+                "group_id": int(group_id),
+                "user_id": int(user_id),
+            },
+        )

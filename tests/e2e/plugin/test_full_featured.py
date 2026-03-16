@@ -10,7 +10,7 @@
 
 import pytest
 
-from ncatbot.testing import PluginTestHarness, group_message, group_increase
+from ncatbot.testing import PluginTestHarness, group_message
 
 pytestmark = pytest.mark.asyncio
 
@@ -143,9 +143,7 @@ async def test_keyword_add_and_list(examples_dir):
         h.reset_api()
 
         # 查看关键词列表
-        await h.inject(
-            group_message("关键词列表", group_id=GROUP_ID, user_id=USER_ID)
-        )
+        await h.inject(group_message("关键词列表", group_id=GROUP_ID, user_id=USER_ID))
         await h.settle(0.1)
         assert h.api_called("send_group_msg")
 

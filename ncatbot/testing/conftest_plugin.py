@@ -62,11 +62,9 @@ def pytest_collection_modifyitems(config, items):
 
     # 如果指定了 plugin-dir，则只运行带 @pytest.mark.plugin 的测试
     # 其他测试跳过
-    skip = pytest.mark.skip(reason="不在 --plugin-dir 测试范围内")
     for item in items:
         if "plugin" not in item.keywords and "plugin_names" not in item.keywords:
-            # 不影响普通测试
-            pass
+            item.add_marker(pytest.mark.skip(reason="不在 --plugin-dir 测试范围内"))
 
 
 def get_testable_plugin_names(plugin_dir: str) -> List[str]:

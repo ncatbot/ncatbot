@@ -4,7 +4,7 @@ import shlex
 
 import click
 
-from .colors import header, error, info, dim, command as cmd_style
+from .colors import header, error, info, dim
 
 
 def start_repl(ctx: click.Context):

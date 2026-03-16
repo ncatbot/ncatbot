@@ -29,6 +29,9 @@ dependencies = [
   "qrcode",
   # CLI
   "click>=8.1",
+  "ruff>=0.14.10",
+  "pre-commit>=4.5.1",
+  "tox>=4.33.0",
 ]
 
 [project.scripts]
@@ -109,8 +112,7 @@ directory = "htmlcov"
 ignore-words-list = "ans,fo"
 
 [tool.ruff.lint.per-file-ignores]
-# 这些文件使用 star imports 来导出公共 API
-"ncatbot/core/event/__init__.py" = ["F405"]
-"ncatbot/core/event/parser.py" = ["F405"]
-"ncatbot/core/event/events.py" = ["F405"]
-"ncatbot/core/event/message_segments/__init__.py" = ["F405"]
+# legacy 代码正在重构替换，不再维护 lint
+"ncatbot_legacy/**" = ["F401", "F405", "F841", "E402"]
+# 示例代码允许未使用的 import（教学用途）
+"examples/**" = ["F401"]

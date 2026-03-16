@@ -1,6 +1,5 @@
 """plugin 命令组 — 插件管理。"""
 
-import os
 import re
 import shutil
 from pathlib import Path
@@ -52,7 +51,9 @@ def plugin_list():
     blacklist = mgr.plugin.plugin_blacklist
     load_enabled = mgr.plugin.load_plugin
 
-    entries = sorted(p for p in pdir.iterdir() if p.is_dir() and not p.name.startswith("."))
+    entries = sorted(
+        p for p in pdir.iterdir() if p.is_dir() and not p.name.startswith(".")
+    )
     if not entries:
         click.echo(info("暂无已安装的插件。"))
         return

@@ -1,6 +1,5 @@
 """init 命令 — 初始化项目结构。"""
 
-import os
 from pathlib import Path
 
 import click
@@ -48,7 +47,13 @@ def init(target_dir: str):
 
     target.mkdir(parents=True, exist_ok=True)
     with open(config_path, "w", encoding="utf-8") as f:
-        yaml.dump(config_data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        yaml.dump(
+            config_data,
+            f,
+            allow_unicode=True,
+            default_flow_style=False,
+            sort_keys=False,
+        )
 
     click.echo(success(f"config.yaml 已创建: {config_path}"))
     _ensure_plugins_dir(plugins_path)

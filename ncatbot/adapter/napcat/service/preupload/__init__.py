@@ -2,7 +2,7 @@
 预上传服务 — 统一入口
 """
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from ncatbot.utils import get_log
 from .client import StreamUploadClient
@@ -55,20 +55,25 @@ class PreUploadService:
         return await self._processor.process(data)
 
     async def process_message_array(
-        self, messages: List[Dict[str, Any]],
+        self,
+        messages: List[Dict[str, Any]],
     ) -> ProcessResult:
         return await self._processor.process_message_array(messages)
 
     # ---- 文件预上传 ----
 
     async def preupload_file(
-        self, file_value: str, file_type: str = "file",
+        self,
+        file_value: str,
+        file_type: str = "file",
     ) -> PreUploadResult:
         if not file_value:
             return PreUploadResult(success=False, error="文件路径为空")
 
         if is_remote_url(file_value):
-            return PreUploadResult(success=True, file_path=file_value, original_path=file_value)
+            return PreUploadResult(
+                success=True, file_path=file_value, original_path=file_value
+            )
 
         if is_local_file(file_value):
             return await self._upload_local(file_value)
@@ -76,10 +81,14 @@ class PreUploadService:
         if is_base64_data(file_value):
             return await self._upload_base64(file_value, file_type)
 
-        return PreUploadResult(success=True, file_path=file_value, original_path=file_value)
+        return PreUploadResult(
+            success=True, file_path=file_value, original_path=file_value
+        )
 
     async def preupload_file_if_needed(
-        self, file_value: str, file_type: str = "file",
+        self,
+        file_value: str,
+        file_type: str = "file",
     ) -> str:
         result = await self.preupload_file(file_value, file_type)
         if not result.success or result.file_path is None:
@@ -89,22 +98,34 @@ class PreUploadService:
     async def _upload_local(self, file_value: str) -> PreUploadResult:
         local_path = get_local_path(file_value)
         if not local_path:
-            return PreUploadResult(success=False, original_path=file_value, error="无法解析本地文件路径")
+            return PreUploadResult(
+                success=False, original_path=file_value, error="无法解析本地文件路径"
+            )
 
         result = await self._client.upload_file(local_path)
         if result.success:
             LOG.debug(f"文件预上传成功: {local_path} -> {result.file_path}")
-            return PreUploadResult(success=True, file_path=result.file_path, original_path=file_value)
-        return PreUploadResult(success=False, original_path=file_value, error=result.error)
+            return PreUploadResult(
+                success=True, file_path=result.file_path, original_path=file_value
+            )
+        return PreUploadResult(
+            success=False, original_path=file_value, error=result.error
+        )
 
     async def _upload_base64(self, file_value: str, file_type: str) -> PreUploadResult:
         data = extract_base64_data(file_value)
         if not data:
-            return PreUploadResult(success=False, original_path=file_value, error="Base64 解码失败")
+            return PreUploadResult(
+                success=False, original_path=file_value, error="Base64 解码失败"
+            )
 
         filename = generate_filename_from_type(file_type)
         result = await self._client.upload_bytes(data, filename)
         if result.success:
             LOG.debug(f"Base64 预上传成功: {file_value[:30]}... -> {result.file_path}")
-            return PreUploadResult(success=True, file_path=result.file_path, original_path=file_value)
-        return PreUploadResult(success=False, original_path=file_value, error=result.error)
+            return PreUploadResult(
+                success=True, file_path=result.file_path, original_path=file_value
+            )
+        return PreUploadResult(
+            success=False, original_path=file_value, error=result.error
+        )

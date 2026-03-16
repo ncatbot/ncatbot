@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
+import pytest
 import pytest_asyncio
 
 from ncatbot.testing import PluginTestHarness
@@ -39,11 +40,10 @@ async def example_harness(request):
 
     plugin_names: List[str] = names_marker.args[0]
     plugin_dir_name: str = dir_marker.args[0]
-    plugin_dir = EXAMPLES_DIR / plugin_dir_name
 
     harness = PluginTestHarness(
         plugin_names=plugin_names,
-        plugin_dir=EXAMPLES_DIR,
+        plugin_dir=EXAMPLES_DIR / plugin_dir_name,
     )
     async with harness:
         yield harness

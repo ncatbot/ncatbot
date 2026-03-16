@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ncatbot.testing.harness import TestHarness
@@ -75,7 +75,10 @@ class Scenario:
     def assert_api_called(self, action: str, **match: Any) -> "Scenario":
         """断言某 API 被调用（可选检查参数匹配）"""
         self._steps.append(
-            _Step(kind=_StepKind.ASSERT_API_CALLED, kwargs={"action": action, "match": match})
+            _Step(
+                kind=_StepKind.ASSERT_API_CALLED,
+                kwargs={"action": action, "match": match},
+            )
         )
         return self
 
@@ -89,14 +92,22 @@ class Scenario:
     def assert_api_count(self, action: str, count: int) -> "Scenario":
         """断言某 API 被调用了指定次数"""
         self._steps.append(
-            _Step(kind=_StepKind.ASSERT_API_COUNT, kwargs={"action": action, "count": count})
+            _Step(
+                kind=_StepKind.ASSERT_API_COUNT,
+                kwargs={"action": action, "count": count},
+            )
         )
         return self
 
-    def assert_that(self, predicate: Callable[["TestHarness"], None], desc: str = "") -> "Scenario":
+    def assert_that(
+        self, predicate: Callable[["TestHarness"], None], desc: str = ""
+    ) -> "Scenario":
         """自定义断言：predicate 接收 harness，可抛出 AssertionError"""
         self._steps.append(
-            _Step(kind=_StepKind.ASSERT_CUSTOM, kwargs={"predicate": predicate, "desc": desc})
+            _Step(
+                kind=_StepKind.ASSERT_CUSTOM,
+                kwargs={"predicate": predicate, "desc": desc},
+            )
         )
         return self
 
@@ -129,7 +140,9 @@ class Scenario:
 
         elif step.kind == _StepKind.ASSERT_API_CALLED:
             action = kw["action"]
-            assert harness.api_called(action), f"期望 API '{action}' 被调用，但未找到调用记录"
+            assert harness.api_called(action), (
+                f"期望 API '{action}' 被调用，但未找到调用记录"
+            )
             match = kw.get("match", {})
             if match:
                 calls = harness.get_api_calls(action)
@@ -145,13 +158,17 @@ class Scenario:
 
         elif step.kind == _StepKind.ASSERT_API_NOT_CALLED:
             action = kw["action"]
-            assert not harness.api_called(action), f"期望 API '{action}' 未被调用，但实际被调用了"
+            assert not harness.api_called(action), (
+                f"期望 API '{action}' 未被调用，但实际被调用了"
+            )
 
         elif step.kind == _StepKind.ASSERT_API_COUNT:
             action = kw["action"]
             expected = kw["count"]
             actual = harness.api_call_count(action)
-            assert actual == expected, f"API '{action}' 调用次数: 期望 {expected}，实际 {actual}"
+            assert actual == expected, (
+                f"API '{action}' 调用次数: 期望 {expected}，实际 {actual}"
+            )
 
         elif step.kind == _StepKind.ASSERT_CUSTOM:
             kw["predicate"](harness)
