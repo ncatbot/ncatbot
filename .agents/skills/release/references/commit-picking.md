@@ -11,7 +11,7 @@
 ```powershell
 git status --short
 git diff --stat
-```
+```python
 
 ### 步骤 0b：ASK 用户确认纳入范围
 
@@ -24,7 +24,7 @@ git diff --stat
 建议按模块/功能将变更拆分为多个 conventional-commits，使用 `vscode_askQuestions` 确认分组方案。
 
 建议格式示例：
-```
+```python
 分组 1: fix(adapter): 修复 WebSocket 连接中断
   - ncatbot/adapter/ws.py
   - ncatbot/adapter/connection.py
@@ -32,7 +32,7 @@ git diff --stat
 分组 2: feat(plugin): 新增热重载支持
   - ncatbot/plugin/loader.py
   - ncatbot/plugin/watcher.py
-```
+```python
 
 ### 步骤 0d：执行 Commit
 
@@ -40,7 +40,7 @@ git diff --stat
 ```powershell
 git add <files>
 git commit -m "type(scope): description"
-```
+```python
 
 ---
 
@@ -53,13 +53,13 @@ if (!$lastTag) { $lastTag = (git rev-list --max-parents=0 HEAD) }
 
 # 列出候选 commits（排除 merge commits）
 git log "$lastTag..HEAD" --oneline --no-merges
-```
+```python
 
 如果用户指定了起止范围（如某个 commit hash 或 tag），使用用户指定的范围：
 
 ```powershell
 git log "<from>..<to>" --oneline --no-merges
-```
+```python
 
 ## 步骤 2：解析与分类
 
@@ -90,7 +90,7 @@ Commit message 遵循 Conventional Commits 格式：`type(scope): description`
 
 向用户展示分类后的 commit 列表，格式：
 
-```
+```text
 === 自 v5.0.0 以来共 15 个 commits ===
 
 ✨ 新功能 (3) [默认纳入]
@@ -107,7 +107,7 @@ Commit message 遵循 Conventional Commits 格式：`type(scope): description`
 
 🔧 构建/维护 (2) [默认跳过]
   ☐ ...
-```
+```python
 
 然后询问用户：
 1. 是否调整默认选择（纳入/排除特定 commit）
@@ -130,7 +130,7 @@ Commit message 遵循 Conventional Commits 格式：`type(scope): description`
 
 ## 💥 破坏性变更
 - 描述 (hash)
-```
+```python
 
 ### 格式化规则
 
@@ -148,11 +148,11 @@ Commit message 遵循 Conventional Commits 格式：`type(scope): description`
 
 根据纳入的 commits 自动建议版本递增：
 
-```
+```yaml
 当前版本: 5.0.0
 纳入的变更: 3 feat, 1 fix, 2 refactor
 建议: 5.1.0 (minor — 包含新功能)
-```
+```text
 
 决策树：
 1. 有 feat（大型）或 BREAKING CHANGE → minor

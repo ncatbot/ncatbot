@@ -17,7 +17,7 @@ class OB11Protocol:
     async def call(self, action: str, params: Optional[dict] = None, timeout: float = 30.0) -> dict: ...
     def cancel_all(self) -> None: ...
     async def on_message(self, data: dict) -> None: ...
-```
+```python
 
 ### 方法详解
 
@@ -46,7 +46,7 @@ sequenceDiagram
     WS->>P: on_message(data)
     P->>P: 匹配 echo → 设置 Future 结果
     P->>API: 返回响应 dict
-```
+```json
 
 **匹配机制**：
 1. `call()` 为每个 API 请求生成唯一的 UUID 作为 `echo` 字段
@@ -72,7 +72,7 @@ sequenceDiagram
     "data": { ... },
     "echo": "uuid-xxx"
 }
-```
+```python
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
@@ -92,7 +92,7 @@ sequenceDiagram
 ```python
 class NapCatEventParser:
     def parse(self, raw_data: dict) -> Optional[BaseEventData]: ...
-```
+```python
 
 | 方法 | 签名 | 说明 |
 |---|---|---|
@@ -155,7 +155,7 @@ class NapCatBotAPI(
     def __init__(self, protocol: OB11Protocol): ...
     async def _call(self, action: str, params: Optional[dict] = None) -> dict: ...
     async def _call_data(self, action: str, params: Optional[dict] = None) -> Any: ...
-```
+```python
 
 ### Mixin 组合
 
@@ -186,7 +186,7 @@ async def send_group_msg(
 ) -> dict:
     message = await self._preupload_message(message)
     return await super().send_group_msg(group_id, message, **kwargs)
-```
+```python
 
 ### 附加 API
 
@@ -209,7 +209,7 @@ async def send_group_msg(
     },
     "echo": "uuid-xxx"
 }
-```
+```json
 
 **事件反序列化**（`NapCatEventParser.parse`）：
 ```json
@@ -223,6 +223,6 @@ async def send_group_msg(
     "time": 1700000000,
     "self_id": 123456789
 }
-```
+```text
 
 原始 JSON 经 `NapCatEventParser.parse()` 解析后转换为对应的 `BaseEventData` 子类实例（如 `GroupMessageEventData`），包含类型化的字段访问。

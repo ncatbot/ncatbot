@@ -61,7 +61,7 @@ NcatBot 是基于 OneBot v11 协议的 Python QQ 机器人框架，通过 NapCat
 
 ## 2. 目录结构
 
-```
+```text
 ncatbot/
 ├── adapter/          # 协议适配器（NapCat、Mock）
 │   ├── base.py       #   BaseAdapter 抽象接口
@@ -127,7 +127,7 @@ ncatbot/
     ├── commands/     #   run / dev / config / plugin / napcat / init
     ├── utils/        #   颜色输出 / REPL
     └── templates/    #   插件脚手架模板
-```
+```python
 
 ---
 
@@ -171,7 +171,7 @@ graph TB
     %% 给游离层加一点背景色区分（可选）
     style App fill:#e1f5fe,stroke:#03a9f4
     style Types fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray: 5 5
-```
+```python
 
 ### 模块依赖关系
 
@@ -219,7 +219,7 @@ graph LR
     style LayerApp fill:none,stroke:none
     style LayerCore fill:none,stroke:none
     style LayerCommon fill:#f9f9f9,stroke:#ccc,stroke-dasharray: 5 5
-```
+```python
 
 #### 依赖反转说明
 
@@ -231,7 +231,7 @@ graph LR
         adapter2["adapter"] -->|实现 IBotAPI| api2["api"]
         event2["其它"] -->|引用 IBotAPI| api2
     end
-```
+```python
 
 - `IBotAPI` 抽象接口定义在 `api/interface.py`
 - `NapCatBotAPI` 在 `adapter/napcat/` 中实现该接口
@@ -267,7 +267,7 @@ graph LR
     Proto --> BotAPI
     Parser --> Adapter
     BotAPI --> Adapter
-```
+```markdown
 
 | 组件 | 职责 |
 |---|---|
@@ -317,7 +317,7 @@ graph TB
 
     Request --> FriendReq["FriendRequestEventData"]
     Request --> GroupReq["GroupRequestEventData"]
-```
+```python
 
 **消息段体系 (`types/segment/`)：**
 
@@ -362,7 +362,7 @@ graph LR
     Broadcast --> Stream1["EventStream A"]
     Broadcast --> Stream2["EventStream B"]
     Broadcast --> Waiter["wait_event()"]
-```
+```python
 
 | 组件 | 职责 |
 |---|---|
@@ -389,7 +389,7 @@ graph TB
     Before -->|SKIP| Skip["跳过"]
     Handler --> After
     Handler -.->|异常| Error
-```
+```python
 
 | 组件 | 职责 |
 |---|---|
@@ -424,7 +424,7 @@ graph TB
     Client --> Support
     Client --> Interface
     Interface -.->|实现| Impl
-```
+```markdown
 
 **BotAPIClient 命名空间：**
 
@@ -456,7 +456,7 @@ graph TB
     NP --> RM
     NP --> CM
     NP --> DM
-```
+```python
 
 **加载子系统：**
 
@@ -513,7 +513,7 @@ async def on_group_msg(event):
     await event.reply("hello")
 
 bot.run()
-```
+```python
 
 职责：
 - 组装所有核心组件（Adapter / API / Dispatcher / Handler / Service / Plugin）
@@ -563,7 +563,7 @@ sequenceDiagram
     Client->>Svc: register_builtin() + load_all()
     Client->>Plug: load_all(plugin_dir)
     Client->>Adapter: listen()
-```
+```python
 
 ### 5.2 事件处理流程
 
@@ -582,7 +582,7 @@ sequenceDiagram
     Adapter->>Disp: callback(BaseEventData)
     Disp->>Disp: 推导事件类型（如 "message.group"）
     Disp->>Disp: 广播 Event 到所有消费者
-```
+```python
 
 > `AsyncEventDispatcher` 是纯广播器，不含业务逻辑。
 > 它将 `Event` 同时投递给所有活跃的 `EventStream`（多消费者）和一次性 `wait_event()` waiter。
@@ -616,7 +616,7 @@ sequenceDiagram
     and 一次性等待
         Disp-->>Plugin: wait_event(predicate, timeout)
     end
-```
+```python
 
 > `AsyncEventDispatcher` 的消费者有三类：
 > 1. **HandlerDispatcher** — 订阅全量事件流，负责 Hook 链 + Handler 路由
@@ -640,7 +640,7 @@ sequenceDiagram
     Client->>HDis: stop()
     Client->>Disp: close()
     Client->>Adapter: disconnect()
-```
+```python
 
 ---
 
@@ -650,12 +650,12 @@ sequenceDiagram
 
 每个插件是一个独立目录，包含 `manifest.toml` 和入口模块：
 
-```
+```text
 plugins/
 └── my_plugin/
     ├── manifest.toml    # 插件元信息
     └── main.py          # 入口模块
-```
+```toml
 
 **manifest.toml 示例：**
 
@@ -667,7 +667,7 @@ author = "developer"
 description = "示例插件"
 dependencies = []          # 依赖的其他插件
 pip_dependencies = []      # pip 依赖
-```
+```python
 
 **入口模块示例：**
 
@@ -687,7 +687,7 @@ class MyPlugin(NcatBotPlugin):
     async def on_close(self):
         # 清理资源
         pass
-```
+```python
 
 ### 6.2 Mixin 体系
 
@@ -717,7 +717,7 @@ graph LR
     Load["on_load()"]
 
     Scan --> Index --> Resolve --> Import --> Init --> Load
-```
+```python
 
 **热重载机制：**
 - `FileWatcherService` 监控插件目录文件变更

@@ -44,12 +44,12 @@
 1. 将任意示例插件文件夹复制到项目根目录的 `plugins/` 下
 2. 启动 Bot，插件自动加载
 
-```
+```text
 plugins/
 ├── 01_hello_world/
 │   ├── manifest.toml
 │   └── main.py
-```
+```python
 
 ## 框架功能覆盖矩阵
 

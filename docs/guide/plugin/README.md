@@ -12,16 +12,16 @@
 
 ```bash
 uv add ncatbot5    # 或 pip install ncatbot5
-```
+```python
 
 ### 2. 创建插件目录
 
-```
+```text
 plugins/
 └── hello_world/
     ├── manifest.toml
     └── main.py
-```
+```toml
 
 ### 3. manifest.toml
 
@@ -30,7 +30,7 @@ name = "hello_world"
 version = "1.0.0"
 main = "main.py"
 entry_class = "HelloWorldPlugin"
-```
+```python
 
 ### 4. main.py
 
@@ -61,7 +61,7 @@ class HelloWorldPlugin(NcatBotPlugin):
     @registrar.on_private_command("hello", ignore_case=True)
     async def on_private_hello(self, event: PrivateMessageEvent):
         await event.reply(text="你好！👋")
-```
+```python
 
 ### 5. 入口与运行
 
@@ -71,11 +71,11 @@ from ncatbot.app import BotClient
 bot = BotClient()
 if __name__ == "__main__":
     bot.run()
-```
+```python
 
 ```bash
 python main.py   # 启动 Bot，自动扫描 plugins/
-```
+```python
 
 > 完整入门教程 → [1. 快速入门](1.quick-start.md)
 
@@ -215,7 +215,7 @@ class MyHook(Hook):
     async def execute(self, ctx: HookContext) -> HookAction:
         # 你的逻辑
         return HookAction.CONTINUE  # 或 SKIP
-```
+```python
 
 ---
 
@@ -225,23 +225,21 @@ class MyHook(Hook):
 |------|------|------|
 | [1. 快速入门](1.quick-start.md) | 环境准备、安装、5 分钟跑通第一个插件 | ⭐ |
 | [2. 插件结构](2.structure.md) | manifest.toml 详解、基类选择、多文件组织 | ⭐ |
-| [3a. 加载流程](3a.loading.md) | 扫描、依赖排序、模块导入、Mixin 钩子链 | ⭐ |
-| [3b. 卸载与开发者钩子](3b.unloading.md) | 卸载流程、4 个生命周期钩子、常见模式 | ⭐ |
+| [3. 生命周期](3.lifecycle.md) | 加载流程、卸载流程、生命周期钩子、常见模式 | ⭐ |
 | [4a. 事件注册与装饰器](4a.event-registration.md) | 事件类型体系、装饰器路由、优先级、通知/请求 | ⭐⭐ |
 | [4b. 事件高级用法](4b.event-advanced.md) | 事件流、wait_event、事件实体、实战组合 | ⭐⭐ |
 | [5a. 配置与数据 Mixin](5a.config-data.md) | ConfigMixin + DataMixin 用法与对比 | ⭐⭐ |
 | [5b. 权限、定时任务与事件 Mixin](5b.rbac-schedule-event.md) | RBACMixin + TimeTaskMixin + EventMixin | ⭐⭐ |
-| [6a. Hook 基础](6a.hook-basics.md) | 三阶段模型、HookContext、自定义编写 | ⭐⭐ |
-| [6b. 内置 Hook 与参数绑定](6b.hook-builtins.md) | 内置 Hook 清单、CommandHook、优先级 | ⭐⭐ |
+| [6. Hook 机制](6.hooks.md) | 三阶段模型、内置 Hook 清单、自定义编写、优先级 | ⭐⭐ |
 | [7a. 高级模式](7a.patterns.md) | 热重载、依赖管理、跨插件交互、多步对话 | ⭐⭐⭐ |
 | [7b. 实战案例与调试](7b.case-studies.md) | 群管理/定时报告/外部 API 案例、调试排查 | ⭐⭐⭐ |
 
 ### 阅读路线图
 
 | 角色 | 推荐阅读 |
-|------|---------|
+|------|--------|
 | **新手** | 1.快速入门 → 2.插件结构 → 4a.事件注册 |
-| **进阶** | 5a/5b.Mixin → 6a/6b.Hook |
+| **进阶** | 5a/5b.Mixin → 6.Hook |
 | **高级** | 7a.高级模式 → 7b.实战案例 |
 
 ### 相关资源

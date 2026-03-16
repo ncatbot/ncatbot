@@ -52,7 +52,7 @@ if (Test-Path dist) { Remove-Item dist -Recurse -Force }
 
 # 构建
 python -m build
-```
+```python
 
 构建产物：
 - `dist/ncatbot5-{version}-py3-none-any.whl` — wheel 包
@@ -63,7 +63,7 @@ python -m build
 ```powershell
 # 使用 API Token 上传（Token 通过 TWINE_PASSWORD 环境变量提供）
 python -m twine upload dist/* -u __token__
-```
+```python
 
 验证发布：访问 https://pypi.org/project/ncatbot5/{version}/
 
@@ -97,7 +97,7 @@ Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath
 
 # 清理临时目录
 Remove-Item $tempDir -Recurse -Force
-```
+```python
 
 ### 阶段 6：创建 GitHub Release
 
@@ -110,7 +110,7 @@ gh release create "v$ver" `
     --title "v$ver" `
     --notes-file release-notes.md `
     --repo ncatbot/NcatBot
-```
+```bash
 
 验证发布：访问 https://github.com/ncatbot/NcatBot/releases/tag/v{version}
 
@@ -118,7 +118,7 @@ gh release create "v$ver" `
 
 ```powershell
 if (Test-Path release-notes.md) { Remove-Item release-notes.md }
-```
+```python
 
 ## 环境变量配置
 

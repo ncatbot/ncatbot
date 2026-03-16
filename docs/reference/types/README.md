@@ -16,7 +16,19 @@ msg = MessageArray().add_text("你好 ").add_at(123456).add_image("https://examp
 
 # 等价写法：直接组合消息段
 msg = MessageArray([PlainText(text="你好 "), At(qq="123456"), Image(file="https://example.com/img.png")])
-```
+```python
+
+API 返回值使用 Pydantic 类型：
+
+```python
+from ncatbot.types import SendMessageResult, LoginInfo, GroupInfo
+
+result = await api.post_group_msg(group_id, text="hello")
+print(result.message_id)  # str
+
+info = await api.info.get_login_info()
+print(info.user_id, info.nickname)
+```python
 
 在事件处理器中使用：
 
@@ -33,7 +45,7 @@ async def handler(event):
     if event.message.is_at(bot.self_id):
         reply = MessageArray().add_text("收到！")
         await bot.api.send_group_msg(group_id=event.group_id, message=reply)
-```
+```python
 
 ---
 
@@ -142,8 +154,9 @@ async def handler(event):
 |---|---|
 | [消息段类型详解](1_segments.md) | 每个消息段的完整属性表、验证规则、构造示例 |
 | [MessageArray 详解](2_message_array.md) | MessageArray 完整方法详解、高级用法、Pydantic 集成 |
+| [API 响应类型](3_response_types.md) | Bot API 返回值的 Pydantic 类型定义 |
 
 **相关参考：**
 
-- 原始类型参考（枚举、事件模型等）：[types.md](../types.md)
+- 事件模型参考：[events/](../events/)
 - 插件开发指南：[guide/plugin/](../../guide/plugin/README.md)

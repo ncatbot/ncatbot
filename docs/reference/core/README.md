@@ -31,7 +31,7 @@ async def main():
     await event_dispatcher.close()
 
 asyncio.run(main())
-```
+```python
 
 ### 一次性等待事件
 
@@ -44,7 +44,7 @@ event = await event_dispatcher.wait_event(
     ),
     timeout=30.0,
 )
-```
+```python
 
 ---
 
@@ -59,7 +59,7 @@ event = await event_dispatcher.wait_event(
 ```python
 class AsyncEventDispatcher:
     def __init__(self, stream_queue_size: int = 500): ...
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
@@ -85,7 +85,7 @@ def events(
     self,
     event_type: Optional[Union[str, EventType]] = None,
 ) -> EventStream: ...
-```
+```python
 
 **异常**: `RuntimeError` — dispatcher 已关闭时调用。
 
@@ -94,7 +94,7 @@ def events(
 async with dispatcher.events(EventType.MESSAGE) as stream:
     async for event in stream:
         print(event.type, event.data)
-```
+```python
 
 #### wait_event() 详细参数
 
@@ -104,7 +104,7 @@ async def wait_event(
     predicate: Optional[Callable[[Event], bool]] = None,
     timeout: Optional[float] = None,
 ) -> Event: ...
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
@@ -124,7 +124,7 @@ async def wait_event(
 class Event:
     type: str              # resolved 类型字符串，如 "message.group"
     data: "BaseEventData"  # 原始 Pydantic 数据模型
-```
+```python
 
 `Event` 是 **frozen** 不可变数据类，使用 `__slots__` 优化内存。
 
@@ -157,7 +157,7 @@ class EventStream:
     async def __aenter__(self) -> "EventStream": ...
     async def __aexit__(self, ...) -> None: ...
     async def aclose(self) -> None: ...
-```
+```python
 
 #### 三种使用方式
 
@@ -181,7 +181,7 @@ try:
             break
 finally:
     await stream.aclose()
-```
+```python
 
 #### 类型过滤（前缀匹配）
 
@@ -208,7 +208,7 @@ class HandlerDispatcher:
         api: Optional["IBotAPI"] = None,
         service_manager: Optional["ServiceManager"] = None,
     ): ...
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
@@ -229,7 +229,7 @@ class HandlerDispatcher:
 
 核心引擎的启动分为三个阶段：
 
-```
+```text
 1. 创建阶段
    AsyncEventDispatcher(stream_queue_size) → 初始化事件队列
    HandlerDispatcher(api, service_manager)  → 初始化 handler 存储
@@ -241,7 +241,7 @@ class HandlerDispatcher:
 3. 运行阶段
    Adapter 推送 BaseEventData → callback → Event → 广播到流
    HandlerDispatcher 消费事件 → 匹配 handler → Hook 链 → 执行
-```
+```python
 
 关闭时按相反顺序：`HandlerDispatcher.stop()` → `AsyncEventDispatcher.close()`
 

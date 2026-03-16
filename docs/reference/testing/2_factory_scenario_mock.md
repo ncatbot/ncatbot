@@ -24,7 +24,7 @@ group_message(
     sub_type: str = "normal",
     **extra: Any,
 ) -> GroupMessageEventData
-```
+```python
 
 ### private_message
 
@@ -41,7 +41,7 @@ private_message(
     sub_type: str = "friend",
     **extra: Any,
 ) -> PrivateMessageEventData
-```
+```python
 
 ### friend_request
 
@@ -54,7 +54,7 @@ friend_request(
     self_id: str = "10001",
     **extra: Any,
 ) -> FriendRequestEventData
-```
+```python
 
 ### group_request
 
@@ -69,7 +69,7 @@ group_request(
     self_id: str = "10001",
     **extra: Any,
 ) -> GroupRequestEventData
-```
+```python
 
 ### group_increase
 
@@ -83,7 +83,7 @@ group_increase(
     self_id: str = "10001",
     **extra: Any,
 ) -> GroupIncreaseNoticeEventData
-```
+```python
 
 ### group_decrease
 
@@ -97,7 +97,7 @@ group_decrease(
     self_id: str = "10001",
     **extra: Any,
 ) -> GroupDecreaseNoticeEventData
-```
+```python
 
 ### group_ban
 
@@ -112,7 +112,7 @@ group_ban(
     self_id: str = "10001",
     **extra: Any,
 ) -> GroupBanNoticeEventData
-```
+```python
 
 ### poke
 
@@ -125,7 +125,7 @@ poke(
     self_id: str = "10001",
     **extra: Any,
 ) -> PokeNotifyEventData
-```
+```python
 
 ---
 
@@ -133,7 +133,7 @@ poke(
 
 ```python
 from ncatbot.testing import Scenario
-```
+```python
 
 链式测试场景构建器。所有链式方法返回 `self`。
 
@@ -141,7 +141,7 @@ from ncatbot.testing import Scenario
 
 ```python
 Scenario(name: str = "") -> Scenario
-```
+```python
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
@@ -164,7 +164,7 @@ Scenario(name: str = "") -> Scenario
 
 ```python
 async run(harness: TestHarness) -> None
-```
+```python
 
 按顺序执行所有步骤。失败时抛出 `AssertionError`，包含场景名和步骤编号。
 
@@ -174,7 +174,7 @@ async run(harness: TestHarness) -> None
 
 ```python
 from ncatbot.adapter.mock.api import APICall
-```
+```python
 
 ```python
 @dataclass
@@ -182,7 +182,7 @@ class APICall:
     action: str      # API 方法名（如 "send_group_msg"）
     args: tuple      # 位置参数
     kwargs: dict     # 关键字参数
-```
+```python
 
 ---
 
@@ -190,7 +190,7 @@ class APICall:
 
 ```python
 from ncatbot.adapter import MockBotAPI
-```
+```python
 
 `IBotAPI` 的完整 Mock 实现。记录所有调用，返回可配置响应。
 
@@ -209,7 +209,7 @@ from ncatbot.adapter import MockBotAPI
 
 ```python
 set_response(action: str, response: Any) -> None
-```
+```python
 
 未配置的 action 返回 `{}`。
 
@@ -230,7 +230,7 @@ set_response(action: str, response: Any) -> None
 
 ```python
 from ncatbot.adapter import MockAdapter
-```
+```python
 
 `BaseAdapter` 的内存实现，无网络通信。
 
@@ -252,7 +252,7 @@ from ncatbot.adapter import MockAdapter
 
 ```python
 discover_testable_plugins(plugin_dir: Path) -> List[PluginManifest]
-```
+```python
 
 扫描目录下所有含 `manifest.toml` 的子文件夹，返回解析后的 `PluginManifest` 列表。
 
@@ -260,7 +260,7 @@ discover_testable_plugins(plugin_dir: Path) -> List[PluginManifest]
 
 ```python
 generate_smoke_tests(manifests: List[PluginManifest]) -> str
-```
+```python
 
 批量生成冒烟测试代码（完整 pytest 文件）。
 
@@ -268,7 +268,7 @@ generate_smoke_tests(manifests: List[PluginManifest]) -> str
 
 ```python
 generate_smoke_test(manifest: PluginManifest) -> str
-```
+```python
 
 为单个插件生成冒烟测试代码片段。
 
@@ -300,7 +300,7 @@ generate_smoke_test(manifest: PluginManifest) -> str
 
 ```python
 get_testable_plugin_names(plugin_dir: str) -> List[str]
-```
+```python
 
 返回目录下所有可测试插件名。
 

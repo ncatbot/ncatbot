@@ -24,7 +24,7 @@ async def on_load(self):
 async def set_welcome(self, event, msg: str):
     self.set_config("welcome_msg", msg)
     await event.reply(f"欢迎语已设置为: {msg}")
-```
+```python
 
 **注意**：`set_config()` 立即写文件，批量用 `update_config()`。
 
@@ -46,7 +46,7 @@ async def sign_in(self, event):
     count = self.data["sign_in_count"]
     count[uid] = count.get(uid, 0) + 1
     await event.reply(f"签到成功！累计 {count[uid]} 次")
-```
+```python
 
 **注意**：用 `setdefault()` 初始化，避免覆盖重启前数据。中途持久化用 `self._save_data()`。
 
@@ -74,7 +74,7 @@ async def admin_cmd(self, event):
         await event.reply("权限不足")
         return
     await event.reply("管理员命令已执行")
-```
+```python
 
 **注意**：`self.rbac` 可能为 None（服务未启动时），`check_permission()` 此时返回 False。`user` 参数始终为 `str`。
 
@@ -84,7 +84,7 @@ async def admin_cmd(self, event):
 
 | 方法 | 签名 | 说明 |
 |------|------|------|
-| `add_scheduled_task` | `(name, interval, conditions=None, max_runs=None) -> bool` | 添加 |
+| `add_scheduled_task` | `(name, interval, conditions=None, max_runs=None, callback=None) -> bool` | 添加 |
 | `remove_scheduled_task` | `(name: str) -> bool` | 移除 |
 | `get_task_status` | `(name: str) -> Optional[Dict]` | 状态 |
 | `list_scheduled_tasks` | `() -> List[str]` | 列出所有 |
@@ -110,9 +110,9 @@ async def daily_report(self):
     groups = await self.api.info.get_group_list()
     for g in groups:
         await self.api.post_group_msg(g["group_id"], text="日报...")
-```
+```python
 
-**注意**：回调方法名须与 `add_scheduled_task(name)` 一致。任务在卸载时自动清理。
+**注意**：默认回调方法名须与 `add_scheduled_task(name)` 一致，找不到则报错。也可显式传入 `callback` 参数。任务在卸载时自动清理。
 
 ## EventMixin — 事件流
 
@@ -136,6 +136,6 @@ async def _monitor(self):
         async for event in stream:
             if "广告" in event.data.message.text:
                 await self.api.delete_msg(event.data.message_id)
-```
+```markdown
 
 **注意**：`events()` 流在插件卸载时自动关闭。后台 task 需在 `on_close()` 取消。

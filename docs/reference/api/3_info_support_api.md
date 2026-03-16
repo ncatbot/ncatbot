@@ -13,33 +13,33 @@
 ### get_login_info()
 
 ```python
-async def get_login_info(self) -> dict:
-```
+async def get_login_info(self) -> LoginInfo:
+```python
 
 **参数**：无
 
-**返回值**：`dict` — 包含 `user_id` 和 `nickname` 的字典
+**返回值**：`LoginInfo` — 包含 `user_id: str` 和 `nickname: str`
 
 **OneBot v11 Action**：`get_login_info`
 
 ```python
 info = await api.info.get_login_info()
-print(f"Bot QQ: {info['user_id']}")
-```
+print(f"Bot QQ: {info.user_id}")
+```python
 
 ---
 
 ### get_stranger_info()
 
 ```python
-async def get_stranger_info(self, user_id: Union[str, int]) -> dict:
-```
+async def get_stranger_info(self, user_id: Union[str, int]) -> StrangerInfo:
+```python
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | user_id | str \| int | 是 | 目标用户 QQ 号 |
 
-**返回值**：`dict` — 用户信息（`user_id`, `nickname`, `sex`, `age` 等）
+**返回值**：`StrangerInfo` — 用户信息（`user_id`, `nickname`, `sex`, `age` 等）
 
 **OneBot v11 Action**：`get_stranger_info`
 
@@ -48,12 +48,12 @@ async def get_stranger_info(self, user_id: Union[str, int]) -> dict:
 ### get_friend_list()
 
 ```python
-async def get_friend_list(self) -> List[dict]:
-```
+async def get_friend_list(self) -> List[FriendInfo]:
+```python
 
 **参数**：无
 
-**返回值**：`List[dict]` — 好友列表，每项包含 `user_id`, `nickname`, `remark`
+**返回值**：`List[FriendInfo]` — 好友列表，每项包含 `user_id`, `nickname`, `remark`
 
 **OneBot v11 Action**：`get_friend_list`
 
@@ -62,14 +62,14 @@ async def get_friend_list(self) -> List[dict]:
 ### get_group_info()
 
 ```python
-async def get_group_info(self, group_id: Union[str, int]) -> dict:
-```
+async def get_group_info(self, group_id: Union[str, int]) -> GroupInfo:
+```python
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | group_id | str \| int | 是 | 群号 |
 
-**返回值**：`dict` — 群信息（`group_id`, `group_name`, `member_count` 等）
+**返回值**：`GroupInfo` — 群信息（`group_id`, `group_name`, `member_count` 等）
 
 **OneBot v11 Action**：`get_group_info`
 
@@ -78,20 +78,20 @@ async def get_group_info(self, group_id: Union[str, int]) -> dict:
 ### get_group_list()
 
 ```python
-async def get_group_list(self) -> list:
-```
+async def get_group_list(self) -> List[GroupInfo]:
+```python
 
 **参数**：无
 
-**返回值**：`list` — 群列表
+**返回值**：`List[GroupInfo]` — 群列表
 
 **OneBot v11 Action**：`get_group_list`
 
 ```python
 groups = await api.info.get_group_list()
 for g in groups:
-    print(g["group_name"])
-```
+    print(g.group_name)
+```python
 
 ---
 
@@ -100,15 +100,15 @@ for g in groups:
 ```python
 async def get_group_member_info(
     self, group_id: Union[str, int], user_id: Union[str, int],
-) -> dict:
-```
+) -> GroupMemberInfo:
+```python
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | group_id | str \| int | 是 | 群号 |
 | user_id | str \| int | 是 | 目标用户 QQ 号 |
 
-**返回值**：`dict` — 群成员信息（`group_id`, `user_id`, `nickname`, `card`, `role` 等）
+**返回值**：`GroupMemberInfo` — 群成员信息（`group_id`, `user_id`, `nickname`, `card`, `role` 等）
 
 **OneBot v11 Action**：`get_group_member_info`
 
@@ -117,14 +117,14 @@ async def get_group_member_info(
 ### get_group_member_list()
 
 ```python
-async def get_group_member_list(self, group_id: Union[str, int]) -> list:
-```
+async def get_group_member_list(self, group_id: Union[str, int]) -> List[GroupMemberInfo]:
+```python
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | group_id | str \| int | 是 | 群号 |
 
-**返回值**：`list` — 群成员列表
+**返回值**：`List[GroupMemberInfo]` — 群成员列表
 
 **OneBot v11 Action**：`get_group_member_list`
 
@@ -133,14 +133,14 @@ async def get_group_member_list(self, group_id: Union[str, int]) -> list:
 ### get_msg()
 
 ```python
-async def get_msg(self, message_id: Union[str, int]) -> dict:
-```
+async def get_msg(self, message_id: Union[str, int]) -> MessageData:
+```python
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | message_id | str \| int | 是 | 消息 ID |
 
-**返回值**：`dict` — 消息详情（`message_id`, `real_id`, `sender`, `time`, `message` 等）
+**返回值**：`MessageData` — 消息详情（`message_id`, `real_id`, `sender`, `time`, `message` 等）
 
 **OneBot v11 Action**：`get_msg`
 
@@ -149,14 +149,14 @@ async def get_msg(self, message_id: Union[str, int]) -> dict:
 ### get_forward_msg()
 
 ```python
-async def get_forward_msg(self, message_id: Union[str, int]) -> dict:
-```
+async def get_forward_msg(self, message_id: Union[str, int]) -> ForwardMessageData:
+```python
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | message_id | str \| int | 是 | 合并转发消息 ID |
 
-**返回值**：`dict` — 合并转发消息内容
+**返回值**：`ForwardMessageData` — 合并转发消息内容
 
 **OneBot v11 Action**：`get_forward_msg`
 
@@ -165,14 +165,14 @@ async def get_forward_msg(self, message_id: Union[str, int]) -> dict:
 ### get_group_root_files()
 
 ```python
-async def get_group_root_files(self, group_id: Union[str, int]) -> dict:
-```
+async def get_group_root_files(self, group_id: Union[str, int]) -> GroupFileList:
+```python
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | group_id | str \| int | 是 | 群号 |
 
-**返回值**：`dict` — 群根目录文件列表
+**返回值**：`GroupFileList` — 群根目录文件列表
 
 **OneBot v11 Action**：`get_group_root_files`
 
@@ -184,7 +184,7 @@ async def get_group_root_files(self, group_id: Union[str, int]) -> dict:
 async def get_group_file_url(
     self, group_id: Union[str, int], file_id: str,
 ) -> str:
-```
+```python
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
@@ -197,7 +197,7 @@ async def get_group_file_url(
 
 ```python
 url = await api.info.get_group_file_url(123456, "file_abc123")
-```
+```python
 
 ---
 
@@ -213,7 +213,7 @@ url = await api.info.get_group_file_url(123456, "file_abc123")
 async def upload_group_file(
     self, group_id: Union[str, int], file: str, name: str, folder_id: str = "",
 ) -> None:
-```
+```python
 
 上传群文件。
 
@@ -230,7 +230,7 @@ async def upload_group_file(
 
 ```python
 await api.support.upload_group_file(123456, "/tmp/report.pdf", "月报.pdf")
-```
+```python
 
 ---
 
@@ -240,7 +240,7 @@ await api.support.upload_group_file(123456, "/tmp/report.pdf", "月报.pdf")
 async def delete_group_file(
     self, group_id: Union[str, int], file_id: str,
 ) -> None:
-```
+```python
 
 删除群文件。
 
@@ -259,7 +259,7 @@ async def delete_group_file(
 
 ```python
 async def send_like(self, user_id: Union[str, int], times: int = 1) -> None:
-```
+```python
 
 给用户点赞。
 
@@ -274,4 +274,4 @@ async def send_like(self, user_id: Union[str, int], times: int = 1) -> None:
 
 ```python
 await api.support.send_like(654321, times=10)
-```
+```text

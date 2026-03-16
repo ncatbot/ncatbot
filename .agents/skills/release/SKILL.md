@@ -46,9 +46,9 @@ license: MIT
 
 ## 发布模式：CI/CD 全链路流程总览
 
-```
+```text
 工作区变更审查 → Commit 编排 → 已有 Commit 审查 → 版本号确定 → Tag → Push（CI 自动: Lint → Test → Build → PyPI → user-ref 打包 → GitHub Release）
-```
+```python
 
 ---
 
@@ -61,7 +61,7 @@ license: MIT
 ```powershell
 git status --short
 git diff --stat
-```
+```python
 
 #### 1.2 ASK：哪些变更纳入本次发布
 
@@ -87,7 +87,7 @@ git diff --stat
 ```powershell
 git add <files>
 git commit -m "type(scope): description"
-```
+```python
 
 重复直到所有选中的变更都已提交。
 
@@ -105,7 +105,7 @@ git commit -m "type(scope): description"
 $lastTag = git describe --tags --abbrev=0 2>$null
 if (!$lastTag) { $lastTag = (git rev-list --max-parents=0 HEAD) }
 git log "$lastTag..HEAD" --oneline --no-merges
-```
+```markdown
 
 #### 2.2 分类展示
 
@@ -175,7 +175,7 @@ git log "$lastTag..HEAD" --oneline --no-merges
 
 ## 💥 破坏性变更
 - 描述 (hash)
-```
+```bash
 
 格式化规则：
 - 移除 commit message 的 `type(scope):` 前缀，只保留描述
@@ -203,7 +203,7 @@ uv run ruff format --check .
 
 # 3. 运行测试（无覆盖率，与 CI 一致）
 uv run pytest --no-cov
-```
+```markdown
 
 **全部通过（exit code 0）后**才能进行阶段 5。若有失败：
 - Ruff lint/format 问题：运行 `uv run ruff check --fix .` 和 `uv run ruff format .` 修复，再提交
@@ -217,7 +217,7 @@ uv run pytest --no-cov
 $ver = "X.Y.Z"  # 替换为实际版本
 git tag "v$ver"
 git push origin main --tags
-```
+```python
 
 推送 tag 后 CI 自动执行:
 1. **Lint** — ruff check + format check
@@ -240,7 +240,7 @@ gh run list --workflow=pypi-publish.yml --limit=1
 
 # 查看最新 release
 gh release view "v$ver" --repo ncatbot/NcatBot
-```
+```python
 
 如果 CI 失败，检查 Actions 日志排查问题。必要时可回退到本地人工发布流程。
 
@@ -259,7 +259,7 @@ gh release view "v$ver" --repo ncatbot/NcatBot
 ```powershell
 if (Test-Path dist) { Remove-Item dist -Recurse -Force }
 python -m build
-```
+```python
 
 构建产物：
 - `dist/ncatbot5-{version}-py3-none-any.whl`
@@ -269,7 +269,7 @@ python -m build
 
 ```powershell
 python -m twine upload dist/* -u __token__
-```
+```python
 
 `twine` 自动读取 `TWINE_PASSWORD` 环境变量中的 API Token。
 
@@ -295,7 +295,7 @@ foreach ($f in $files) {
 }
 Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath
 Remove-Item $tempDir -Recurse -Force
-```
+```python
 
 ### 手动阶段 4：创建 GitHub Release
 
@@ -308,7 +308,7 @@ gh release create "v$ver" `
     --title "v$ver" `
     --notes-file release-notes.md `
     --repo ncatbot/NcatBot
-```
+```python
 
 ### 手动阶段 5：清理与收尾
 
@@ -316,7 +316,7 @@ gh release create "v$ver" `
 
 ```powershell
 Remove-Item release-notes.md -ErrorAction SilentlyContinue
-```
+```python
 
 并向用户确认发布结果。
 
@@ -328,9 +328,9 @@ Remove-Item release-notes.md -ErrorAction SilentlyContinue
 
 ### 流程
 
-```
+```text
 工作区变更审查 → Commit 编排 → Push → （可选）更新 Release Asset
-```
+```python
 
 ### P1：工作区变更审查与 Commit 编排
 
@@ -340,7 +340,7 @@ Remove-Item release-notes.md -ErrorAction SilentlyContinue
 
 ```powershell
 git push origin main
-```
+```markdown
 
 ### P3：判断是否需要更新 Release Asset
 
@@ -355,7 +355,7 @@ git push origin main
 ```powershell
 $lastTag = git describe --tags --abbrev=0 2>$null
 git diff --name-only "$lastTag..HEAD" | Select-String "^(docs/|examples/|\.agents/skills/)"
-```
+```python
 
 若匹配到文件 → 执行 P4；否则流程结束。
 
@@ -366,7 +366,7 @@ git diff --name-only "$lastTag..HEAD" | Select-String "^(docs/|examples/|\.agent
 ```powershell
 $latestTag = git describe --tags --abbrev=0
 $ver = $latestTag -replace '^v', ''
-```
+```python
 
 #### 4b. 打包参考资料（同发布模式阶段 7）
 
@@ -389,7 +389,7 @@ foreach ($f in $files) {
 }
 Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath
 Remove-Item $tempDir -Recurse -Force
-```
+```python
 
 #### 4c. 替换 Release 中的旧 asset
 
@@ -399,13 +399,13 @@ gh release delete-asset "v$ver" "ncatbot5-$ver-user-reference.zip" --repo ncatbo
 
 # 上传新的
 gh release upload "v$ver" $zipPath --repo ncatbot/NcatBot
-```
+```python
 
 #### 4d. 清理
 
 ```powershell
 if (Test-Path dist) { Remove-Item dist -Recurse -Force }
-```
+```python
 
 ---
 

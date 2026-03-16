@@ -21,7 +21,7 @@ class RBACService(BaseService):
         case_sensitive: bool = True,
         **config,
     ):
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
@@ -45,7 +45,7 @@ graph TD
     RBAC -->|内部| PC[PermissionChecker]
     RBAC -->|内部| PA[PermissionAssigner]
     RBAC -->|内部| EM[EntityManager]
-```
+```python
 
 ---
 
@@ -69,7 +69,7 @@ rbac.add_permission("plugin.echo.use")
 
 # 检查
 rbac.permission_exists("admin.panel")  # True
-```
+```python
 
 ---
 
@@ -89,7 +89,7 @@ rbac.add_role("moderator")
 
 # 角色继承：admin 继承 moderator 的所有权限
 rbac.set_role_inheritance("admin", "moderator")
-```
+```python
 
 ---
 
@@ -109,7 +109,7 @@ rbac.set_role_inheritance("admin", "moderator")
 rbac.add_user("user_123")
 rbac.assign_role("user", "user_123", "admin")
 rbac.user_has_role("user_123", "admin")  # True
-```
+```python
 
 ---
 
@@ -137,7 +137,7 @@ rbac.grant("user", "user_456", "admin.panel", mode="black")
 
 # 撤销权限
 rbac.revoke("role", "moderator", "plugin.echo.use")
-```
+```python
 
 ---
 
@@ -145,7 +145,7 @@ rbac.revoke("role", "moderator", "plugin.echo.use")
 
 ```python
 def check(self, user: str, permission: str, create_user: bool = True) -> bool:
-```
+```markdown
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
@@ -159,7 +159,7 @@ def check(self, user: str, permission: str, create_user: bool = True) -> bool:
 rbac.check("user_123", "admin.panel")       # True（admin 角色有此权限）
 rbac.check("user_456", "admin.panel")       # False（被黑名单禁止）
 rbac.check("unknown_user", "admin.panel")   # False（无角色、无权限）
-```
+```python
 
 ---
 
@@ -167,7 +167,7 @@ rbac.check("unknown_user", "admin.panel")   # False（无角色、无权限）
 
 ```python
 def save(self, path: Optional[Path] = None) -> None:
-```
+```python
 
 手动将当前 RBAC 数据保存到文件。不传 `path` 时使用初始化时的 `storage_path`。
 
@@ -207,7 +207,7 @@ rbac.check("qq_123456", "plugin.echo.use")  # True（继承自 user 角色）
 
 # 手动保存
 rbac.save()
-```
+```text
 
 ---
 

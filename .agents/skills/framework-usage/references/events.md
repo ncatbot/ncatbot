@@ -7,7 +7,7 @@
 ```python
 from ncatbot.core import registrar
 from ncatbot.event import GroupMessageEvent, PrivateMessageEvent
-```
+```python
 
 ### 完整装饰器列表
 
@@ -49,7 +49,7 @@ async def _monitor(self):
         async for event in stream:
             if "敏感词" in event.data.message.text:
                 await self.api.delete_msg(event.data.message_id)
-```
+```python
 
 **events() 参数**：
 - `None` — 接收全部事件
@@ -74,7 +74,7 @@ async def on_confirm(self, event: GroupMessageEvent):
         await event.reply("已确认")
     except asyncio.TimeoutError:
         await event.reply("超时，已取消")
-```
+```python
 
 ### Predicate DSL
 
@@ -119,7 +119,7 @@ pred = from_event(event) * ~same_user(bot_id)
 
 # 混用 lambda
 pred = from_event(event) * P.of(lambda e: int(e.data.raw_message) > 0)
-```
+```python
 
 ## 事件类型字符串完整列表
 
@@ -148,11 +148,11 @@ pred = from_event(event) * P.of(lambda e: int(e.data.raw_message) > 0)
 
 ## 前缀匹配规则
 
-```
+```json
 "message"        → 匹配 "message" + "message.group" + "message.private"
 "notice"         → 匹配 "notice" + "notice.group_increase" + ...
 "notice.group"   → 匹配 "notice.group_increase" + "notice.group_decrease" + ...
-```
+```python
 
 ## 事件实体层
 
@@ -175,7 +175,7 @@ event.group_id       # → event.data.group_id
 event.message        # → event.data.message (MessageArray)
 event.message_id     # → event.data.message_id
 event.sender         # → event.data.sender
-```
+```python
 
 ## 多步对话模板
 
@@ -204,4 +204,4 @@ async def order_flow(self, event: GroupMessageEvent):
             await event.reply("已取消")
     except asyncio.TimeoutError:
         await event.reply("超时，已取消")
-```
+```text

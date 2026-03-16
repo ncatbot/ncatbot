@@ -43,7 +43,7 @@ flowchart LR
         G
         H
     end
-```
+```markdown
 
 **数据流**: Adapter 推送 `BaseEventData` → `AsyncEventDispatcher` 解析类型并广播 `Event` → `HandlerDispatcher` 消费事件流，匹配 handler → 执行 Hook 链 → 调用 handler。
 
@@ -67,12 +67,12 @@ flowchart LR
 
 ### 解析流程
 
-```
+```text
 BaseEventData 到达
   ├─ 读取 data.post_type → "message"
   ├─ 查找对应 secondary 字段 → data.message_type → "group"
   └─ 拼接 → "message.group"
-```
+```python
 
 `notice` 类型的特殊逻辑：当 `notice_type` 为 `"notify"` 时，二级类型使用 `sub_type`（如 `"poke"`），产生 `"notice.poke"` 而非 `"notice.notify"`。
 
@@ -100,7 +100,7 @@ flowchart TD
     D -->|"handlers['message']"| C
     C --> E[按 priority 降序排序]
     E --> F[依次执行]
-```
+```python
 
 ### 匹配规则
 
@@ -148,7 +148,7 @@ sequenceDiagram
             D->>EH: 依次执行
         end
     end
-```
+```python
 
 ### 关键行为
 
@@ -190,7 +190,7 @@ class Hook(ABC):
 
     @abstractmethod
     async def __call__(self, context: "HookContext") -> HookAction: ...
-```
+```python
 
 ### HookContext — 上下文
 
@@ -203,7 +203,7 @@ class HookContext:
     service_manager: Optional[ServiceManager]
     kwargs: dict              # 额外参数，可被 Hook 修改
     error: Optional[Exception]  # 仅 ON_ERROR 阶段填充
-```
+```python
 
 ### 内置 Hook 一览
 
@@ -224,7 +224,7 @@ class HookContext:
 ```python
 removed_count = handler_dispatcher.revoke_plugin("my_plugin")
 # 重新加载插件后，新 handler 自动注册
-```
+```python
 
 **流程**: 卸载旧插件（`revoke_plugin` 清理 handler）→ 重新导入插件模块 → 新 handler 通过 `Registrar` 重新注册。
 
@@ -267,7 +267,7 @@ class RateLimitHook(Hook):
         if user_id and self.is_rate_limited(user_id):
             return HookAction.SKIP
         return HookAction.CONTINUE
-```
+```python
 
 ### 自定义事件消费
 
@@ -278,7 +278,7 @@ async with event_dispatcher.events(EventType.NOTICE) as stream:
     async for event in stream:
         # 自定义处理逻辑
         await custom_notice_handler(event)
-```
+```markdown
 
 ### Registrar — 装饰器注册
 

@@ -20,11 +20,11 @@ NcatBot 需要同时满足三类用户的需求：
 
 采用 7 层分层架构，自底向上为：
 
-```
+```text
 Types → Adapter → Event → API → Core → Service → Plugin
                                                     ↑
                                             App（编排层，游离）
-```
+```text
 
 ```mermaid
 graph TB
@@ -48,7 +48,7 @@ graph TB
 
     style App fill:#e1f5fe,stroke:#03a9f4
     style Types fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray: 5 5
-```
+```markdown
 
 ### 理由
 
@@ -61,12 +61,12 @@ graph TB
 
 **层间依赖规则：**
 
-```
+```text
         可依赖 →
 Plugin ─────── Core ─────── Event ─────── Adapter
    │             │             │
    └── Service   └── API      └── Types
-```
+```python
 
 - **禁止**跨层依赖（如 Plugin 直接依赖 Adapter）
 - **禁止**反向依赖（如 Adapter 引用 Core）
@@ -115,7 +115,7 @@ graph LR
     Client --> IBotAPI
     NapCatAPI -.->|implements| IBotAPI
     MockAPI -.->|implements| IBotAPI
-```
+```python
 
 关键代码（`api/interface.py`）：
 
@@ -128,7 +128,7 @@ class IBotAPI(ABC):
     @abstractmethod
     async def delete_msg(self, message_id) -> None: ...
     # ... 群管理 / 信息查询等方法
-```
+```python
 
 ### 理由
 
@@ -184,7 +184,7 @@ graph LR
     Dispatcher -->|Event| S1["EventStream A<br/><small>HandlerDispatcher</small>"]
     Dispatcher -->|Event| S2["EventStream B<br/><small>插件 EventMixin</small>"]
     Dispatcher -->|Event| W["wait_event()<br/><small>一次性 Future</small>"]
-```
+```python
 
 核心实现（`core/dispatcher/dispatcher.py`）：
 
@@ -204,7 +204,7 @@ class AsyncEventDispatcher:
         queue = asyncio.Queue(maxsize=self._stream_queue_size)
         self._stream_queues.add(queue)
         return EventStream(self, queue, event_type)
-```
+```python
 
 ### 理由
 
@@ -262,7 +262,7 @@ def set_current_plugin(name: str) -> Token:
 
 def get_current_plugin() -> Optional[str]:
     return _current_plugin_ctx.get()
-```
+```python
 
 加载流程中，`PluginLoader` 在导入模块前设置、导入后重置：
 
@@ -273,14 +273,14 @@ try:
     importlib.import_module(plugin_module)
 finally:
     _current_plugin_ctx.reset(token)
-```
+```python
 
 `Registrar` 在装饰器内读取当前插件名：
 
 ```python
 # core/registry/registrar.py
 plugin_name = get_current_plugin() or "__global__"
-```
+```python
 
 ### 理由
 

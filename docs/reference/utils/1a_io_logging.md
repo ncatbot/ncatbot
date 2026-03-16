@@ -18,7 +18,7 @@ graph LR
     C --> E[PluginConfig]
     F[ConfigManager] -->|持有| B
     F -->|懒加载| C
-```
+```python
 
 ### ConfigManager
 
@@ -30,14 +30,14 @@ from ncatbot.utils.config.manager import ConfigManager, get_config_manager
 # 单例获取
 cm = get_config_manager()                    # 默认路径
 cm = get_config_manager("dev/config.yaml")   # 指定路径
-```
+```python
 
 #### 构造函数
 
 ```python
 class ConfigManager:
     def __init__(self, path: Optional[str] = None): ...
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -74,7 +74,7 @@ class ConfigManager:
 
 ```python
 def get_config_manager(path: Optional[str] = None) -> ConfigManager
-```
+```markdown
 
 获取全局单例。传入 `path` 时会重新创建实例。
 
@@ -110,7 +110,7 @@ napcat:
 plugin:
   plugins_dir: "plugins"
   load_plugin: true
-```
+```python
 
 ### NapCatConfig 模型
 

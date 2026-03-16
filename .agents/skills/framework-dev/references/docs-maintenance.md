@@ -21,8 +21,8 @@
 ## Step 2：确定文件名
 
 1. 查看目标目录已有文件的命名风格
-2. 有序系列 → `数字前缀.主题.md`（如 `3a.loading.md`）
-3. 独立参考 → `数字_主题.md`（如 `1a_message_api.md`）
+2. 有序系列 → `数字前缀.主题.md`（如 `3.lifecycle.md`）
+3. 独立参考 → `数字_主题.md`（如 `1_message_api.md`）
 4. 新子目录需创建 `README.md`
 
 ## Step 3：选模板
@@ -42,14 +42,14 @@
 
 ```python
 # 可直接复制运行的示例
-```
+```python
 
 ## 进阶用法（可选）
 
 ## 延伸阅读
 
 - [相关参考](../../reference/.../xxx.md)
-```
+```python
 
 ### 模板 B：参考文档（reference/）
 
@@ -63,7 +63,7 @@
 ```python
 class Foo:
     def bar(self, x: int, *, opt: str = "default") -> None: ...
-```
+```python
 
 ## 参数
 
@@ -74,7 +74,7 @@ class Foo:
 ## 示例
 
 ## 注意事项
-```
+```python
 
 ### 模板 C：子目录 README.md
 
@@ -91,7 +91,7 @@ class Foo:
 |------|------|------|
 
 ## 推荐阅读顺序
-```
+```python
 
 ## Step 4：同步索引
 
@@ -103,9 +103,9 @@ class Foo:
 
 在对应位置新增：
 
-```
+```text
 │   ├── 新文件名.md              #   说明
-```
+```python
 
 ## Step 5：验证
 
@@ -140,4 +140,4 @@ class Foo:
 
 ```markdown
 > **已废弃（v5.x）**：请改用 [`NewApi`](./xxx.md#new-api)。
-```
+```text

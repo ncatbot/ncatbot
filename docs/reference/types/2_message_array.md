@@ -15,7 +15,7 @@
 
 ```python
 from ncatbot.types import MessageArray, PlainText, At, Image
-```
+```python
 
 ---
 
@@ -29,7 +29,7 @@ msg = MessageArray()
 
 # 从消息段列表创建
 msg = MessageArray([PlainText(text="你好"), At(qq="123456")])
-```
+```python
 
 ### from_list
 
@@ -40,7 +40,7 @@ msg = MessageArray.from_list([
     {"type": "text", "data": {"text": "你好"}},
     {"type": "at", "data": {"qq": "123456"}},
 ])
-```
+```python
 
 ### from_any
 
@@ -55,7 +55,7 @@ msg = MessageArray.from_any([{"type": "text", "data": {"text": "hi"}}])
 
 # 从单个消息段
 msg = MessageArray.from_any(PlainText(text="hi"))
-```
+```python
 
 ---
 
@@ -71,13 +71,13 @@ msg = (
     .add_text(" 请看这张图：")
     .add_image("https://example.com/photo.jpg")
 )
-```
+```python
 
 ### add_text
 
 ```python
 add_text(text: str) -> MessageArray
-```
+```toml
 
 追加纯文本。支持 CQ 码自动解析 — 如果 `text` 中包含 CQ 码，会被解析为对应的消息段。
 
@@ -85,26 +85,26 @@ add_text(text: str) -> MessageArray
 msg = MessageArray()
 msg.add_text("普通文本")
 msg.add_text("[CQ:face,id=178]")   # CQ 码会被解析为 Face 段
-```
+```python
 
 ### add_image
 
 ```python
 add_image(image: str | Image) -> MessageArray
-```
+```text
 
 追加图片。传入字符串时自动包装为 `Image(file=...)`：
 
 ```python
 msg.add_image("https://example.com/photo.jpg")
 msg.add_image(Image(file="https://example.com/photo.jpg", type=1))  # 闪照
-```
+```python
 
 ### add_video
 
 ```python
 add_video(video: str | Video) -> MessageArray
-```
+```python
 
 追加视频。用法同 `add_image`。
 
@@ -113,31 +113,31 @@ add_video(video: str | Video) -> MessageArray
 ```python
 add_at(user_id: str | int) -> MessageArray
 add_at_all() -> MessageArray
-```
+```text
 
 ```python
 msg.add_at(123456)     # @某人
 msg.add_at_all()       # @全体成员
-```
+```python
 
 ### add_reply
 
 ```python
 add_reply(message_id: str | int) -> MessageArray
-```
+```text
 
 追加引用回复：
 
 ```python
 msg.add_reply(event.message_id)
-```
+```python
 
 ### add_segment / add_segments
 
 ```python
 add_segment(segment: MessageSegment) -> MessageArray
 add_segments(data: Any) -> MessageArray
-```
+```python
 
 追加任意消息段或任意可解析输入：
 
@@ -146,7 +146,7 @@ from ncatbot.types import Share
 
 msg.add_segment(Share(url="https://ncatbot.dev", title="NcatBot"))
 msg.add_segments([{"type": "text", "data": {"text": "hi"}}])
-```
+```python
 
 ---
 
@@ -157,20 +157,20 @@ msg.add_segments([{"type": "text", "data": {"text": "hi"}}])
 ```python
 @property
 text -> str
-```
+```toml
 
 拼接所有 `PlainText` 段的文本：
 
 ```python
 msg = MessageArray.from_any("你好[CQ:at,qq=123456]世界")
 msg.text  # "你好世界"
-```
+```python
 
 ### filter
 
 ```python
 filter(cls: Type[T] = None) -> List[T]
-```
+```python
 
 按类型过滤。不传参时返回所有消息段（副本）：
 
@@ -180,7 +180,7 @@ from ncatbot.types import Image, At
 all_segs = msg.filter()          # 所有消息段
 images   = msg.filter(Image)     # 仅图片段
 ats      = msg.filter(At)        # 仅 @段
-```
+```python
 
 ### 快捷过滤方法
 
@@ -196,7 +196,7 @@ ats      = msg.filter(At)        # 仅 @段
 
 ```python
 is_at(user_id: str | int, all_except: bool = False) -> bool
-```
+```toml
 
 判断消息中是否 @了指定用户：
 
@@ -209,13 +209,13 @@ msg = MessageArray([At(qq="all"), PlainText(text="Hello")])
 
 msg.is_at("123456")                    # True（被 @all 覆盖）
 msg.is_at("123456", all_except=True)   # False（排除 @all）
-```
+```python
 
 ### is_forward_msg
 
 ```python
 is_forward_msg() -> bool
-```
+```python
 
 判断消息中是否包含合并转发段。
 
@@ -227,7 +227,7 @@ is_forward_msg() -> bool
 
 ```python
 to_list() -> List[Dict[str, Any]]
-```
+```python
 
 将消息数组序列化为 OB11 协议格式：
 
@@ -238,7 +238,7 @@ msg.to_list()
 #   {"type": "text", "data": {"text": "hi"}},
 #   {"type": "at", "data": {"qq": "123"}}
 # ]
-```
+```python
 
 ---
 
@@ -252,7 +252,7 @@ msg = MessageArray([PlainText(text="a"), PlainText(text="b")])
 len(msg)           # 2
 for seg in msg:    # 可迭代
     print(seg)
-```
+```python
 
 ### 拼接
 
@@ -265,7 +265,7 @@ msg2 = MessageArray([PlainText(text="World")])
 combined = msg1 + msg2              # MessageArray([PlainText("Hello "), PlainText("World")])
 combined = msg1 + [At(qq="123")]    # 右侧会自动解析
 combined = "前缀" + msg1             # __radd__ 支持
-```
+```python
 
 ---
 
@@ -288,7 +288,7 @@ m = MyModel(message="你好[CQ:at,qq=123]")
 
 # 序列化
 m.model_dump()  # {"message": [{"type": "text", ...}, ...]}
-```
+```python
 
 事件模型中的 `message` 字段就利用了这一特性，会自动将 `list`、CQ 码字符串、`MessageArray` 统一转为 `MessageArray`。
 
@@ -307,6 +307,6 @@ result = parse_cq_code_to_onebot11("你好[CQ:at,qq=123456]世界")
 #   {"type": "at", "data": {"qq": "123456"}},
 #   {"type": "text", "data": {"text": "世界"}}
 # ]
-```
+```text
 
 支持 HTML 反转义：`&amp;` → `&`，`&#91;` → `[`，`&#93;` → `]`，`&#44;` → `,`。

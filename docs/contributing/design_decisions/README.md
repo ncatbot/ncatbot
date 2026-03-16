@@ -8,11 +8,11 @@
 
 NcatBot 采用 7 层分层架构，自底向上为：
 
-```
+```text
 Types → Adapter → Event → API → Core → Service → Plugin
                                                     ↑
                                             App（编排层，游离）
-```
+```text
 
 ```mermaid
 graph TB
@@ -36,7 +36,7 @@ graph TB
 
     style App fill:#e1f5fe,stroke:#03a9f4
     style Types fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray: 5 5
-```
+```python
 
 每一层只解决一个维度的问题，上层可依赖下层，下层不得引用上层。`App`（编排层）作为 Composition Root 是唯一可依赖所有层的例外。
 
@@ -121,12 +121,12 @@ graph TB
 
 ### 1. 分层隔离与依赖规则
 
-```
+```text
         可依赖 →
 Plugin ─────── Core ─────── Event ─────── Adapter
    │             │             │
    └── Service   └── API      └── Types
-```
+```python
 
 - 上层可依赖下层，**禁止**反向依赖和跨层依赖
 - `Types` 和 `Utils` 是公共层，任何层均可引用
@@ -166,5 +166,5 @@ Plugin ─────── Core ─────── Event ──────
 |---|---|
 | [架构级决策](1_architecture.md) | ADR-001 ~ ADR-004：分层架构、适配器模式、纯广播设计、ContextVar |
 | [实现级决策](2_implementation.md) | ADR-005 ~ ADR-009：Mixin、Hook 链、Handler 分发、命名空间 API、RBAC Trie |
-| [架构文档](../architecture.md) | 完整的分层架构与模块详解 |
-| [插件快速入门](../guide/plugin/1.quick-start.md) | 插件开发入门指南 |
+| [架构文档](../../architecture.md) | 完整的分层架构与模块详解 |
+| [插件快速入门](../../guide/plugin/1.quick-start.md) | 插件开发入门指南 |

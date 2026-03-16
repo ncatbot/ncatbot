@@ -2,20 +2,20 @@
 
 ## 目录结构
 
-```
+```python
 plugins/my_plugin/
 ├── manifest.toml    # 必须
 ├── main.py          # 入口文件
 ├── config.yaml      # 可选：默认配置
 └── ...              # 其他辅助模块
-```
+```toml
 
 ## manifest.toml 完整格式
 
 > 参考文档：[guide/plugin/2.structure.md](docs/guide/plugin/2.structure.md), [reference/plugin/1_base_class.md](docs/reference/plugin/1_base_class.md#3-pluginmanifest)
 
 ```toml
-[plugin]
+# ⚠️ 必填字段必须放在 TOML 顶层，不能放在任何 [section] 下
 name = "my_plugin"          # 唯一标识符，小写+下划线
 version = "1.0.0"           # SemVer 版本号
 main = "main.py"            # 入口文件名
@@ -28,7 +28,7 @@ description = "插件说明"
 
 [pip_dependencies]
 # aiohttp = ">=3.8.0"
-```
+```python
 
 **规则**：
 - `name` 须为合法 Python 标识符（小写字母+下划线）
@@ -48,7 +48,7 @@ description = "插件说明"
 
 ## 生命周期
 
-> 参考文档：[guide/plugin/3a.loading.md](docs/guide/plugin/3a.loading.md)
+> 参考文档：[guide/plugin/3.lifecycle.md](docs/guide/plugin/3.lifecycle.md)
 
 ```python
 async def on_load(self):
@@ -62,7 +62,7 @@ async def on_load(self):
 async def on_close(self):
     """卸载时：清理资源、取消后台 task"""
     pass
-```
+```python
 
 **顺序**：加载 `_init_()` → Mixin `_mixin_load()` → `on_load()` | 卸载 `_close_()` → `on_close()` → Mixin `_mixin_unload()`
 
@@ -109,4 +109,4 @@ async with PluginTestHarness(
     assert "my_plugin" in h.loaded_plugins
     plugin = h.get_plugin("my_plugin")
     assert plugin is not None
-```
+```text

@@ -24,14 +24,14 @@ class NcatBotPlugin(
     BasePlugin, EventMixin, TimeTaskMixin, RBACMixin, ConfigMixin, DataMixin
 ):
     """继承此类即获得全部 Mixin 能力"""
-```
+```text
 
 MRO（方法解析顺序）决定钩子执行顺序：
 
-```
+```text
 load  顺序: EventMixin → TimeTaskMixin → RBACMixin → ConfigMixin → DataMixin
 unload 顺序: EventMixin → TimeTaskMixin → RBACMixin → ConfigMixin → DataMixin
-```
+```text
 
 ```mermaid
 graph LR
@@ -49,7 +49,7 @@ graph LR
     NP --> RM
     NP --> CM
     NP --> DM
-```
+```python
 
 `BasePlugin.__onload__()` 自动发现并调用所有 Mixin 的 `_mixin_load()` 方法，`__unload__()` 调用 `_mixin_unload()`。
 
@@ -80,7 +80,7 @@ graph LR
 for cls in type(self).__mro__:
     if hasattr(cls, '_mixin_load') and '_mixin_load' in cls.__dict__:
         await cls._mixin_load(self)
-```
+```python
 
 这确保了：
 - 每个 Mixin 的钩子只执行一次（通过检查 `cls.__dict__`）
@@ -130,7 +130,7 @@ graph LR
     B2 -->|SKIP| Skip2["跳过 Handler"]
     Handler --> A1
     Handler -.->|异常| E1
-```
+```python
 
 **三阶段设计：**
 
@@ -160,7 +160,7 @@ class Hook(ABC):
 
     @abstractmethod
     async def execute(self, ctx: HookContext) -> HookAction: ...
-```
+```python
 
 ### 理由
 
@@ -219,7 +219,7 @@ def _collect_handlers(self, event_type: str) -> List[HandlerEntry]:
         result.extend(self._handlers.get(prefix, []))
     result.sort(key=lambda e: -e.priority)               # 优先级降序
     return result
-```
+```python
 
 分发循环按优先级遍历，每个 handler 独立经过 Hook 链；`_propagation_stopped` 标志可显式终止传播。
 
@@ -277,7 +277,7 @@ class BotAPIClient(MessageSugarMixin):
         self.manage = ManageExtension(self._base)  # 群管理
         self.info = InfoExtension(self._base)       # 信息查询
         self.support = SupportExtension(self._base)  # 文件·杂项
-```
+```python
 
 | 层级 | 方法示例 | 使用频率 |
 |---|---|---|
@@ -292,7 +292,7 @@ class BotAPIClient(MessageSugarMixin):
 ```python
 def __getattr__(self, name: str) -> Any:
     return getattr(self._base, name)
-```
+```python
 
 未在 `BotAPIClient` 显式定义的方法自动代理到底层 `IBotAPI`，确保不遗漏任何 API。
 
@@ -345,15 +345,15 @@ class PermissionTrie:
 
     def add(self, path: str) -> None: ...    # 添加权限路径
     def exists(self, path: str, exact: bool = False) -> bool: ...  # 支持通配符查询
-```
+```markdown
 
 **权限路径格式：**
 
-```
+```text
 plugin.admin.kick       # 具体权限
 plugin.admin.*          # admin 下的所有直接子权限
 plugin.**               # plugin 下任意深度的权限
-```
+```markdown
 
 `PermissionPath` 负责路径解析，将 `"a.b.c"` 拆分为 `("a", "b", "c")` 元组。
 

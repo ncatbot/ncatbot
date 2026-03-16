@@ -13,7 +13,7 @@ await event.reply("通知", at_sender=False)
 
 msg = MessageArray().add_text("Hello ").add_image("pic.jpg")
 await event.reply(rtf=msg)
-```
+```python
 
 **签名**：
 ```python
@@ -27,7 +27,7 @@ async def reply(
     rtf: Optional[MessageArray] = None,
     at_sender: bool = True,
 ) -> Any
-```
+```python
 
 ### 方式 2：Sugar 方法
 
@@ -45,7 +45,7 @@ await self.api.send_group_sticker(group_id, Image(file="sticker.gif", sub_type=1
 await self.api.post_private_msg(user_id, text="Hello", image="pic.jpg")
 await self.api.send_private_text(user_id, "纯文本")
 await self.api.send_private_image(user_id, "https://example.com/pic.jpg")
-```
+```python
 
 ### 方式 3：MessageArray
 
@@ -69,7 +69,7 @@ msg = MessageArray([
     Image(file="https://example.com/pic.jpg"),
 ])
 await self.api.send_group_msg(group_id, msg.to_list())
-```
+```python
 
 ## 消息段类型速查
 
@@ -156,7 +156,7 @@ await self.api.post_group_forward_msg(group_id, fc.build())
 
 # 方式 2：按消息 ID 转发
 await self.api.send_group_forward_msg_by_id(group_id, [msg_id1, msg_id2])
-```
+```python
 
 ## 从接收消息提取信息
 
@@ -165,7 +165,7 @@ text = event.message.text                    # 纯文本
 images = event.message.filter_image()        # 所有图片
 if event.message.is_at(event.self_id):       # 是否 @了我
     ...
-```
+```python
 
 ## 常见陷阱
 

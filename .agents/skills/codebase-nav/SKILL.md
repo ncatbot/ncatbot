@@ -11,9 +11,9 @@ description: '导航 NcatBot 代码库：定位代码、理解模块、查阅文
 
 ## 工作流
 
-```
+```text
 1. 分类问题 → 2. 查阅文档 → 3. 锁定模块 → 4. 精准定位（仅在必要时读代码）
-```
+```python
 
 ---
 
@@ -25,19 +25,19 @@ description: '导航 NcatBot 代码库：定位代码、理解模块、查阅文
 
 | 症状 / 关键词 | 涉及模块 | 首先查阅的文档 |
 |---|---|---|
-| Bot 启动失败 / 连接不上 | adapter, app | `contributing/module_internals/1a_core_modules.md` |
+| Bot 启动失败 / 连接不上 | adapter, app | `contributing/module_internals/1.core_modules.md` |
 | 消息不响应 / handler 不触发 | core/registry, core/dispatcher | `guide/plugin/4a.event-registration.md` |
 | API 调用报错 / 返回异常 | api, adapter/napcat/api | `reference/api/README.md` → 对应方法 |
-| 插件加载失败 / 找不到插件 | plugin/loader | `guide/plugin/3a.loading.md` |
-| 插件卸载/热重载异常 | plugin/loader | `guide/plugin/3b.unloading.md` |
-| Hook/Filter 不生效 | core/registry/hook | `guide/plugin/6a.hook-basics.md` |
+| 插件加载失败 / 找不到插件 | plugin/loader | `guide/plugin/3.lifecycle.md` |
+| 插件卸载/热重载异常 | plugin/loader | `guide/plugin/3.lifecycle.md` |
+| Hook/Filter 不生效 | core/registry/hook | `guide/plugin/6.hooks.md` |
 | 权限/RBAC 不工作 | service/builtin/rbac | `guide/rbac/1_model.md` |
-| 定时任务不执行 | service/builtin/schedule | `reference/services/2_config_task_service.md` |
-| 配置读取错误 | utils/config | `guide/configuration/1_manager.md` |
+| 定时任务不执行 | plugin/mixin/time_task_mixin, service/builtin/schedule | `reference/services/2_config_task_service.md`。检查插件是否有与 task name 同名的方法，或是否显式传入了 callback |
+| 配置读取错误 | utils/config | `guide/configuration/1.config-security.md` |
 | 消息构造/消息段问题 | types/segment | `guide/send_message/2_segments.md` |
 | 合并转发失败 | types/helper, api | `guide/send_message/4_forward.md` |
 | 事件字段缺失/解析错误 | event, types | `reference/events/1_event_classes.md` |
-| CLI 命令报错 | cli | `reference/cli/1_commands.md` |
+| CLI 命令报错 | cli | `reference/cli.md` |
 | 非插件模式不工作 | app/client, core/registry | `guide/README.md`（非插件模式章节） |
 | 日志/输出异常 | utils/logger | `reference/utils/1a_io_logging.md` |
 | 测试框架问题 | testing | `guide/testing/README.md` |
@@ -109,6 +109,8 @@ description: '导航 NcatBot 代码库：定位代码、理解模块、查阅文
 | 事件模型 | `ncatbot/event/` | `MessageEvent`, `NoticeEvent`, `RequestEvent` |
 | 类型定义 | `ncatbot/types/` | Pydantic 数据模型 |
 | 消息段 | `ncatbot/types/segment/` | text / media / rich / forward / array |
+| API 响应类型 | `ncatbot/types/napcat/` | SendMessageResult, GroupInfo, LoginInfo 等 |
+| API 错误 | `ncatbot/api/errors.py` | APIError, APIRequestError 等 |
 | 服务管理 | `ncatbot/service/` | `ServiceManager` |
 | RBAC 服务 | `ncatbot/service/builtin/` | RBAC 相关 |
 | 定时任务 | `ncatbot/service/builtin/` | Schedule 相关 |
@@ -137,23 +139,23 @@ description: '导航 NcatBot 代码库：定位代码、理解模块、查阅文
 
 当需要追踪"消息从接收到处理"的完整链路时：
 
-```
+```text
 NapCatAdapter（WebSocket 收消息）
   → OB11Protocol（解析 OneBot 协议）
   → NapCatEventParser（构造事件实体）
   → AsyncEventDispatcher（广播事件）
   → HandlerDispatcher（匹配 handler + 执行 Hook 链）
   → 用户 handler 函数
-```
+```python
 
 ### 出站链路参考
 
-```
+```text
 用户调用 BotAPIClient 方法
   → IBotAPI 接口
   → NapCatBotAPI 实现
   → WebSocket 发送请求
-```
+```python
 
 ---
 

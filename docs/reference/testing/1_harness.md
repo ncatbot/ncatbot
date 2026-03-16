@@ -8,7 +8,7 @@
 
 ```python
 from ncatbot.testing import TestHarness
-```
+```python
 
 测试编排器，在后台启动 `BotClient`（使用 `MockAdapter`），提供事件注入和断言 API。
 
@@ -16,7 +16,7 @@ from ncatbot.testing import TestHarness
 
 ```python
 TestHarness() -> TestHarness
-```
+```python
 
 无参数。内部创建 `MockAdapter` + `BotClient`。
 
@@ -68,7 +68,7 @@ async with TestHarness() as h:
 
     call = h.last_api_call("send_group_msg")
     print(call.action, call.args, call.kwargs)
-```
+```python
 
 ---
 
@@ -76,7 +76,7 @@ async with TestHarness() as h:
 
 ```python
 from ncatbot.testing import PluginTestHarness
-```
+```python
 
 继承 `TestHarness`，增加插件选择性加载和查询能力。
 
@@ -90,7 +90,7 @@ PluginTestHarness(
     skip_builtin: bool = True,    # 是否跳过内置插件
     skip_pip: bool = True,        # 是否跳过 pip 依赖安装
 ) -> PluginTestHarness
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -148,7 +148,7 @@ async with PluginTestHarness(
     # 查询插件状态
     plugin = h.get_plugin("hello_world")
     config = h.plugin_config("hello_world")
-```
+```python
 
 ---
 

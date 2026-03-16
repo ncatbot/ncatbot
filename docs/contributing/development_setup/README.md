@@ -19,13 +19,13 @@ cd ncatbot
 # 3. 添加上游远程仓库
 git remote add upstream https://github.com/ncatbot/ncatbot.git
 git fetch upstream
-```
+```python
 
 ### 2. 安装依赖
 
 ```bash
 uv sync --extra dev
-```
+```bash
 
 该命令会自动完成：
 1. 创建 `.venv/` 虚拟环境
@@ -37,12 +37,12 @@ uv sync --extra dev
 ```powershell
 # Windows PowerShell
 .venv\Scripts\activate.ps1
-```
+```bash
 
 ```bash
 # Linux / macOS
 source .venv/bin/activate
-```
+```python
 
 激活后终端提示符前缀显示 `(.venv)`。
 
@@ -51,13 +51,13 @@ source .venv/bin/activate
 ```bash
 python -c "import ncatbot; print('ncatbot 可用')"
 uv run pytest --version
-```
+```python
 
 ### 5. 安装 pre-commit 钩子
 
 ```bash
 uv run pre-commit install
-```
+```python
 
 ### 6. 创建功能分支并开始开发
 
@@ -70,7 +70,7 @@ uv run pytest           # 运行测试
 git add .
 git commit -m "feat: 你的功能描述"
 git push origin feat/你的功能描述
-```
+```python
 
 然后在 GitHub 上创建 Pull Request，目标分支为上游 `main`。
 
@@ -94,7 +94,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 # 安装 uv — Linux / macOS
 curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+```python
 
 ### 版本验证
 
@@ -102,7 +102,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv --version
 python --version   # 确认 ≥ 3.12
 git --version
-```
+```python
 
 ### 开发工具链（由 `uv sync --extra dev` 自动安装）
 
@@ -136,7 +136,7 @@ uv run codespell
 
 # pre-commit 全量运行
 uv run pre-commit run --all-files
-```
+```python
 
 ### 测试
 
@@ -151,7 +151,7 @@ uv run pytest --cov=ncatbot --cov-report=term-missing
 uv run tox              # 全部版本
 uv run tox -e py312     # 仅 Python 3.12
 uv run tox -e py313     # 仅 Python 3.13
-```
+```python
 
 > 覆盖率 HTML 报告输出到 `htmlcov/`，浏览器打开 `htmlcov/index.html` 查看。
 
@@ -165,7 +165,7 @@ uv sync --extra dev
 # 升级所有依赖
 uv lock --upgrade
 uv sync --extra dev
-```
+```python
 
 | 文件 | 作用 |
 |------|------|
@@ -174,7 +174,7 @@ uv sync --extra dev
 
 ### 项目结构速览
 
-```
+```text
 ncatbot/
 ├── adapter/    协议适配器（NapCat、Mock）
 ├── api/        Bot API 封装（IBotAPI / BotAPIClient）
@@ -187,7 +187,7 @@ ncatbot/
 ├── testing/    测试工具（TestHarness / 数据工厂）
 ├── types/      Pydantic 数据模型（消息段 / 事件数据 / 枚举）
 └── utils/      公共工具（日志 / 配置 / 网络 / 错误定义）
-```
+```python
 
 各模块详细职责与数据流参阅 [架构文档](../../architecture.md)。
 
@@ -239,7 +239,7 @@ ncatbot/
 - [ ] 代码通过 `uv run ruff check .`
 - [ ] 已添加 / 更新相关测试（如适用）
 - [ ] 已更新相关文档（如适用）
-```
+```python
 
 ### PR 提交后
 
@@ -253,7 +253,7 @@ git merge upstream/main
 # 解决冲突后
 git add .
 git commit -m "chore: 合并上游变更"
-```
+```python
 
 ---
 
@@ -263,5 +263,5 @@ git commit -m "chore: 合并上游变更"
 |------|------|
 | [高级开发环境](1_advanced.md) | IDE 配置（VSCode settings.json）、调试配置（launch.json）、CI/CD 本地模拟、NapCat 本地部署、常见问题排查 |
 | [架构总览](../../architecture.md) | 项目整体架构、模块职责、数据流与生命周期 |
-| [设计决策](../design-decisions.md) | 关键设计决策与取舍 |
-| [模块内部实现](../module-internals.md) | 各模块内部实现细节 |
+| [设计决策](../design_decisions/) | 关键设计决策与取舍 |
+| [模块内部实现](../module_internals/) | 各模块内部实现细节 |

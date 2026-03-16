@@ -18,16 +18,14 @@ ncatbot dev
 
 # 进入交互模式（REPL）
 ncatbot
-```
+```python
 
 ## 文档清单
 
 | 文件 | 说明 | 难度 |
 |------|------|------|
-| [1_getting_started.md](1_getting_started.md) | 项目初始化与启动 | ⭐ |
-| [2_management.md](2_management.md) | 插件与配置管理 | ⭐⭐ |
+| [1.commands.md](1.commands.md) | 命令详解（初始化 / 启动 / 插件与配置管理） | ⭐ |
 
 ## 推荐阅读顺序
 
-1. 先读 [项目初始化与启动](1_getting_started.md) — 从零创建并运行 Bot
-2. 再读 [插件与配置管理](2_management.md) — 用 CLI 管理插件和配置
+1. 先读 [命令详解](1.commands.md) — 从零创建并运行 Bot，管理插件和配置

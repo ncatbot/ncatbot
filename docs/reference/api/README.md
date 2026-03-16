@@ -16,7 +16,7 @@ from ncatbot.plugin import on_group_message, EventContext
 @on_group_message()
 async def handle(ctx: EventContext):
     api = ctx.api  # BotAPIClient 实例
-```
+```python
 
 ### 最常用方法示例
 
@@ -28,7 +28,7 @@ await api.post_group_msg(group_id, text="Hello!", at=user_id)
 
 # 回复消息并附图
 await api.post_group_msg(group_id, text="看这个", reply=msg_id, image="https://example.com/img.png")
-```
+```python
 
 **2. 发送群消息（原始方式）**
 
@@ -38,17 +38,17 @@ result = await api.send_group_msg(group_id, [
     {"type": "text", "data": {"text": "hello"}}
 ])
 print(result["message_id"])
-```
+```python
 
 **3. 撤回消息**
 
 ```python
 await api.delete_msg(message_id)
-```
+```python
 
 ### 架构总览
 
-```
+```text
 BotAPIClient
 ├── send_group_msg()        ← 高频 API（顶层直调）
 ├── send_private_msg()
@@ -67,7 +67,7 @@ BotAPIClient
 └── .support                ← SupportExtension（文件管理 / 杂项）
     ├── upload_group_file()
     └── ...
-```
+```python
 
 > **类型别名**：文档中 `Union[str, int]` 简写为 `str | int`。
 
@@ -193,12 +193,11 @@ BotAPIClient
 
 | 子文档 | 内容 |
 |---|---|
-| [消息 API — 核心方法与便捷方法](1a_message_api.md) | 核心消息方法 + MessageSugarMixin 便捷方法（post_group_msg / post_private_msg）的参数与示例 |
-| [消息 API — Sugar 快捷方法](1b_message_api.md) | 群消息 / 私聊消息 / 合并转发的各类 Sugar 快捷方法参数一览 |
+| [消息 API](1_message_api.md) | 核心消息方法 + MessageSugarMixin 便捷方法 + Sugar 快捷方法完整参数一览 |
 | [群管理 API 详解](2_manage_api.md) | ManageExtension 群管理 / 账号操作 / 组合 Sugar 的参数、返回值与示例 |
 | [信息查询与支持操作 API 详解](3_info_support_api.md) | InfoExtension 信息查询 + SupportExtension 文件管理与辅助操作的参数、返回值与示例 |
 
 ### 相关文档
 
-- [架构文档](../architecture.md) — 系统整体架构
-- [插件开发指南](../guide/plugin/) — 插件开发入门
+- [架构文档](../../architecture.md) — 系统整体架构
+- [插件开发指南](../../guide/plugin/) — 插件开发入门

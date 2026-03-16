@@ -1,6 +1,6 @@
 # Hook 系统参考
 
-> 参考文档：[guide/plugin/6a.hook-basics.md](docs/guide/plugin/6a.hook-basics.md), [reference/core/1_internals.md](docs/reference/core/1_internals.md)
+> 参考文档：[guide/plugin/6.hooks.md](docs/guide/plugin/6.hooks.md), [reference/core/1_internals.md](docs/reference/core/1_internals.md)
 
 ## Hook 三阶段
 
@@ -43,7 +43,7 @@ async def on_weather(self, event): ...
 async def on_calc(self, event, match=None):
     a, b = int(match.group(1)), int(match.group(2))
     await event.reply(f"{a} + {b} = {a + b}")
-```
+```python
 
 ## 命令参数自动绑定
 
@@ -55,7 +55,7 @@ async def on_add(self, event, a: int, b: int):
 @registrar.on_group_command("kick")
 async def on_kick(self, event, target: At):
     await self.api.manage.set_group_kick(event.group_id, target.qq)
-```
+```python
 
 **参数绑定规则**：
 
@@ -114,7 +114,7 @@ class CooldownHook(Hook):
             return HookAction.SKIP
         self._last_use[user_id] = now
         return HookAction.CONTINUE
-```
+```python
 
 **HookContext 字段**：
 
@@ -142,4 +142,4 @@ class CooldownHook(Hook):
 async def handler(self, event):
     # 不是自己发的 → 群消息 → 包含"天气" → 未在冷却中
     ...
-```
+```text

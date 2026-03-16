@@ -70,7 +70,7 @@ class APICall:
     args: tuple       # 位置参数
     kwargs: dict      # 关键字参数
     timestamp: float  # 调用时间
-```
+```python
 
 ## Scenario 链式构建器
 
@@ -80,7 +80,7 @@ Scenario(harness)
     .settle(delay=0.05)          # 等待处理
     .assert_api_called(action)   # 断言调用
     .run()                       # 执行链（async）
-```
+```python
 
 ## pytest Fixtures（conftest.py 提供）
 

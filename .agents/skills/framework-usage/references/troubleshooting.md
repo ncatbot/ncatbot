@@ -9,7 +9,7 @@ ncatbot config check              # 一键检查配置
 ncatbot config show               # 查看完整配置
 ncatbot config get napcat.ws_uri  # 查看特定项
 ncatbot dev                       # 调试模式 + 热重载
-```
+```python
 
 ```powershell
 # 启用完整调试日志
@@ -19,7 +19,7 @@ ncatbot run --debug
 
 # 实时查看日志
 Get-Content logs\bot.log -Tail 50 -Wait
-```
+```python
 
 ## 日志系统
 
@@ -52,7 +52,7 @@ log.error("操作失败", exc_info=True)
 
 # 绑定上下文
 log = get_log("my_plugin").bind(group_id="456")
-```
+```python
 
 ## 配置检查清单
 
@@ -61,7 +61,7 @@ log = get_log("my_plugin").bind(group_id="456")
 ```yaml
 root: "123456"              # 管理员 QQ
 bot_uin: "123456789"        # 机器人 QQ
-```
+```python
 
 ### NapCat 连接
 
@@ -70,7 +70,7 @@ napcat:
   ws_uri: ws://localhost:3001
   ws_token: napcat_ws
   ws_listen_ip: localhost
-```
+```python
 
 ### 插件
 
@@ -79,7 +79,7 @@ plugin:
   plugins_dir: plugins
   load_plugin: true
   auto_install_pip_deps: true
-```
+```python
 
 ## dev vs 生产
 
@@ -114,8 +114,8 @@ plugin:
 
 ### 插件加载失败
 
-1. manifest.toml：必填 `name`, `version`, `main`
-2. import 路径：`from ncatbot.xxx import yyy`
+1. manifest.toml：必填 `name`, `version`, `main` 须**位于 TOML 顶层**，不能放在 `[plugin]` 等 section 下（否则报"缺少必填字段"）
+2. import 路径：`from ncatbot.xxx import yyy`（`ncatbot.plugin_system` 已废弃，改用 `ncatbot.plugin`）
 3. pip 依赖：设 `plugin.auto_install_pip_deps: true`
 4. 入口类：须继承 `NcatBotPlugin`/`BasePlugin`
 
@@ -139,7 +139,7 @@ plugin:
 
 ## BotClient 启动序列
 
-```
+```text
 run()
   → _startup_core()
     ├─ _setup_adapter()          → NapCat WebSocket 连接
@@ -153,7 +153,7 @@ run()
     └─ setup_hot_reload()        → 仅 debug 模式
   → adapter.listen()              → 阻塞监听
   → shutdown()
-```
+```text
 
 启动卡住时按阶段定位：
 - `_setup_adapter()` → WebSocket 连接问题

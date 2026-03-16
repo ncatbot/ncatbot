@@ -17,7 +17,7 @@ log = get_log("my_module")
 log.info("启动完成")
 log = log.bind(user_id="12345")   # 绑定上下文
 log.info("处理消息")               # extra 自动携带 user_id
-```
+```python
 
 ### 读取配置
 
@@ -29,7 +29,7 @@ print(cm.bot_uin)        # 机器人 QQ 号
 print(cm.napcat.ws_uri)  # WebSocket 地址
 cm.update_value("debug", True)
 cm.save()
-```
+```python
 
 ### 发送网络请求
 
@@ -39,7 +39,7 @@ from ncatbot.utils import post_json, get_json, download_file
 data = get_json("https://api.example.com/status")
 resp = post_json("https://api.example.com/action", payload={"key": "value"})
 download_file("https://example.com/file.zip", "local.zip")
-```
+```python
 
 > 子文档详细 API 参见 [深入阅读](#深入阅读)。
 
@@ -53,7 +53,7 @@ download_file("https://example.com/file.zip", "local.zip")
 
 ```python
 from ncatbot.utils.config.manager import ConfigManager, get_config_manager
-```
+```python
 
 | 方法/属性 | 签名 | 说明 |
 |-----------|------|------|
@@ -80,7 +80,7 @@ from ncatbot.utils.config.manager import ConfigManager, get_config_manager
 
 ```python
 from ncatbot.utils.config.models import Config
-```
+```python
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -99,7 +99,7 @@ from ncatbot.utils.config.models import Config
 
 ```python
 from ncatbot.utils.config.models import NapCatConfig
-```
+```python
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -121,7 +121,7 @@ from ncatbot.utils.config.models import NapCatConfig
 
 ```python
 from ncatbot.utils.config.models import PluginConfig
-```
+```python
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -136,7 +136,7 @@ from ncatbot.utils.config.models import PluginConfig
 
 ```python
 from ncatbot.utils.config.storage import ConfigStorage
-```
+```python
 
 | 方法 | 签名 | 说明 |
 |------|------|------|
@@ -149,7 +149,7 @@ from ncatbot.utils.config.storage import ConfigStorage
 
 ```python
 from ncatbot.utils.config.security import strong_password_check, generate_strong_token
-```
+```python
 
 | 函数 | 签名 | 说明 |
 |------|------|------|

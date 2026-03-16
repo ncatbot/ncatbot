@@ -19,7 +19,7 @@ class NapCatWebSocket:
     async def listen(self, on_message: Callable[[dict], Awaitable[None]]) -> None: ...
     @property
     def connected(self) -> bool: ...
-```
+```python
 
 ### 方法详解
 
@@ -44,7 +44,7 @@ async def connect(self) -> None:
     self._protocol = OB11Protocol(self._ws)
     self._api = NapCatBotAPI(self._protocol)
     self._protocol.set_event_handler(self._on_event)
-```
+```python
 
 流程说明：
 1. 从配置获取 WebSocket URI（含 Token）
@@ -58,7 +58,7 @@ async def connect(self) -> None:
 ```python
 async def listen(self) -> None:
     await self._ws.listen(self._protocol.on_message)
-```
+```python
 
 阻塞监听 WebSocket 消息，通过 `OB11Protocol.on_message` 区分 API 响应和事件推送。收到事件推送后，经 `NapCatEventParser` 解析为数据模型，回调给分发器。
 
@@ -89,7 +89,7 @@ async def disconnect(self) -> None:
     if self._ws:
         await self._ws.disconnect()
     self._api = self._protocol = self._ws = None
-```
+```python
 
 断开连接时：取消所有挂起的 API 请求 → 关闭 WebSocket → 清除组件引用。
 
@@ -113,7 +113,7 @@ class NapCatLauncher:
     async def launch(self) -> None: ...
     async def is_service_ok(self, timeout: int = 0, show_info: bool = True) -> bool: ...
     async def wait_for_service(self, timeout: int = 60) -> None: ...
-```
+```python
 
 | 方法 | 签名 | 说明 |
 |---|---|---|
@@ -139,7 +139,7 @@ flowchart TD
     I --> J[启动 NapCat 进程]
     J --> K[等待登录]
     K --> OK
-```
+```yaml
 
 **Setup 模式**（默认）：
 1. 检测 NapCat 服务是否已在线
@@ -169,6 +169,6 @@ bot_uin: 123456789              # QQ 号
 ws_uri: "ws://localhost:3001"  # WebSocket 地址
 token: ""                      # 认证 Token（可选）
 skip_setup: false              # true = Connect 模式, false = Setup 模式
-```
+```text
 
 `NapCatWebSocket` 接收的 URI 由 `ncatbot_config.get_uri_with_token()` 构造，当 `token` 非空时自动附加到 URI 查询参数中。

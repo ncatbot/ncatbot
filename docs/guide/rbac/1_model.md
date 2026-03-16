@@ -29,7 +29,7 @@ graph LR
     R1 -->|包含| P1["rbac.admin"]
     R1 -->|包含| P2["rbac.user"]
     R2 -->|包含| P2
-```
+```text
 
 修改角色的权限集合即可批量影响该角色下所有用户。
 
@@ -54,7 +54,7 @@ flowchart TD
     BL -->|否| WL{在白名单中?}
     WL -->|是| ALLOW[✅ 允许]
     WL -->|否| DENY
-```
+```python
 
 ---
 
@@ -64,9 +64,9 @@ flowchart TD
 
 权限路径使用 **点分隔** 的层级格式，由 `PermissionPath` 类表示：
 
-```
+```text
 <命名空间>.<模块>.<操作>
-```
+```python
 
 **示例路径：**
 
@@ -86,7 +86,7 @@ path = PermissionPath("plugin.admin.kick")
 path.raw      # "plugin.admin.kick" — 原始字符串
 path.parts    # ("plugin", "admin", "kick") — 各层级元组
 path.SEPARATOR  # "." — 分隔符
-```
+```text
 
 `PermissionPath` 支持多种初始化方式：
 
@@ -95,14 +95,14 @@ PermissionPath("a.b.c")           # 字符串
 PermissionPath(["a", "b", "c"])   # 列表
 PermissionPath(("a", "b", "c"))   # 元组
 PermissionPath(another_path)      # 另一个 PermissionPath 实例
-```
+```toml
 
 还可以使用 `join()` 拼接路径：
 
 ```python
 base = PermissionPath("my_plugin")
 full = base.join("admin", "kick")  # PermissionPath("my_plugin.admin.kick")
-```
+```python
 
 ### 2.2 Trie 树结构
 
@@ -117,7 +117,7 @@ graph TD
     rbac --> rbac_user["user"]
     group_manager --> gm_admin["admin"]
     full_bot --> fb_admin["admin"]
-```
+```json
 
 上图对应 `data/rbac.json` 中 `permissions` 字段的树结构：
 
@@ -136,7 +136,7 @@ graph TD
     }
   }
 }
-```
+```python
 
 `PermissionTrie` 的核心方法：
 
@@ -168,7 +168,7 @@ pattern.matches("plugin.news.bar.read")  # False
 pattern2 = PermissionPath("plugin.**")
 pattern2.matches("plugin.news")          # True
 pattern2.matches("plugin.news.detail")   # True
-```
+```python
 
 > **注意**：通配符用于权限检查阶段的模式匹配，注册权限路径时（`PermissionTrie.add`）不允许包含通配符。
 
@@ -189,7 +189,7 @@ pattern2.matches("plugin.news.detail")   # True
 graph BT
     MEMBER["member 角色<br/>whitelist: {basic.read}"] --> MOD["moderator 角色<br/>whitelist: {basic.write}"]
     MOD --> ADMIN["admin 角色<br/>whitelist: {admin.manage}"]
-```
+```json
 
 上图中 `admin` 继承 `moderator`，`moderator` 继承 `member`。拥有 `admin` 角色的用户将同时获得 `admin.manage`、`basic.write`、`basic.read` 三项权限。
 
@@ -237,7 +237,7 @@ RBAC 数据默认存储在 `data/rbac.json`，由 `save_rbac_data` / `load_rbac_
     }
   }
 }
-```
+```python
 
 **各字段说明：**
 
@@ -264,9 +264,9 @@ RBAC 数据默认存储在 `data/rbac.json`，由 `save_rbac_data` / `load_rbac_
 
 序列化过程中的类型转换：
 
-```
+```text
 内存 (set)  ──serialize──>  JSON (list)  ──deserialize──>  内存 (set)
-```
+```python
 
 ---
 
@@ -274,7 +274,7 @@ RBAC 数据默认存储在 `data/rbac.json`，由 `save_rbac_data` / `load_rbac_
 
 推荐采用 `<插件名>.<模块>.<操作>` 的层级命名：
 
-```
+```text
 ✅ 推荐
 my_plugin.admin                    # 插件管理权限
 my_plugin.user                     # 插件用户权限
@@ -285,8 +285,8 @@ my_plugin.feature.write            # 功能级别 — 写
 admin                              # 过于笼统，容易与其他插件冲突
 MyPlugin.Admin                     # 不建议使用大写（除非 case_sensitive=True 且有必要）
 my-plugin.admin                    # 避免使用连字符，使用下划线
-```
+```text
 
 ---
 
-> **返回**：[RBAC 权限管理](README.md) · **下一篇**：[RBAC 核心模块与插件集成](2a_integration.md)
+> **返回**：[RBAC 权限管理](README.md) · **下一篇**：[RBAC 核心模块与插件集成](2.integration.md)

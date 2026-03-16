@@ -20,7 +20,7 @@ graph LR
     QQ[QQ / NapCat] <-->|WebSocket| Adapter[Adapter 适配层]
     Adapter -->|BaseEventData| Dispatcher[Dispatcher 分发器]
     Adapter -.->|IBotAPI| Plugin[插件 / 服务]
-```
+```python
 
 > 适配器只产出纯数据模型（`BaseEventData`），不创建事件实体。事件实体由 `Dispatcher` 在下游构建。
 
@@ -34,7 +34,7 @@ from ncatbot.app import BotClient
 # 默认使用 NapCatAdapter，从 config.yaml 读取连接配置
 bot = BotClient()
 bot.run()
-```
+```yaml
 
 `config.yaml` 中的适配器相关配置：
 
@@ -43,7 +43,7 @@ bot_uin: 123456789          # QQ 号
 ws_uri: "ws://localhost:3001"  # WebSocket 地址
 token: ""                  # 认证 Token（可选）
 skip_setup: false          # true = 跳过安装，直接连接已有 NapCat 服务
-```
+```python
 
 ### 测试环境 — MockAdapter
 
@@ -60,7 +60,7 @@ await adapter.inject_event(some_event_data)
 # 检查 API 调用
 assert adapter.mock_api.called("send_group_msg")
 adapter.stop()
-```
+```python
 
 ---
 
@@ -78,7 +78,7 @@ class BaseAdapter(ABC):
     description: str
     supported_protocols: List[str]
     _event_callback: Optional[Callable[["BaseEventData"], Awaitable[None]]] = None
-```
+```markdown
 
 **类属性**:
 
@@ -105,7 +105,7 @@ sequenceDiagram
     Note right of A: 阻塞监听事件流
     B->>A: disconnect()
     Note right of A: 断开连接, 释放资源
-```
+```python
 
 | 方法 | 签名 | 说明 |
 |---|---|---|
@@ -143,7 +143,7 @@ graph TD
     API --> P
 
     style NA fill:#f9f,stroke:#333,stroke-width:2px
-```
+```python
 
 **生命周期概览**:
 
@@ -183,7 +183,7 @@ class APICall:
     action: str     # API 动作名
     args: tuple     # 位置参数
     kwargs: dict    # 关键字参数
-```
+```python
 
 ### 自定义适配器指南
 
@@ -238,7 +238,7 @@ class MyAdapter(BaseAdapter):
     @property
     def connected(self) -> bool:
         return self._api is not None
-```
+```markdown
 
 **IBotAPI 完整方法清单**:
 
@@ -262,5 +262,5 @@ class MyAdapter(BaseAdapter):
 
 **相关文档**:
 
-- [事件系统参考](../event.md) — 事件数据模型与分发器
+- [事件系统参考](../events/) — 事件数据模型与分发器
 - [Bot API 接口参考](../api/) — IBotAPI 完整接口文档

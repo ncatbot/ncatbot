@@ -19,9 +19,9 @@ description: '编写和运行 NcatBot 测试。覆盖框架单元/集成/E2E 测
 
 ## 工作流
 
-```
+```text
 1. 确定测试类型 → 2. 选择工具 → 3. 编写测试 → 4. 运行验证 → 5. 修复问题
-```
+```python
 
 ---
 
@@ -69,7 +69,7 @@ from ncatbot.testing import (
     discover_testable_plugins,
     generate_smoke_tests,
 )
-```
+```python
 
 ### TestHarness vs PluginTestHarness
 
@@ -88,7 +88,7 @@ harness.api_call_count("send_group_msg")     # int：调用次数
 harness.get_api_calls("send_group_msg")      # list[APICall]：所有调用
 harness.last_api_call("send_group_msg")      # APICall：最近一次
 harness.reset_api()                          # 清空记录
-```
+```python
 
 ---
 
@@ -115,7 +115,7 @@ async def test_dispatcher_routes_group_message(event_dispatcher):
     event_dispatcher.subscribe("message.group", handler)
     await event_dispatcher.callback(group_message("hello"))
     assert len(received) == 1
-```
+```python
 
 **关键约束**：
 - 使用 `conftest.py` 中的 fixture（`mock_api`, `event_dispatcher`, `handler_dispatcher`, `fresh_registrar`）
@@ -138,7 +138,7 @@ async def test_event_pipeline_group_message():
         await h.inject(group_message("hello", group_id="111"))
         await h.settle()
         assert h.api_called("send_group_msg")
-```
+```python
 
 ### 3c. 插件测试
 
@@ -168,7 +168,7 @@ async def test_plugin_responds_to_command():
         await h.inject(group_message("hello", group_id="100"))
         await h.settle()
         assert h.api_called("send_group_msg")
-```
+```python
 
 ### 3d. Scenario 链式场景
 
@@ -187,7 +187,7 @@ async def test_multi_step_dialog():
             .assert_api_called("send_group_msg")
             .run()
         )
-```
+```bash
 
 ---
 
@@ -219,7 +219,7 @@ python -m pytest tests/ --lf -v -o "addopts="
 
 # 插件冒烟测试
 python -m pytest tests/ -m smoke -v -o "addopts="
-```
+```python
 
 > **注意**：使用 `-o "addopts="` 覆盖 pyproject.toml 中的默认 addopts，避免在开发阶段强制开启覆盖率收集。
 
@@ -229,7 +229,7 @@ python -m pytest tests/ -m smoke -v -o "addopts="
 $env:NAPCAT_TEST_GROUP="123456"
 $env:NAPCAT_TEST_USER="654321"
 python tests/e2e/napcat/run.py
-```
+```python
 
 ---
 

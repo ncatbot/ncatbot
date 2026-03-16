@@ -6,7 +6,7 @@
 
 ## 模块结构
 
-```
+```python
 ncatbot/testing/              # 测试框架公开 API
 ├── __init__.py               # 公开导出
 ├── harness.py                # TestHarness
@@ -19,7 +19,7 @@ ncatbot/testing/              # 测试框架公开 API
 ncatbot/adapter/mock/         # Mock 适配器（内部使用）
 ├── adapter.py                # MockAdapter
 └── api.py                    # MockBotAPI + APICall
-```
+```python
 
 ---
 
@@ -45,7 +45,7 @@ from ncatbot.testing import (
     discover_testable_plugins,
     generate_smoke_tests,
 )
-```
+```python
 
 ---
 

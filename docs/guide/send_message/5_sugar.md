@@ -31,7 +31,7 @@ async def reply(
     rtf: MessageArray | None = None,
     at_sender: bool = True,
 ) -> Any
-```
+```python
 
 **行为：**
 - 自动添加 `Reply`（引用原消息 ID）
@@ -43,7 +43,7 @@ async def reply(
 await event.reply(text="收到！")
 await event.reply(text="看图", image="https://example.com/img.png")
 await event.reply(text="不 @你", at_sender=False)
-```
+```python
 
 ---
 
@@ -64,7 +64,7 @@ async def post_group_msg(
     video: str | Video | None = None,
     rtf: MessageArray | None = None,
 ) -> dict
-```
+```python
 
 ### post_private_msg
 
@@ -78,14 +78,14 @@ async def post_private_msg(
     video: str | Video | None = None,
     rtf: MessageArray | None = None,
 ) -> dict
-```
+```python
 
 **组装顺序：** `reply → at → text → image → video → rtf`
 
 ```python
 await self.api.post_group_msg(gid, text="你好！", at=uid, reply=mid)
 await self.api.post_private_msg(uid, text="Hi", image="a.png")
-```
+```python
 
 > 如果需要更复杂的组合，使用 `rtf` 参数传入完整的 `MessageArray`。
 
@@ -102,7 +102,7 @@ await self.api.post_private_msg(uid, text="Hi", image="a.png")
 msg = MessageArray().add_text("Hello").add_image("a.png")
 await self.api.post_group_array_msg(group_id, msg)
 await self.api.post_private_array_msg(user_id, msg)
-```
+```python
 
 ---
 
@@ -126,7 +126,7 @@ await self.api.send_group_record(gid, "https://example.com/voice.silk")
 await self.api.send_group_video(gid, str(video_path))
 await self.api.send_group_file(gid, "https://example.com/doc.pdf", name="文档.pdf")
 await self.api.send_group_sticker(gid, str(image_path))
-```
+```python
 
 ---
 
@@ -152,7 +152,7 @@ await self.api.send_private_file(uid, "doc.pdf", name="文档.pdf")
 await self.api.send_private_sticker(uid, "sticker.gif")
 await self.api.send_private_dice(uid, value=3)
 await self.api.send_private_rps(uid, value=2)
-```
+```python
 
 ---
 
@@ -173,13 +173,13 @@ await self.api.send_private_rps(uid, value=2)
 
 ```python
 async def send_poke(self, group_id: str | int, user_id: str | int) -> None
-```
+```python
 
 在群内戳指定用户：
 
 ```python
 await self.api.send_poke(event.group_id, event.user_id)
-```
+```text
 
 ---
 

@@ -11,14 +11,14 @@
 ```bash
 pip install ncatbot5
 mkdir my-bot && cd my-bot
-```
+```yaml
 
 创建 `config.yaml`：
 
 ```yaml
 bot_uin: "你的QQ号"
 ws_uri: "ws://localhost:3001"
-```
+```python
 
 ### 2. 编写入口文件
 
@@ -37,7 +37,7 @@ async def on_hello(event: GroupMessageEvent):
 
 if __name__ == "__main__":
     bot.run()
-```
+```python
 
 ### 3. 启动
 
@@ -89,7 +89,7 @@ async def on_hello(event: PrivateMessageEvent):
 
 if __name__ == "__main__":
     bot.run()
-```
+```python
 
 > `content: str` 由 CommandHook 自动提取命令后的文本，支持 `str`、`int`、`At` 类型。
 
@@ -112,7 +112,7 @@ async def on_ban(event: GroupMessageEvent, target: At = None, duration: int = 60
 @registrar.on_group_command("设置前缀")
 async def on_set_prefix(event: GroupMessageEvent, new_prefix: str):
     await event.reply(text=f"前缀已更新为: {new_prefix}")
-```
+```python
 
 #### 消息监听 — `on_group_message`
 
@@ -123,7 +123,7 @@ async def on_set_prefix(event: GroupMessageEvent, new_prefix: str):
 async def on_keyword(event: GroupMessageEvent):
     if "关键词" in event.message.text:
         await event.reply(text="检测到关键词！")
-```
+```python
 
 > `priority` 越大越先执行。多个 handler 按优先级排序。
 
@@ -148,7 +148,7 @@ async def on_poke(event: NoticeEvent):
 @registrar.on_friend_request()
 async def on_friend(event: FriendRequestEvent):
     await event.approve()
-```
+```python
 
 #### 多步对话 — `wait_event`
 
@@ -169,7 +169,7 @@ async def on_register(event: GroupMessageEvent):
         await event.reply(text=f"你好，{reply.data.raw_message.strip()}！")
     except asyncio.TimeoutError:
         await event.reply(text="超时，注册已取消")
-```
+```python
 
 ---
 
@@ -179,12 +179,12 @@ async def on_register(event: GroupMessageEvent):
 
 #### 最小插件结构
 
-```
+```python
 plugins/
   hello_world/
     __init__.py       # 插件代码
     manifest.toml     # 插件清单
-```
+```toml
 
 `manifest.toml`：
 
@@ -195,7 +195,7 @@ description = "Hello World 插件"
 author = "you"
 main = "__init__"
 entry_class = "HelloWorldPlugin"
-```
+```python
 
 `__init__.py`：
 
@@ -220,7 +220,7 @@ class HelloWorldPlugin(NcatBotPlugin):
     @registrar.on_private_command("hello", ignore_case=True)
     async def on_private_hello(self, event: PrivateMessageEvent):
         await event.reply(text="你好！")
-```
+```python
 
 > 插件模式的装饰器与非插件模式**完全相同**，只是方法多了 `self` 参数。
 
@@ -239,7 +239,7 @@ class MyPlugin(NcatBotPlugin):
     async def on_stats(self, event: GroupMessageEvent):
         self.data["counter"] += 1
         await event.reply(text=f"调用次数: {self.data['counter']}")
-```
+```python
 
 #### 定时任务
 
@@ -252,7 +252,7 @@ class MyPlugin(NcatBotPlugin):
 
     async def heartbeat(self):  # 方法名 = 任务名
         print("heartbeat!")
-```
+```python
 
 #### Hook 机制
 
@@ -272,7 +272,7 @@ class KeywordFilter(Hook):
 @registrar.on_group_command("echo")
 async def on_echo(self, event: GroupMessageEvent, content: str):
     await event.reply(text=content)
-```
+```python
 
 #### 多步对话（插件模式）
 
@@ -292,7 +292,7 @@ async def on_register(self, event: GroupMessageEvent):
         await event.reply(text=f"注册成功，{name}！")
     except asyncio.TimeoutError:
         await event.reply(text="超时已取消")
-```
+```python
 
 ---
 
@@ -338,14 +338,13 @@ async def on_register(self, event: GroupMessageEvent):
 1. [快速入门](plugin/1.quick-start.md) — 5 分钟跑通第一个插件
 2. [插件结构](plugin/2.structure.md) — manifest.toml、目录布局、基类选择
 3. [生命周期](plugin/3.lifecycle.md) — 插件加载 / 卸载流程、Mixin 钩子链
-4. [事件处理](plugin/4.event-handling.md) — 三种事件消费模式
-5. [Mixin 能力体系](plugin/5.mixins.md) — 配置、数据、权限、定时任务
+4. [事件处理](plugin/4a.event-registration.md) — 三种事件消费模式
+5. [Mixin 能力体系](plugin/5a.config-data.md) — 配置、数据、权限、定时任务
 6. [Hook 机制](plugin/6.hooks.md) — 中间件、过滤器、参数绑定
-7. [高级主题](plugin/7.advanced.md) — 热重载、依赖管理、多步对话
+7. [高级主题](plugin/7a.patterns.md) — 热重载、依赖管理、多步对话
 
 ### send_message/ — 消息发送
 
-- [快速上手](send_message/1_quickstart.md) — 三种发送方式速览
 - [消息段参考](send_message/2_segments.md) — 所有消息段类型详解
 - [MessageArray](send_message/3_array.md) — 消息容器与链式构造
 - [合并转发](send_message/4_forward.md) — ForwardNode / Forward 构造
@@ -354,30 +353,22 @@ async def on_register(self, event: GroupMessageEvent):
 
 ### api_usage/ — Bot API 使用
 
-- [API 概览](api_usage/1_overview.md) — API 分类与调用方式
-- [常用接口](api_usage/2_common.md) — 消息发送、群管理、信息查询
-- [文件操作](api_usage/3_file.md) — 文件上传与下载
-
-> 另有旧版单文件指南：[api-usage.md](api-usage.md)
+- [消息 API](api_usage/1_messaging.md) — 消息发送相关 API
+- [管理 API](api_usage/2_manage.md) — 群管理、账号操作
+- [查询与支持](api_usage/3_query_support.md) — 信息查询与辅助操作
 
 ### configuration/ — 配置管理
 
-- [全局配置](configuration/1_global.md) — config.yaml 全部字段说明
-- [插件配置](configuration/2_plugin.md) — ConfigManager 与安全检查
-
-> 另有旧版单文件指南：[configuration.md](configuration.md)
+- [配置与安全](configuration/1.config-security.md) — config.yaml 字段与安全检查
 
 ### cli/ — CLI 命令行工具
 
-- [项目初始化与启动](cli/1_getting_started.md) — init / run / dev / REPL
-- [插件与配置管理](cli/2_management.md) — plugin / config / napcat 命令
+- [命令详解](cli/1.commands.md) — init / run / dev / plugin / config 命令
 
 ### rbac/ — 权限管理
 
 - [RBAC 模型](rbac/1_model.md) — 角色权限模型、Trie 权限路径
-- [RBACMixin](rbac/2_mixin.md) — 在插件中使用权限控制
-
-> 另有旧版单文件指南：[rbac.md](rbac.md)
+- [RBAC 集成](rbac/2.integration.md) — 在插件中使用权限控制
 
 ---
 

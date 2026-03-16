@@ -18,53 +18,47 @@
 
 ## 文档目录树
 
-```
+```text
 docs/
 ├── README.md                        # 文档中心首页（本文件）
 ├── architecture.md                  # 架构总览
 │
 ├── guide/                           # 使用指南
 │   ├── README.md                    #   指南首页 & 框架使用 & Quick Start
-│   ├── plugin/                      #   插件开发（12 篇）
+│   ├── plugin/                      #   插件开发（10 篇）
 │   │   ├── README.md                #     插件开发首页 & Quick Start
 │   │   ├── 1.quick-start.md         #     快速入门
 │   │   ├── 2.structure.md           #     插件结构（manifest / 目录 / 基类）
-│   │   ├── 3a.loading.md            #     生命周期 — 加载流程
-│   │   ├── 3b.unloading.md          #     生命周期 — 卸载流程
+│   │   ├── 3.lifecycle.md           #     生命周期（加载与卸载）
 │   │   ├── 4a.event-registration.md #     事件处理 — 注册方式
 │   │   ├── 4b.event-advanced.md     #     事件处理 — 高级用法
 │   │   ├── 5a.config-data.md        #     Mixin — 配置与数据
 │   │   ├── 5b.rbac-schedule-event.md#     Mixin — 权限 / 定时 / 事件
-│   │   ├── 6a.hook-basics.md        #     Hook — 基础用法
-│   │   ├── 6b.hook-builtins.md      #     Hook — 内置钩子
+│   │   ├── 6.hooks.md               #     Hook 机制（基础与内置钩子）
 │   │   ├── 7a.patterns.md           #     高级主题 — 常用模式
 │   │   └── 7b.case-studies.md       #     高级主题 — 实战案例
-│   ├── send_message/                #   消息发送（6 篇）
+│   ├── send_message/                #   消息发送（5 篇）
 │   │   ├── README.md                #     消息发送首页 & Quick Start
-│   │   ├── 1_quickstart.md          #     快速上手（三种发送方式）
 │   │   ├── 2_segments.md            #     消息段参考
 │   │   ├── 3_array.md               #     MessageArray 容器与链式构造
 │   │   ├── 4_forward.md             #     合并转发
 │   │   ├── 5_sugar.md               #     MessageSugarMixin 便捷接口
-│   │   └── 6_examples.md            #     实战示例（14 个场景）
+│   │   └── 6_examples.md            #     实战示例
 │   ├── api_usage/                   #   Bot API 使用（3 篇）
 │   │   ├── README.md                #     API 使用首页 & Quick Start
 │   │   ├── 1_messaging.md           #     消息收发 API
 │   │   ├── 2_manage.md              #     群管理 API
 │   │   └── 3_query_support.md       #     信息查询与支持 API
-│   ├── configuration/               #   配置管理（2 篇）
+│   ├── configuration/               #   配置管理（1 篇）
 │   │   ├── README.md                #     配置管理首页 & Quick Start
-│   │   ├── 1_manager.md             #     ConfigManager 详解
-│   │   └── 2_security.md            #     配置安全与校验
-│   ├── rbac/                        #   RBAC 权限管理（3 篇）
+│   │   └── 1.config-security.md     #     配置管理与安全校验
+│   ├── rbac/                        #   RBAC 权限管理（2 篇）
 │   │   ├── README.md                #     权限管理首页 & Quick Start
 │   │   ├── 1_model.md               #     权限模型
-│   │   ├── 2a_integration.md        #     插件集成（上）
-│   │   └── 2b_integration.md        #     插件集成（下）
-│   ├── cli/                         #   CLI 命令行工具（2 篇）
+│   │   └── 2.integration.md         #     插件集成
+│   ├── cli/                         #   CLI 命令行工具（1 篇）
 │   │   ├── README.md                #     CLI 指南首页 & Quick Start
-│   │   ├── 1_getting_started.md     #     项目初始化与启动
-│   │   └── 2_management.md          #     插件与配置管理
+│   │   └── 1.commands.md            #     命令详解（初始化 / 启动 / 管理）
 │   └── testing/                     #   插件测试（3 篇）
 │       ├── README.md                #     测试指南首页 & Quick Start
 │       ├── 1.quick-start.md         #     快速入门
@@ -73,19 +67,20 @@ docs/
 │
 ├── reference/                       # API 参考
 │   ├── README.md                    #   参考首页 & 模块索引
-│   ├── api/                         #   Bot API 方法（4 篇）
+│   ├── cli.md                       #   CLI 命令参考（全部命令签名与参数）
+│   ├── api/                         #   Bot API 方法（3 篇）
 │   │   ├── README.md                #     API 方法首页 & Quick Start
-│   │   ├── 1a_message_api.md        #     消息 API（上）
-│   │   ├── 1b_message_api.md        #     消息 API（下）
+│   │   ├── 1_message_api.md         #     消息 API
 │   │   ├── 2_manage_api.md          #     群管理 API
 │   │   └── 3_info_support_api.md    #     信息查询与支持 API
 │   ├── events/                      #   事件类型（1 篇）
 │   │   ├── README.md                #     事件参考首页 & Quick Start
 │   │   └── 1_event_classes.md       #     事件类层级详解
-│   ├── types/                       #   数据类型（2 篇）
+│   ├── types/                       #   数据类型（3 篇）
 │   │   ├── README.md                #     类型参考首页 & Quick Start
 │   │   ├── 1_segments.md            #     消息段类型
-│   │   └── 2_message_array.md       #     MessageArray
+│   │   ├── 2_message_array.md       #     MessageArray
+│   │   └── 3_response_types.md      #     API 响应类型
 │   ├── core/                        #   核心模块（1 篇）
 │   │   ├── README.md                #     核心模块首页 & Quick Start
 │   │   └── 1_internals.md           #     BotClient / Registry / Dispatcher 内部
@@ -106,9 +101,6 @@ docs/
 │   │   ├── 1a_io_logging.md         #     IO 与日志（上）
 │   │   ├── 1b_io_logging.md         #     IO 与日志（下）
 │   │   └── 2_decorators_misc.md     #     装饰器与杂项工具
-│   ├── cli/                         #   CLI 命令参考（1 篇）
-│   │   ├── README.md                #     CLI 参考首页 & Quick Start
-│   │   └── 1_commands.md            #     全部命令签名与参数
 │   └── testing/                     #   测试框架（2 篇）
 │       ├── README.md                #     测试框架首页 & 模块结构
 │       ├── 1_harness.md             #     TestHarness / PluginTestHarness
@@ -123,16 +115,14 @@ docs/
 │   │   ├── README.md
 │   │   ├── 1_architecture.md        #     架构决策（分层 / 适配器模式）
 │   │   └── 2_implementation.md      #     实现决策（Dispatcher / Hook / 热重载）
-│   └── module_internals/            #   模块内部实现（4 篇）
+│   └── module_internals/            #   模块内部实现（2 篇）
 │       ├── README.md
-│       ├── 1a_core_modules.md       #     核心模块实现（上）
-│       ├── 1b_core_modules.md       #     核心模块实现（下）
-│       ├── 2a_plugin_service_modules.md # 插件与服务模块实现（上）
-│       └── 2b_plugin_service_modules.md # 插件与服务模块实现（下）
+│       ├── 1.core_modules.md        #     核心模块实现
+│       └── 2.plugin_service_modules.md # 插件与服务模块实现
 │
 └── meta/                            # 元文档
     └── README.md                    #   文档编写与维护规范
-```
+```python
 
 ---
 
@@ -142,12 +132,12 @@ docs/
 
 | 目录 | 说明 | 篇数 | 难度 |
 |------|------|------|------|
-| [plugin/](guide/plugin/) | 插件开发完整指南 | 12 | ⭐ - ⭐⭐⭐ |
-| [send_message/](guide/send_message/) | 消息发送指南 | 6 | ⭐ |
+| [plugin/](guide/plugin/) | 插件开发完整指南 | 10 | ⭐ - ⭐⭐⭐ |
+| [send_message/](guide/send_message/) | 消息发送指南 | 5 | ⭐ |
 | [api_usage/](guide/api_usage/) | Bot API 使用指南 | 3 | ⭐⭐ |
-| [configuration/](guide/configuration/) | 配置管理指南 | 2 | ⭐⭐ |
-| [cli/](guide/cli/) | CLI 命令行工具指南 | 2 | ⭐ |
-| [rbac/](guide/rbac/) | RBAC 权限管理指南 | 3 | ⭐⭐⭐ |
+| [configuration/](guide/configuration/) | 配置管理指南 | 1 | ⭐⭐ |
+| [cli/](guide/cli/) | CLI 命令行工具指南 | 1 | ⭐ |
+| [rbac/](guide/rbac/) | RBAC 权限管理指南 | 2 | ⭐⭐⭐ |
 | [testing/](guide/testing/) | 插件测试指南 | 3 | ⭐⭐ |
 
 #### plugin/ — 插件开发
@@ -156,20 +146,19 @@ docs/
 
 1. [快速入门](guide/plugin/1.quick-start.md) — 5 分钟跑通第一个插件
 2. [插件结构](guide/plugin/2.structure.md) — manifest.toml、目录布局、基类选择
-3. 生命周期：[加载流程](guide/plugin/3a.loading.md) ｜ [卸载流程](guide/plugin/3b.unloading.md)
+3. [生命周期](guide/plugin/3.lifecycle.md) — 加载与卸载流程
 4. 事件处理：[注册方式](guide/plugin/4a.event-registration.md) ｜ [高级用法](guide/plugin/4b.event-advanced.md)
 5. Mixin 能力：[配置与数据](guide/plugin/5a.config-data.md) ｜ [权限/定时/事件](guide/plugin/5b.rbac-schedule-event.md)
-6. Hook 机制：[基础用法](guide/plugin/6a.hook-basics.md) ｜ [内置钩子](guide/plugin/6b.hook-builtins.md)
+6. [Hook 机制](guide/plugin/6.hooks.md) — 基础用法与内置钩子
 7. 高级主题：[常用模式](guide/plugin/7a.patterns.md) ｜ [实战案例](guide/plugin/7b.case-studies.md)
 
 #### send_message/ — 消息发送
 
-- [快速上手](guide/send_message/1_quickstart.md) — 三种发送方式速览
 - [消息段参考](guide/send_message/2_segments.md) — 所有消息段类型详解
 - [MessageArray](guide/send_message/3_array.md) — 消息容器与链式构造
 - [合并转发](guide/send_message/4_forward.md) — ForwardNode / Forward 构造
 - [便捷接口](guide/send_message/5_sugar.md) — MessageSugarMixin 速查
-- [实战示例](guide/send_message/6_examples.md) — 14 个常见场景
+- [实战示例](guide/send_message/6_examples.md) — 常见场景速查
 
 #### api_usage/ — Bot API 使用
 
@@ -179,19 +168,16 @@ docs/
 
 #### configuration/ — 配置管理
 
-- [ConfigManager 详解](guide/configuration/1_manager.md) — 配置管理器核心用法
-- [配置安全与校验](guide/configuration/2_security.md) — 安全检查与字段校验
+- [配置管理与安全校验](guide/configuration/1.config-security.md) — ConfigManager 用法与安全检查
 
 #### rbac/ — RBAC 权限管理
 
 - [权限模型](guide/rbac/1_model.md) — RBAC 模型与概念
-- [插件集成（上）](guide/rbac/2a_integration.md) — 权限注册与角色分配
-- [插件集成（下）](guide/rbac/2b_integration.md) — 权限检查与实战
+- [插件集成](guide/rbac/2.integration.md) — 权限注册、角色分配与权限检查
 
 #### cli/ — CLI 命令行工具
 
-- [项目初始化与启动](guide/cli/1_getting_started.md) — init / run / dev / REPL
-- [插件与配置管理](guide/cli/2_management.md) — plugin / config / napcat 命令
+- [命令详解](guide/cli/1.commands.md) — init / run / dev / plugin / config 命令
 
 #### testing/ — 插件测试
 
@@ -205,21 +191,20 @@ docs/
 
 | 目录 | 说明 | 篇数 |
 |------|------|------|
-| [api/](reference/api/) | Bot API 方法参考 | 4 |
+| [api/](reference/api/) | Bot API 方法参考 | 3 |
 | [events/](reference/events/) | 事件类型参考 | 1 |
-| [types/](reference/types/) | 数据类型参考 | 2 |
+| [types/](reference/types/) | 数据类型参考 | 3 |
 | [core/](reference/core/) | 核心模块参考 | 1 |
 | [plugin/](reference/plugin/) | 插件系统参考 | 2 |
 | [services/](reference/services/) | 服务层参考 | 2 |
 | [adapter/](reference/adapter/) | 适配器参考 | 2 |
 | [utils/](reference/utils/) | 工具模块参考 | 3 |
-| [cli/](reference/cli/) | CLI 命令参考 | 1 |
+| [cli.md](reference/cli.md) | CLI 命令参考 | 1 |
 | [testing/](reference/testing/) | 测试框架参考 | 2 |
 
 #### api/ — Bot API 方法
 
-- [消息 API（上）](reference/api/1a_message_api.md) — 消息发送 / 接收方法签名
-- [消息 API（下）](reference/api/1b_message_api.md) — 消息发送续篇
+- [消息 API](reference/api/1_message_api.md) — 消息发送 / 接收方法签名
 - [群管理 API](reference/api/2_manage_api.md) — 群管理方法签名
 - [信息查询与支持 API](reference/api/3_info_support_api.md) — 查询 / 文件操作方法签名
 
@@ -259,7 +244,7 @@ docs/
 
 #### cli/ — CLI 命令
 
-- [命令签名与参数](reference/cli/1_commands.md) — 全部 CLI 命令、选项、参数速查
+- [CLI 命令参考](reference/cli.md) — 全部 CLI 命令、选项、参数速查
 
 #### testing/ — 测试框架
 
@@ -274,7 +259,7 @@ docs/
 |------|------|------|
 | [development_setup/](contributing/development_setup/) | 开发环境搭建 | 1 |
 | [design_decisions/](contributing/design_decisions/) | 设计决策记录（ADR） | 2 |
-| [module_internals/](contributing/module_internals/) | 模块内部实现详解 | 4 |
+| [module_internals/](contributing/module_internals/) | 模块内部实现详解 | 2 |
 
 #### development_setup/ — 开发环境
 
@@ -287,10 +272,8 @@ docs/
 
 #### module_internals/ — 模块内部实现
 
-- [核心模块实现（上）](contributing/module_internals/1a_core_modules.md) — WebSocket / Dispatcher / Registry
-- [核心模块实现（下）](contributing/module_internals/1b_core_modules.md) — Hook / EventStream / 拓扑排序
-- [插件与服务模块实现（上）](contributing/module_internals/2a_plugin_service_modules.md) — 插件加载器 / 热重载
-- [插件与服务模块实现（下）](contributing/module_internals/2b_plugin_service_modules.md) — RBAC Trie / 定时任务
+- [核心模块实现](contributing/module_internals/1.core_modules.md) — WebSocket / Dispatcher / Registry / Hook / EventStream
+- [插件与服务模块实现](contributing/module_internals/2.plugin_service_modules.md) — 插件加载器 / 热重载 / RBAC Trie / 定时任务
 
 ---
 
@@ -305,6 +288,6 @@ docs/
 | **为插件编写测试** | [guide/testing/](guide/testing/) → [reference/testing/](reference/testing/) |
 | **参与贡献** | [contributing/](contributing/) |
 | **配置 Bot** | [guide/configuration/](guide/configuration/) |
-| **使用 CLI** | [guide/cli/](guide/cli/) → [reference/cli/](reference/cli/) |
+| **使用 CLI** | [guide/cli/](guide/cli/) → [reference/cli.md](reference/cli.md) |
 | **贡献代码** | [contributing/development_setup/](contributing/development_setup/) → [architecture.md](architecture.md) → [contributing/design_decisions/](contributing/design_decisions/) |
 | **理解内部实现** | [architecture.md](architecture.md) → [contributing/module_internals/](contributing/module_internals/) |

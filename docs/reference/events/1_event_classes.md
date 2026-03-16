@@ -82,7 +82,7 @@ classDiagram
     NoticeEvent <|-- GroupIncreaseEvent
     RequestEvent <|-- FriendRequestEvent
     RequestEvent <|-- GroupRequestEvent
-```
+```python
 
 ---
 
@@ -94,7 +94,7 @@ classDiagram
 class BaseEvent:
     __slots__ = ("_data", "_api")
     def __init__(self, data: BaseEventData, api: IBotAPI) -> None
-```
+```python
 
 | 属性 | 类型 | 说明 |
 |---|---|---|
@@ -144,7 +144,7 @@ async def reply(
     rtf: Optional[MessageArray] = None,
     at_sender: bool = True,
 ) -> Any
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
@@ -292,7 +292,7 @@ async def reply(
 
 ```python
 def create_entity(data: BaseEventData, api: IBotAPI) -> BaseEvent
-```
+```python
 
 采用 **精确映射优先、降级 post_type 匹配** 的两级策略：
 
@@ -324,4 +324,4 @@ flowchart TD
     B -->|否| D{post_type 降级匹配?}
     D -->|是| E[返回 post_type 基类实体]
     D -->|否| F[返回 BaseEvent]
-```
+```text

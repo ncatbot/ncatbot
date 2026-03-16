@@ -16,7 +16,7 @@
 | [services/](services/) | 服务层参考（RBAC、定时任务、配置存储） |
 | [adapter/](adapter/) | 适配器参考（WebSocket、协议处理） |
 | [utils/](utils/) | 工具模块参考（日志、IO、装饰器） |
-| [cli/](cli/) | CLI 命令参考（全部命令签名与参数） |
+| [cli.md](cli.md) | CLI 命令参考（全部命令签名与参数） |
 | [testing/](testing/) | 测试框架参考（TestHarness、事件工厂、Mock） |
 
 ---
@@ -30,7 +30,7 @@ Bot 可调用的所有 API 方法签名，按功能分类：
 - 信息查询（get_login_info / get_stranger_info / ...）
 - 文件操作（upload_group_file / get_group_file_url / ...）
 
-> 旧版单文件参考：[api.md](api.md)
+> 旧版单文件参考：[api/](api/)
 
 ---
 
@@ -43,7 +43,7 @@ Bot 可调用的所有 API 方法签名，按功能分类：
 - **NoticeEvent** — 通知事件（群成员变动、撤回等）
 - **RequestEvent** — 请求事件（加好友、加群请求）
 
-> 旧版单文件参考：[events.md](events.md)
+> 旧版单文件参考：[events/](events/)
 
 ---
 
@@ -55,7 +55,7 @@ Bot 可调用的所有 API 方法签名，按功能分类：
 - **MessageArray** — 消息容器，链式构造
 - **枚举** — 事件类型、消息类型、角色类型等
 
-> 旧版单文件参考：[types.md](types.md)
+> 旧版单文件参考：[types/](types/)
 
 ---
 
@@ -69,7 +69,7 @@ Bot 可调用的所有 API 方法签名，按功能分类：
 - **Hook** — 钩子链管理，中间件执行
 - **EventStream** — 事件流，异步队列
 
-> 旧版单文件参考：[core.md](core.md)
+> 旧版单文件参考：[core/](core/)
 
 ---
 
@@ -83,7 +83,7 @@ Bot 可调用的所有 API 方法签名，按功能分类：
 - **Manifest** — 插件描述文件解析
 - **Loader** — 插件加载器与热重载
 
-> 旧版单文件参考：[plugin.md](plugin.md)
+> 旧版单文件参考：[plugin/](plugin/)
 
 ---
 
@@ -96,7 +96,7 @@ Bot 可调用的所有 API 方法签名，按功能分类：
 - **TimeTask** — 定时任务调度
 - **FileWatcher** — 文件监听（热重载）
 
-> 旧版单文件参考：[services.md](services.md)
+> 旧版单文件参考：[services/](services/)
 
 ---
 
@@ -108,7 +108,7 @@ Bot 可调用的所有 API 方法签名，按功能分类：
 - **NapCatAdapter** — NapCat WebSocket 适配器
 - **MockAdapter** — 测试用模拟适配器
 
-> 旧版单文件参考：[adapter.md](adapter.md)
+> 旧版单文件参考：[adapter/](adapter/)
 
 ---
 
@@ -122,20 +122,13 @@ Bot 可调用的所有 API 方法签名，按功能分类：
 - **IO** — 文件 IO 工具
 - **Decorators** — 通用装饰器
 
-> 旧版单文件参考：[utils.md](utils.md)
+> 旧版单文件参考：[utils/](utils/)
 
 ---
 
 ## cli/ — CLI 命令
 
-`ncatbot` 命令行工具完整参考：
-
-- **init** — 初始化项目
-- **run / dev** — 启动 Bot
-- **config** — 配置管理（show / get / set / check）
-- **plugin** — 插件管理（list / create / enable / disable / ...）
-- **napcat** — NapCat 诊断（ws / webui）
-- **REPL** — 交互式命令行
+`ncatbot` 命令行工具完整参考：见 [cli.md](cli.md)。
 
 ---
 

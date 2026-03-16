@@ -44,7 +44,7 @@ node = ForwardNode(
         {"type": "image", "data": {"file": "https://example.com/img.png"}},
     ],
 )
-```
+```python
 
 ---
 
@@ -61,7 +61,7 @@ node = ForwardNode(
 from ncatbot.types import Forward
 
 fwd = Forward(id="abc123")
-```
+```python
 
 ### 方式二：构造新的合并转发（通过 `content`）
 
@@ -83,7 +83,7 @@ fwd = Forward(content=[
         ],
     ),
 ])
-```
+```python
 
 ---
 
@@ -93,7 +93,7 @@ fwd = Forward(content=[
 
 ```python
 from ncatbot.types import ForwardConstructor
-```
+```python
 
 ### 构造方法
 
@@ -130,7 +130,7 @@ fc.attach_message(msg)
 
 forward = fc.build()
 await self.api.post_group_forward_msg(event.group_id, forward)
-```
+```python
 
 ### 切换作者
 
@@ -143,7 +143,7 @@ fc.attach_text("Bob 说的话")
 
 # 或在 attach 时临时指定
 fc.attach_text("Charlie 客串", user_id="333", nickname="Charlie")
-```
+```python
 
 ---
 
@@ -168,7 +168,7 @@ outer_fc.attach_text("🔸 外层第三条消息（在嵌套转发之后）")
 
 forward = outer_fc.build()
 await self.api.post_group_forward_msg(event.group_id, forward)
-```
+```python
 
 ---
 
@@ -187,7 +187,7 @@ await self.api.post_group_forward_msg(group_id, forward)
 
 # 通过消息 ID 转发已有消息
 await self.api.send_group_forward_msg_by_id(group_id, [msg_id_1, msg_id_2])
-```
+```text
 
 ---
 

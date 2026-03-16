@@ -12,7 +12,7 @@
 
 ```bash
 uv pip install ncatbot55[test]
-```
+```python
 
 ### 2. 创建测试文件
 
@@ -23,7 +23,7 @@ import pytest
 from ncatbot.testing import PluginTestHarness, group_message
 
 pytestmark = pytest.mark.asyncio
-```
+```python
 
 ### 3. 编写加载测试
 
@@ -34,7 +34,7 @@ async def test_plugin_loads():
         plugin_dir=Path("plugins/"),
     ) as h:
         assert "my_plugin" in h.loaded_plugins
-```
+```python
 
 ### 4. 编写命令测试
 
@@ -47,13 +47,13 @@ async def test_hello_command():
         await h.inject(group_message("hello", group_id="100", user_id="99"))
         await h.settle()
         assert h.api_called("send_group_msg")
-```
+```python
 
 ### 5. 运行测试
 
 ```bash
 python -m pytest tests/ -v
-```
+```python
 
 > **下一步：** 阅读 [快速入门](1.quick-start.md) 了解完整的测试编写流程。
 

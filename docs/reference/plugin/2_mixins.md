@@ -17,7 +17,7 @@ def events(
     self,
     event_type: Optional[Union[str, EventType]] = None,
 ) -> EventStream
-```
+```python
 
 创建事件流，可选按类型过滤。返回的 `EventStream` 支持 `async with` / `async for`。
 
@@ -34,7 +34,7 @@ async def on_load(self):
     async with self.events("message") as stream:
         async for event in stream:
             print(event.raw_message)
-```
+```python
 
 ### 1.2 wait_event()
 
@@ -44,7 +44,7 @@ async def wait_event(
     predicate: Optional[Callable[[Event], bool]] = None,
     timeout: Optional[float] = None,
 ) -> Event
-```
+```python
 
 等待下一个满足条件的事件。
 
@@ -65,7 +65,7 @@ event = await self.wait_event(
     predicate=lambda e: e.user_id == 12345,
     timeout=30.0,
 )
-```
+```python
 
 ---
 
@@ -87,7 +87,7 @@ def add_scheduled_task(
     conditions: Optional[List[Callable[[], bool]]] = None,
     max_runs: Optional[int] = None,
 ) -> bool
-```
+```python
 
 添加定时任务。
 
@@ -114,7 +114,7 @@ def add_scheduled_task(
 ```python
 @final
 def remove_scheduled_task(self, name: str) -> bool
-```
+```python
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
@@ -127,7 +127,7 @@ def remove_scheduled_task(self, name: str) -> bool
 ```python
 @final
 def get_task_status(self, name: str) -> Optional[Dict[str, Any]]
-```
+```python
 
 获取指定任务状态。返回包含 `name`、`next_run`、`run_count`、`max_runs` 的字典，
 任务不存在返回 `None`。
@@ -137,7 +137,7 @@ def get_task_status(self, name: str) -> Optional[Dict[str, Any]]
 ```python
 @final
 def list_scheduled_tasks(self) -> List[str]
-```
+```python
 
 列出本插件注册的所有定时任务名称。
 
@@ -146,7 +146,7 @@ def list_scheduled_tasks(self) -> List[str]
 ```python
 @final
 def cleanup_scheduled_tasks(self) -> None
-```
+```python
 
 清理本插件的所有定时任务。通常无需手动调用，`_mixin_unload` 钩子会自动执行。
 
@@ -162,7 +162,7 @@ class MyPlugin(NcatBotPlugin):
 
     async def on_close(self):
         pass  # cleanup_scheduled_tasks() 由 _mixin_unload 自动调用
-```
+```python
 
 ---
 
@@ -176,7 +176,7 @@ class MyPlugin(NcatBotPlugin):
 
 ```python
 def check_permission(self, user: str, permission: str) -> bool
-```
+```python
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
@@ -189,7 +189,7 @@ def check_permission(self, user: str, permission: str) -> bool
 
 ```python
 def add_permission(self, path: str) -> None
-```
+```python
 
 注册权限路径。
 
@@ -201,7 +201,7 @@ def add_permission(self, path: str) -> None
 
 ```python
 def remove_permission(self, path: str) -> None
-```
+```python
 
 移除权限路径。
 
@@ -209,7 +209,7 @@ def remove_permission(self, path: str) -> None
 
 ```python
 def add_role(self, role: str, exist_ok: bool = True) -> None
-```
+```python
 
 创建角色。
 
@@ -222,7 +222,7 @@ def add_role(self, role: str, exist_ok: bool = True) -> None
 
 ```python
 def user_has_role(self, user: str, role: str) -> bool
-```
+```python
 
 检查用户是否拥有指定角色。RBAC 服务不可用时返回 `False`。
 
@@ -239,7 +239,7 @@ class AdminPlugin(NcatBotPlugin):
 
     def can_manage(self, user_id: int) -> bool:
         return self.check_permission(str(user_id), "admin.manage")
-```
+```python
 
 ---
 
@@ -263,7 +263,7 @@ class AdminPlugin(NcatBotPlugin):
 
 ```python
 def get_config(self, key: str, default: Any = None) -> Any
-```
+```python
 
 读取配置值。
 
@@ -276,7 +276,7 @@ def get_config(self, key: str, default: Any = None) -> Any
 
 ```python
 def set_config(self, key: str, value: Any) -> None
-```
+```python
 
 设置配置值并**立即持久化**到 `config.yaml`。
 
@@ -284,7 +284,7 @@ def set_config(self, key: str, value: Any) -> None
 
 ```python
 def remove_config(self, key: str) -> bool
-```
+```python
 
 移除配置项并持久化。键不存在返回 `False`。
 
@@ -292,7 +292,7 @@ def remove_config(self, key: str) -> bool
 
 ```python
 def update_config(self, updates: Dict[str, Any]) -> None
-```
+```python
 
 批量更新配置并持久化。
 
@@ -313,7 +313,7 @@ class MyPlugin(NcatBotPlugin):
 
         # 读取
         key = self.get_config("api_key")
-```
+```python
 
 ---
 
@@ -350,7 +350,7 @@ class CounterPlugin(NcatBotPlugin):
         self.data.pop("temp_key", None)
 
         # 插件卸载时框架自动保存到 data/<plugin_name>/data.json
-```
+```python
 
 > ⚠️ **注意**：`self.data` 的修改不会立即持久化，仅在插件卸载时（`_mixin_unload`）
 > 自动保存。如需立即保存，可手动调用 `self._save_data()`。

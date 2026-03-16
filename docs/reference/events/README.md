@@ -21,7 +21,7 @@ async def on_group_message(event: GroupMessageEvent):
 # 私聊消息
 async def on_private_message(event: PrivateMessageEvent):
     await event.reply("你好！")
-```
+```python
 
 ### 通知事件
 
@@ -35,7 +35,7 @@ async def on_notice(event: NoticeEvent):
 # 群成员增加
 async def on_group_increase(event: GroupIncreaseEvent):
     await event.kick(reject_add_request=True)  # 踢出并拒绝
-```
+```python
 
 ### 请求事件
 
@@ -49,7 +49,7 @@ async def on_friend_request(event: FriendRequestEvent):
 # 加群请求
 async def on_group_request(event: GroupRequestEvent):
     await event.reject(reason="暂不接受")
-```
+```python
 
 ---
 

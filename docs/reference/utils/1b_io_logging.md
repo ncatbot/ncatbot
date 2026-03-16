@@ -19,7 +19,7 @@ graph TD
     D --> G[MessageFoldFilter]
     D --> H[TimedRotatingFileHandler]
     D --> I[StreamHandler]
-```
+```python
 
 ### 1.1 get_log
 
@@ -30,11 +30,11 @@ from ncatbot.utils import get_log
 
 log = get_log("plugin.my_plugin")
 log.info("启动完成")
-```
+```python
 
 ```python
 def get_log(name: Optional[str] = None) -> BoundLogger
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -55,7 +55,7 @@ log.info("收到消息")
 
 # 移除上下文
 log = log.unbind("group_id")
-```
+```python
 
 #### 核心方法
 
@@ -97,7 +97,7 @@ setup_logging(
     log_dir="./logs",
     backup_count=7,
 )
-```
+```python
 
 ```python
 def setup_logging(
@@ -108,7 +108,7 @@ def setup_logging(
     backup_count: int | None = None,
     routing_rules: Sequence[tuple[str, str]] | None = None,
 ) -> None
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -157,17 +157,17 @@ def setup_logging(
 from ncatbot.utils.logger.formatter import ColoredFormatter
 
 formatter = ColoredFormatter(datefmt="%H:%M:%S")
-```
+```text
 
 各级别输出格式示例（去除颜色码）：
 
-```
+```python
 [14:30:05.123] DEBUG    plugin.demo 'ncatbot/plugin/demo.py:42' | 调试信息
 [14:30:05.123] INFO     plugin.demo 'ncatbot/plugin/demo.py:50' ➜ 正常信息
 [14:30:05.123] WARNING  plugin.demo 'ncatbot/plugin/demo.py:55' ➜ 警告信息
 [14:30:05.123] ERROR    plugin.demo 'ncatbot/plugin/demo.py:60' ➜ 错误信息
 [14:30:05.123] CRITICAL plugin.demo 'ncatbot/plugin/demo.py:70' ➜ 严重错误
-```
+```python
 
 #### FileFormatter
 
@@ -177,13 +177,13 @@ formatter = ColoredFormatter(datefmt="%H:%M:%S")
 from ncatbot.utils.logger.formatter import FileFormatter
 
 formatter = FileFormatter(datefmt="%Y-%m-%d %H:%M:%S")
-```
+```text
 
 输出格式：
 
-```
+```python
 [2026-03-15 14:30:05.123] INFO     plugin.demo 'ncatbot/plugin/demo.py:50' ➜ 正常信息
-```
+```python
 
 > 两个 formatter 都会自动将文件路径转为项目根目录的相对路径。
 
@@ -197,7 +197,7 @@ formatter = FileFormatter(datefmt="%Y-%m-%d %H:%M:%S")
 
 ```python
 from ncatbot.utils import post_json, get_json, download_file
-```
+```python
 
 ### 2.1 post_json
 
@@ -210,7 +210,7 @@ def post_json(
     headers: Optional[dict] = None,
     timeout: float = 5.0,
 ) -> dict
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -233,7 +233,7 @@ def get_json(
     headers: Optional[dict] = None,
     timeout: float = 5.0,
 ) -> dict
-```
+```python
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -247,7 +247,7 @@ def get_json(
 
 ```python
 def download_file(url: str, file_name: str) -> None
-```
+```python
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
@@ -260,7 +260,7 @@ def download_file(url: str, file_name: str) -> None
 
 ```python
 from ncatbot.utils import get_proxy_url, gen_url_with_proxy
-```
+```markdown
 
 | 函数 | 签名 | 说明 |
 |------|------|------|

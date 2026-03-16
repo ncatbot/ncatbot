@@ -21,9 +21,9 @@ license: MIT
 
 ## 工作流
 
-```
+```text
 1. 选模式 → 2. 搭项目 → 3. 开发功能 → 4. 测试调试
-```
+```python
 
 ### Step 1：选模式
 
@@ -40,7 +40,7 @@ license: MIT
 ```bash
 pip install ncatbot5
 ncatbot init                        # 交互式创建 config.yaml + plugins/ + 模板插件（以计算机用户名命名）
-```
+```python
 
 - **非插件模式**：直接编写 `main.py`，`python main.py` 或 `ncatbot run` 启动
 - **插件模式**：`ncatbot plugin create my_plugin` 生成脚手架，`ncatbot dev` 启动（含热重载）
@@ -94,7 +94,7 @@ class MyPlugin(NcatBotPlugin):
     @registrar.on_group_command("hello")
     async def on_hello(self, event: GroupMessageEvent):
         await event.reply("Hello!")
-```
+```python
 
 ### 非插件模式
 
@@ -111,7 +111,7 @@ async def on_hello(event: GroupMessageEvent):
 
 if __name__ == "__main__":
     bot.run()
-```
+```python
 
 > 两种模式的差异：插件模式 handler 有 `self`，支持 Mixin（配置/数据/RBAC/定时任务/热重载）；非插件模式更轻量，适合快速原型。
 
@@ -183,7 +183,7 @@ plugin:
   load_plugin: true
   plugin_whitelist: []
   plugin_blacklist: []
-```
+```python
 
 ## 示例索引
 

@@ -22,7 +22,7 @@
 
 ```python
 from ncatbot.utils.config.security import strong_password_check, generate_strong_token
-```
+```python
 
 ### strong_password_check
 
@@ -30,7 +30,7 @@ from ncatbot.utils.config.security import strong_password_check, generate_strong
 
 ```python
 def strong_password_check(password: str) -> bool
-```
+```yaml
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
@@ -50,7 +50,7 @@ def strong_password_check(password: str) -> bool
 strong_password_check("abc")           # False — 太短
 strong_password_check("Abcdef123456")  # False — 无特殊符号
 strong_password_check("Abcdef1234_!")  # True
-```
+```python
 
 ### generate_strong_token
 
@@ -58,7 +58,7 @@ strong_password_check("Abcdef1234_!")  # True
 
 ```python
 def generate_strong_token(length: int = 16) -> str
-```
+```toml
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -68,7 +68,7 @@ def generate_strong_token(length: int = 16) -> str
 token = generate_strong_token()     # 16 位随机 token
 token = generate_strong_token(32)   # 32 位随机 token
 assert strong_password_check(token) # 始终满足强度策略
-```
+```python
 
 ### 安全自动修复
 
@@ -94,7 +94,7 @@ from ncatbot.utils.logger.tqdm import tqdm
 
 for item in tqdm(range(100), desc="处理中", colour="CYAN"):
     process(item)
-```
+```python
 
 ### 参数
 
@@ -117,7 +117,7 @@ from ncatbot.utils import download_file
 
 download_file("https://example.com/large.zip", "large.zip")
 # 处理中:  45%|████████████                | 45/100 [00:03<00:04, 12.50it/s]
-```
+```python
 
 ---
 
@@ -129,7 +129,7 @@ download_file("https://example.com/large.zip", "large.zip")
 
 ```python
 from ncatbot.utils import get_proxy_url, gen_url_with_proxy
-```
+```python
 
 ### get_proxy_url
 
@@ -137,7 +137,7 @@ from ncatbot.utils import get_proxy_url, gen_url_with_proxy
 
 ```python
 def get_proxy_url() -> str
-```
+```python
 
 返回空字符串表示直连。
 
@@ -147,13 +147,13 @@ def get_proxy_url() -> str
 
 ```python
 def gen_url_with_proxy(original_url: str) -> str
-```
+```python
 
 ```python
 url = gen_url_with_proxy("https://github.com/user/repo/releases/latest")
 # 可能返回: "https://proxy.example.com/https://github.com/user/repo/releases/latest"
 # 或直连: "https://github.com/user/repo/releases/latest"
-```
+```yaml
 
 ### 代理配置优先级
 
@@ -205,7 +205,7 @@ plugin:
   plugin_configs:
     my_plugin:
       key: value
-```
+```python
 
 ---
 
@@ -228,7 +228,7 @@ plugin:
 $env:LOG_LEVEL = "INFO"
 $env:GITHUB_PROXY = "https://proxy.example.com"
 python main.py
-```
+```python
 
 **Linux / macOS**：
 
@@ -236,7 +236,7 @@ python main.py
 export LOG_LEVEL=INFO
 export GITHUB_PROXY=https://proxy.example.com
 python main.py
-```
+```toml
 
 **.env 文件**（需框架支持）：
 
@@ -246,4 +246,4 @@ FILE_LOG_LEVEL=DEBUG
 LOG_FILE_PATH=./logs
 BACKUP_COUNT=7
 GITHUB_PROXY=https://proxy.example.com
-```
+```text

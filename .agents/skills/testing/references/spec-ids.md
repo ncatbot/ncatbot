@@ -31,7 +31,7 @@
 async def test_dispatcher_routes_group_message(event_dispatcher):
     """D-03: AsyncEventDispatcher 正确路由群消息到 message.group 订阅者"""
     ...
-```
+```python
 
 ## 新增测试编号
 

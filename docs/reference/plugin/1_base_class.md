@@ -29,7 +29,7 @@ class MyPlugin(NcatBotPlugin):
     author = "dev"
     description = "示例插件"
     dependencies = {"core_plugin": ">=1.0.0"}
-```
+```python
 
 ### 1.2 运行时注入属性
 
@@ -65,7 +65,7 @@ sequenceDiagram
     Loader->>Plugin: _close_()
     Loader->>Plugin: on_close()
     Loader->>Mixin: _mixin_unload() (按 MRO 正序)
-```
+```python
 
 | 方法 | 签名 | 调用时机 | 说明 |
 |------|------|----------|------|
@@ -97,7 +97,7 @@ async def _run_mixin_hooks(self, hook_name: str) -> None:
             result = hook(self)
             if asyncio.iscoroutine(result):
                 await result
-```
+```python
 
 ### 1.5 工具方法
 
@@ -123,7 +123,7 @@ class NcatBotPlugin(
     BasePlugin, EventMixin, TimeTaskMixin, RBACMixin, ConfigMixin, DataMixin
 ):
     ...
-```
+```python
 
 **Mixin 钩子执行顺序**（由 MRO 决定）：
 
@@ -155,7 +155,7 @@ class MyPlugin(NcatBotPlugin):
 
     async def on_close(self):
         pass  # Mixin 钩子自动清理定时任务、关闭事件流、保存数据
-```
+```toml
 
 ---
 
@@ -195,14 +195,14 @@ core_plugin = ">=1.0.0"
 [pip_dependencies]
 requests = ">=2.28.0"
 aiohttp = ">=3.8.0"
-```
+```python
 
 ### 3.2 from_toml()
 
 ```python
 @classmethod
 def from_toml(cls, manifest_path: Path) -> PluginManifest
-```
+```python
 
 从 `manifest.toml` 文件解析清单。
 
@@ -242,13 +242,13 @@ flowchart LR
     D --> E[ModuleImporter<br/>加载模块]
     E --> F[实例化 & 注入属性]
     F --> G[__onload__<br/>生命周期启动]
-```
+```python
 
 ### 4.1 load_all()
 
 ```python
 async def load_all(self, plugin_dir: Path) -> List[str]
-```
+```python
 
 扫描目录并按依赖顺序加载所有插件。
 
@@ -269,7 +269,7 @@ async def load_selected(
     *,
     skip_pip: bool = True,
 ) -> List[str]
-```
+```python
 
 只加载指定插件及其传递依赖。
 
@@ -286,7 +286,7 @@ async def load_plugin(self, name: str) -> Optional[BasePlugin]
 async def unload_plugin(self, name: str) -> bool
 async def reload_plugin(self, name: str) -> bool
 async def unload_all(self) -> None
-```
+```python
 
 | 方法 | 说明 |
 |------|------|
@@ -306,7 +306,7 @@ def setup_hot_reload(
 ) -> None
 
 async def stop_hot_reload(self) -> None
-```
+```python
 
 将 `FileWatcherService` 的文件变更回调连接到重载队列。
 当检测到插件目录文件变更时，自动调用 `reload_plugin()`。

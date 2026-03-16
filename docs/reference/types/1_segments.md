@@ -12,7 +12,7 @@
 class MessageSegment(BaseModel):
     model_config = ConfigDict(extra="allow")   # 允许额外字段
     _type: ClassVar[str]                        # OB11 type 标识
-```
+```python
 
 | 方法 | 说明 |
 |---|---|
@@ -38,7 +38,7 @@ from ncatbot.types import PlainText
 
 seg = PlainText(text="Hello World")
 seg.to_dict()  # {"type": "text", "data": {"text": "Hello World"}}
-```
+```python
 
 ### Face
 
@@ -55,7 +55,7 @@ from ncatbot.types import Face
 
 seg = Face(id=178)       # int 自动转 str
 seg = Face(id="178")     # 也可以直接传 str
-```
+```python
 
 ### At
 
@@ -73,7 +73,7 @@ from ncatbot.types import At
 at_user = At(qq="123456")    # @某人
 at_user = At(qq=123456)      # int 自动转 str
 at_all  = At(qq="all")       # @全体
-```
+```python
 
 ### Reply
 
@@ -88,7 +88,7 @@ from ncatbot.types import Reply
 
 seg = Reply(id="12345")
 seg = Reply(id=12345)     # int 自动转 str
-```
+```python
 
 ---
 
@@ -128,7 +128,7 @@ img = Image(file="file:///C:/imgs/photo.jpg")
 
 # 闪照
 img = Image(file="https://example.com/photo.jpg", type=1)
-```
+```python
 
 ### Record
 
@@ -144,7 +144,7 @@ img = Image(file="https://example.com/photo.jpg", type=1)
 from ncatbot.types import Record
 
 seg = Record(file="https://example.com/voice.silk")
-```
+```python
 
 ### Video
 
@@ -159,7 +159,7 @@ seg = Record(file="https://example.com/voice.silk")
 from ncatbot.types import Video
 
 seg = Video(file="https://example.com/video.mp4")
-```
+```python
 
 ### File
 
@@ -174,7 +174,7 @@ seg = Video(file="https://example.com/video.mp4")
 from ncatbot.types import File
 
 seg = File(file="https://example.com/doc.pdf")
-```
+```python
 
 ---
 
@@ -195,7 +195,7 @@ seg = File(file="https://example.com/doc.pdf")
 from ncatbot.types import Share
 
 seg = Share(url="https://ncatbot.dev", title="NcatBot", content="QQ Bot 框架")
-```
+```python
 
 ### Location
 
@@ -212,7 +212,7 @@ seg = Share(url="https://ncatbot.dev", title="NcatBot", content="QQ Bot 框架")
 from ncatbot.types import Location
 
 seg = Location(lat=39.9042, lon=116.4074, title="北京")
-```
+```python
 
 ### Music
 
@@ -234,7 +234,7 @@ seg = Music(type="qq", id="12345")
 
 # 自定义音乐
 seg = Music(type="custom", url="https://...", audio="https://...", title="My Song")
-```
+```python
 
 ### Json
 
@@ -248,7 +248,7 @@ JSON 消息（卡片消息等）。
 from ncatbot.types import Json
 
 seg = Json(data='{"app":"com.example","desc":"card"}')
-```
+```python
 
 ### Markdown
 
@@ -262,7 +262,7 @@ Markdown 消息。
 from ncatbot.types import Markdown
 
 seg = Markdown(content="# 标题\n正文内容")
-```
+```python
 
 ---
 
@@ -303,7 +303,7 @@ fwd = Forward(content=[
     ForwardNode(user_id="123456", nickname="Alice", content=[PlainText(text="你好")]),
     ForwardNode(user_id="789012", nickname="Bob", content=[Image(file="https://img.url")]),
 ])
-```
+```python
 
 ### ForwardConstructor
 
@@ -331,4 +331,4 @@ fc.set_author("789012", "Alice")
 fc.attach_text("Alice 的消息")
 
 fwd = fc.build()   # 返回 Forward 消息段
-```
+```text

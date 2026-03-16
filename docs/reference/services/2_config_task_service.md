@@ -29,7 +29,7 @@
 
 | 方法 | 签名 | 说明 |
 |---|---|---|
-| `add_job` | `add_job(name: str, interval: Union[str, int, float], conditions: Optional[List[Callable[[], bool]]] = None, max_runs: Optional[int] = None, plugin_name: Optional[str] = None) -> bool` | 添加定时任务 |
+| `add_job` | `add_job(name, interval, callback, conditions=None, max_runs=None, plugin_name=None) -> bool` | 添加定时任务 |
 | `remove_job` | `remove_job(name: str) -> bool` | 移除指定任务 |
 | `get_job_status` | `get_job_status(name: str) -> Optional[Dict[str, Any]]` | 获取任务状态 |
 | `list_jobs` | `list_jobs() -> List[str]` | 列出所有任务名称 |
@@ -47,9 +47,10 @@
 |---|---|---|
 | `name` | `str` | 任务唯一标识，重复添加会失败 |
 | `interval` | `str \| int \| float` | 调度时间参数，支持上表中所有格式 |
+| `callback` | `Callable[[], None]` | 任务触发时调用的回调函数（在调度线程中执行） |
 | `conditions` | `List[Callable[[], bool]] \| None` | 执行条件列表，所有条件返回 `True` 时才执行 |
 | `max_runs` | `int \| None` | 最大执行次数，`None` 为无限次 |
-| `plugin_name` | `str \| None` | 关联的插件名称，传递给回调 |
+| `plugin_name` | `str \| None` | 关联的插件名称 |
 
 **`get_job_status` 返回值：**
 
@@ -60,20 +61,11 @@
     "run_count": 42,
     "max_runs": None,
 }
-```
+```python
 
 ### 回调机制
 
-`TimeTaskService` 通过回调槽 `on_task_triggered` 通知任务触发：
-
-```python
-on_task_triggered: Optional[Callable[[str, Optional[str]], None]]
-```
-
-- **参数 1**：`task_name`（`str`）— 触发的任务名称
-- **参数 2**：`plugin_name`（`Optional[str]`）— 关联的插件名称
-
-内部执行流程由 `TaskExecutor`（`ncatbot/service/builtin/schedule/executor.py`）负责：
+每个任务通过 `add_job(callback=...)` 绑定回调，`TaskExecutor` 在调度线程中直接调用：
 
 ```mermaid
 flowchart LR
@@ -82,53 +74,28 @@ flowchart LR
     C -->|超限| D[remove_job]
     C -->|未超限| E{检查 conditions}
     E -->|不满足| F[跳过]
-    E -->|满足| G[on_task_triggered 回调]
+    E -->|满足| G[callback]
     G --> H[run_count += 1]
-```
+```python
 
-> **线程安全：** 回调在调度线程中执行，如需操作异步资源，调用方应自行通过 `asyncio.run_coroutine_threadsafe()` 转发。
+> **插件开发者**通常使用 `TimeTaskMixin.add_scheduled_task(name, interval)`，框架自动查找同名方法作为 callback。也可显式传入 `callback` 参数。
 
 ### 完整示例
 
 ```python
-from ncatbot.service import ServiceManager
-from ncatbot.service import TimeTaskService
+# 通过插件 Mixin（推荐）
+class MyPlugin(NcatBotPlugin):
+    async def on_load(self):
+        self.add_scheduled_task("heartbeat", "30s")
 
-manager = ServiceManager()
-manager.register(TimeTaskService)
-await manager.load_all()
+    async def heartbeat(self):
+        print("heartbeat")
 
+# 直接使用服务
 tt = manager.time_task
-
-# 设置回调
-def on_triggered(task_name: str, plugin_name: str | None):
-    print(f"任务触发: {task_name} (plugin={plugin_name})")
-
-tt.on_task_triggered = on_triggered
-
-# 每 30 秒执行一次
-tt.add_job("heartbeat", "30s")
-
-# 每天 8:30 执行
-tt.add_job("daily_report", "08:30", plugin_name="reporter")
-
-# 带条件和次数限制
-tt.add_job(
-    name="limited_task",
-    interval="10s",
-    conditions=[lambda: True],
-    max_runs=5,
-    plugin_name="my_plugin",
-)
-
-# 查询状态
-print(tt.list_jobs())        # ['heartbeat', 'daily_report', 'limited_task']
-print(tt.job_count)          # 3
-print(tt.get_job_status("heartbeat"))
-
-# 移除任务
-tt.remove_job("heartbeat")
-```
+tt.add_job("my_task", "10s", callback=lambda: print("tick"))
+```python
+```python
 
 ---
 
@@ -172,7 +139,7 @@ tt.remove_job("heartbeat")
 
 ```python
 on_file_changed: Optional[Callable[[str], None]]
-```
+```python
 
 - **参数**：发生变化的插件一级目录名（非完整路径）
 - **触发条件**：`debug_mode=True` 且插件目录下 `.py` 文件发生增删改
@@ -182,7 +149,7 @@ on_file_changed: Optional[Callable[[str], None]]
 
 ```python
 on_config_changed: Optional[Callable[[], None]]
-```
+```python
 
 - 自动监听 `config.yaml` 文件的修改时间（mtime）变化
 - 在 `on_load()` 时自动设置
@@ -200,7 +167,7 @@ flowchart TD
     E -->|是| A
     E -->|否| F[on_file_changed 回调]
     F --> A
-```
+```python
 
 ### 完整示例
 
@@ -235,7 +202,7 @@ fw.resume()
 # 查询状态
 print(fw.is_watching)     # True
 print(fw.pending_count)   # 0
-```
+```python
 
 ---
 
@@ -281,7 +248,7 @@ sequenceDiagram
     TT-->>SM: 停止调度线程
     SM->>RBAC: on_close()
     RBAC-->>SM: 保存 rbac.json
-```
+```text
 
 ---
 

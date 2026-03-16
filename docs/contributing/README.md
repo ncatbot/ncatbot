@@ -13,7 +13,7 @@
 ```bash
 git clone https://github.com/<your-username>/NcatBot.git
 cd NcatBot
-```
+```bash
 
 ### 2. 安装开发环境
 
@@ -21,13 +21,13 @@ cd NcatBot
 uv sync
 .venv\Scripts\activate.ps1   # Windows
 # source .venv/bin/activate  # Linux/macOS
-```
+```python
 
 ### 3. 创建分支
 
 ```bash
 git checkout -b feat/my-feature
-```
+```python
 
 ### 4. 开发 & 测试
 
@@ -38,7 +38,7 @@ python -m pytest tests/
 # 代码格式化
 ruff format .
 ruff check . --fix
-```
+```python
 
 ### 5. 提交 PR
 
@@ -46,7 +46,7 @@ ruff check . --fix
 git add .
 git commit -m "feat: 描述你的修改"
 git push origin feat/my-feature
-```
+```python
 
 然后在 GitHub 上创建 Pull Request。
 
@@ -64,10 +64,10 @@ git push origin feat/my-feature
 
 详细的环境搭建与工具链配置：
 
-- [基础环境](development_setup/0_basic.md) — Python、uv、依赖安装
+- [基础环境](development_setup/README.md) — Python、uv、依赖安装
 - [高级配置](development_setup/1_advanced.md) — IDE 配置、调试、代码规范
 
-> 旧版单文件指南：[development-setup.md](development-setup.md)
+> 旧版单文件指南：[development_setup/](development_setup/)
 
 ### design_decisions/ — 设计决策
 
@@ -76,7 +76,7 @@ git push origin feat/my-feature
 - [架构决策](design_decisions/1_architecture.md) — 分层架构、适配器模式
 - [实现决策](design_decisions/2_implementation.md) — Dispatcher、Hook、热重载
 
-> 旧版单文件指南：[design-decisions.md](design-decisions.md)
+> 旧版单文件指南：[design_decisions/](design_decisions/)
 
 ### module_internals/ — 模块内部实现
 
@@ -88,7 +88,7 @@ git push origin feat/my-feature
 - Trie 权限树
 - 热重载机制
 
-> 旧版单文件指南：[module-internals.md](module-internals.md)
+> 旧版单文件指南：[module_internals/](module_internals/)
 
 ---
 

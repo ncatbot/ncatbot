@@ -23,7 +23,7 @@ class MyPlugin(NcatBotPlugin):
     @registrar.on_group_command("ping")
     async def on_ping(self, event: GroupMessageEvent):
         await self.api.post_group_msg(event.group_id, text="pong!")
-```
+```python
 
 事件对象也提供 `event.api`（底层 `IBotAPI`），但推荐优先使用 `self.api`（含语法糖 + 自动日志）。
 
@@ -39,7 +39,7 @@ await self.api.post_private_msg(user_id, text="私聊消息")
 
 # 原子 API — 手动构造消息段
 await self.api.send_group_msg(group_id, [{"type": "text", "data": {"text": "你好"}}])
-```
+```python
 
 ### 群管理
 
@@ -52,7 +52,7 @@ await self.api.manage.set_group_kick(group_id, user_id)
 
 # 撤回 + 踢出 + 拉黑（一步到位）
 await self.api.manage.kick_and_block(group_id, user_id, message_id)
-```
+```python
 
 ### API 分层结构
 
@@ -90,7 +90,7 @@ async def post_group_msg(
 async def post_private_msg(
     self, user_id, text=None, reply=None, image=None, video=None, rtf=None,
 ) -> dict
-```
+```python
 
 #### 单类型快捷方法
 
