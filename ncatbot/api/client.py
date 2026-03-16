@@ -39,7 +39,7 @@ class _LoggingAPIProxy:
         @functools.wraps(attr)
         async def _logged(*args: Any, **kwargs: Any) -> Any:
             s = _fmt_call(name, args, kwargs)
-            LOG.info(f"API调用 {s}")
+            LOG.debug(f"API调用 {s}")
             return await attr(*args, **kwargs)
 
         return _logged

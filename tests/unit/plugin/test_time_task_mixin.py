@@ -21,7 +21,15 @@ class FakeTimeTaskService:
         self.name = "time_task"
         self.jobs = {}
 
-    def add_job(self, name, interval, conditions=None, max_runs=None, plugin_name=""):
+    def add_job(
+        self,
+        name,
+        interval,
+        callback=None,
+        conditions=None,
+        max_runs=None,
+        plugin_name="",
+    ):
         self.jobs[name] = {
             "interval": interval,
             "conditions": conditions,
@@ -47,6 +55,14 @@ class FakePlugin(TimeTaskMixin):
     def __init__(self, service_manager):
         self.name = "test_plugin"
         self.services = service_manager
+
+    async def heartbeat(self): ...
+
+    async def task1(self): ...
+
+    async def to_remove(self): ...
+
+    async def monitor(self): ...
 
 
 @pytest.fixture
