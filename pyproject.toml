@@ -67,7 +67,7 @@ testpaths = ["tests"]
 # 只收集 Test 开头的类作为测试类，排除 E2ETestSuite 等工具类
 python_classes = ["Test*"]
 # 忽略 examples 目录
-addopts = "--ignore=examples --cov=ncatbot --cov-report=term-missing --cov-report=html"
+addopts = "--ignore=examples"
 markers = []
 
 [tool.coverage.run]
