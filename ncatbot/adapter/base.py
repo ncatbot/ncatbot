@@ -5,6 +5,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Callable, Awaitable, List, TYPE_CHECKING
 
+from ncatbot.utils import get_log
+
+_LOG = get_log("BaseAdapter")
+
 if TYPE_CHECKING:
     from ncatbot.api import IAPIClient
     from ncatbot.types import BaseEventData
@@ -24,6 +28,10 @@ class BaseAdapter(ABC):
         全局 bot_uin，由 BotClient 从顶层配置注入。
     websocket_timeout:
         全局 WebSocket 超时设置。
+
+    pip_dependencies:
+        Python 包依赖声明，格式 ``{"包名": "版本约束"}``。
+        框架在 ``setup()`` 之前自动调用 ``ensure_deps()`` 检查并安装。
     """
 
     name: str
@@ -44,6 +52,51 @@ class BaseAdapter(ABC):
         self._raw_config = config or {}
         self._bot_uin = bot_uin
         self._websocket_timeout = websocket_timeout
+
+    # ---- 依赖管理 ----
+
+    async def ensure_deps(self) -> bool:
+        """检查并安装 ``pip_dependencies`` 中声明的依赖，返回是否就绪。
+
+        无依赖或依赖已满足时直接返回 ``True``；
+        缺少依赖时交互式询问用户确认安装。
+        """
+        deps = getattr(self, "pip_dependencies", None)
+        if not deps:
+            return True
+
+        from ncatbot.plugin.loader.pip_helper import (
+            check_requirements,
+            install_packages,
+        )
+
+        _, missing = check_requirements(deps)
+        if not missing:
+            return True
+
+        from ncatbot.utils import async_confirm
+
+        listing = ", ".join(missing)
+        _LOG.info("适配器 %s 需要安装 pip 依赖: %s", self.name, listing)
+        approved = await async_confirm(
+            f"适配器 {self.name} 需要安装以下 pip 依赖:\n  {listing}\n确认安装?",
+            default=True,
+        )
+        if not approved:
+            return False
+
+        success = install_packages(missing)
+        if not success:
+            _LOG.error("适配器 %s 的 pip 依赖安装失败", self.name)
+            return False
+
+        _, still_missing = check_requirements(deps)
+        if still_missing:
+            _LOG.error("适配器 %s 安装后仍缺少依赖: %s", self.name, still_missing)
+            return False
+
+        _LOG.info("适配器 %s 的 pip 依赖安装完成", self.name)
+        return True
 
     # ---- 生命周期 ----
 
