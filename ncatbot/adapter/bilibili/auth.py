@@ -18,6 +18,42 @@ if TYPE_CHECKING:
 
 LOG = get_log("BilibiliAuth")
 
+
+def _compress_qr(terminal_str: str) -> str:
+    """将二维码终端输出压缩为原来的 1/2（长宽各减半）。
+
+    利用 Unicode 半块字符将每 2×2 像素合并为 1 个字符：
+    ▀ = 上暗下亮, ▄ = 上亮下暗, █ = 全暗, ' ' = 全亮
+    """
+    lines = terminal_str.splitlines()
+    while lines and not lines[-1].strip():
+        lines.pop()
+    if not lines:
+        return terminal_str
+
+    result: list[str] = []
+    for i in range(0, len(lines), 2):
+        top = lines[i]
+        bot = lines[i + 1] if i + 1 < len(lines) else ""
+        compressed: list[str] = []
+        max_len = max(len(top), len(bot))
+        for j in range(0, max_len, 2):
+            tc = top[j] if j < len(top) else " "
+            bc = bot[j] if j < len(bot) else " "
+            td = tc not in (" ", "\t")
+            bd = bc not in (" ", "\t")
+            if td and bd:
+                compressed.append("█")
+            elif td:
+                compressed.append("▀")
+            elif bd:
+                compressed.append("▄")
+            else:
+                compressed.append(" ")
+        result.append("".join(compressed))
+    return "\n".join(result)
+
+
 # 二维码约 3 分钟过期，每 2 秒轮询一次状态
 _POLL_INTERVAL = 2.0
 _MAX_RETRIES = 3  # 过期后最多重新生成 3 次
@@ -52,8 +88,8 @@ async def qrcode_login() -> "Credential":
                 f.write(pic.content)
             LOG.info("二维码图片已保存: %s", png_path)
 
-        # 终端 ASCII 打印
-        terminal_str = qr.get_qrcode_terminal()
+        # 终端 ASCII 打印（压缩为 1/2 大小）
+        terminal_str = _compress_qr(qr.get_qrcode_terminal())
         print("\n" + "=" * 50)
         print(f"  Bilibili 扫码登录 (第 {attempt}/{_MAX_RETRIES} 次)")
         print("=" * 50)

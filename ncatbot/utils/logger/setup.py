@@ -66,6 +66,7 @@ def setup_logging(
 
     # 压制高频第三方库日志
     logging.getLogger("apscheduler").setLevel(logging.WARNING)
+    logging.getLogger("websockets").setLevel(logging.WARNING)
 
     # 控制台 handler — level 由 console_level 控制
     console_handler = logging.StreamHandler()

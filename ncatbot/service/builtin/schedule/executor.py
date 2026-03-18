@@ -42,7 +42,8 @@ class TaskExecutor:
         try:
             job_info["callback"]()
             job_info["run_count"] += 1
-            LOG.debug("定时任务已执行: %s", name)
+            if not name.startswith("_"):
+                LOG.debug("定时任务已执行: %s", name)
         except Exception as e:
             LOG.error(f"定时任务回调执行失败 [{name}]: {e}")
             LOG.debug(f"任务回调异常堆栈:\n{traceback.format_exc()}")

@@ -174,38 +174,51 @@ class BotClient:
             return
         self._running = False
         LOG.info("正在关闭…")
+
+        # 优先断开适配器（释放端口等网络资源），使 listen 循环自然退出
+        for adapter in self._adapters:
+            try:
+                await adapter.disconnect()
+            except Exception as e:
+                LOG.error("断开适配器 %s 异常: %s", adapter.name, e)
+
+        # 等待所有监听 task 结束（已由 disconnect 触发退出）
+        for task in self._listen_tasks:
+            if not task.done():
+                task.cancel()
+        if self._listen_task and not self._listen_task.done():
+            self._listen_task.cancel()
+        for task in self._listen_tasks:
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+        if self._listen_task:
+            try:
+                await self._listen_task
+            except (asyncio.CancelledError, Exception):
+                pass
+
+        # 以下各步骤独立 try/except，避免互相阻塞
         try:
-            # 取消所有监听 task
-            for task in self._listen_tasks:
-                if not task.done():
-                    task.cancel()
-            if self._listen_task and not self._listen_task.done():
-                self._listen_task.cancel()
-            for task in self._listen_tasks:
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-            if self._listen_task:
-                try:
-                    await self._listen_task
-                except asyncio.CancelledError:
-                    pass
-            # 停止热重载 + 卸载插件
             await self._plugin_loader.stop_hot_reload()
             await self._plugin_loader.unload_all()
-            # 关闭服务
+        except Exception as e:
+            LOG.error("卸载插件异常: %s", e)
+
+        try:
             await self._service_manager.close_all()
-            # 关闭 HandlerDispatcher + AsyncEventDispatcher
+        except Exception as e:
+            LOG.error("关闭服务异常: %s", e)
+
+        try:
             if self._handler_dispatcher is not None:
                 await self._handler_dispatcher.stop()
             if self._dispatcher is not None:
                 await self._dispatcher.close()
-            # 断开所有适配器
-            for adapter in self._adapters:
-                await adapter.disconnect()
         except Exception as e:
-            LOG.error("关闭异常: %s", e)
+            LOG.error("关闭分发器异常: %s", e)
+
         LOG.info("已关闭")
 
     # ---- 内部 ----
@@ -218,13 +231,25 @@ class BotClient:
             if len(self._adapters) == 1:
                 await self._adapters[0].listen()
             else:
-                # 多适配器并行监听
-                tasks = [asyncio.create_task(a.listen()) for a in self._adapters]
+                # 多适配器并行监听，单个适配器崩溃不影响其他适配器
+                tasks = [
+                    asyncio.create_task(self._safe_listen(a)) for a in self._adapters
+                ]
+                self._listen_tasks = tasks
                 await asyncio.gather(*tasks)
         except asyncio.CancelledError:
             LOG.info("Bot 被取消")
         finally:
             await self.shutdown()
+
+    async def _safe_listen(self, adapter: "BaseAdapter") -> None:
+        """安全监听单个适配器，崩溃时仅记录日志而不影响其他适配器。"""
+        try:
+            await adapter.listen()
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            LOG.error("适配器 %s 监听异常，已停止: %s", adapter.name, e)
 
     async def _listen_forever(self) -> None:
         """后台监听 task，异常时自动 shutdown"""
@@ -232,7 +257,10 @@ class BotClient:
             if len(self._adapters) == 1:
                 await self._adapters[0].listen()
             else:
-                tasks = [asyncio.create_task(a.listen()) for a in self._adapters]
+                tasks = [
+                    asyncio.create_task(self._safe_listen(a)) for a in self._adapters
+                ]
+                self._listen_tasks = tasks
                 await asyncio.gather(*tasks)
         except asyncio.CancelledError:
             pass
@@ -264,7 +292,7 @@ class BotClient:
                 adapter.name,
                 getattr(adapter, "platform", "?"),
             )
-            if not await self._ensure_adapter_deps(adapter):
+            if not await adapter.ensure_deps():
                 LOG.warning("适配器 %s 的 pip 依赖未满足，跳过该适配器", adapter.name)
                 skipped.append(adapter)
                 continue
@@ -275,46 +303,6 @@ class BotClient:
             self._adapters.remove(adapter)
         if not self._adapters:
             raise ValueError("所有适配器的依赖均未满足，无法启动")
-
-    async def _ensure_adapter_deps(self, adapter: BaseAdapter) -> bool:
-        """检查并安装适配器声明的 pip 依赖，返回是否就绪。"""
-        deps = getattr(adapter, "pip_dependencies", None)
-        if not deps:
-            return True
-
-        from ncatbot.plugin.loader.pip_helper import (
-            check_requirements,
-            install_packages,
-        )
-
-        _, missing = check_requirements(deps)
-        if not missing:
-            return True
-
-        from ncatbot.utils import async_confirm
-
-        listing = ", ".join(missing)
-        LOG.info("适配器 %s 需要安装 pip 依赖: %s", adapter.name, listing)
-        approved = await async_confirm(
-            f"适配器 {adapter.name} 需要安装以下 pip 依赖:\n  {listing}\n确认安装?",
-            default=True,
-        )
-        if not approved:
-            return False
-
-        success = install_packages(missing)
-        if not success:
-            LOG.error("适配器 %s 的 pip 依赖安装失败", adapter.name)
-            return False
-
-        # 二次确认
-        _, still_missing = check_requirements(deps)
-        if still_missing:
-            LOG.error("适配器 %s 安装后仍缺少依赖: %s", adapter.name, still_missing)
-            return False
-
-        LOG.info("适配器 %s 的 pip 依赖安装完成", adapter.name)
-        return True
 
     # 向后兼容别名
     async def _setup_adapter(self) -> None:

@@ -80,7 +80,18 @@ class SourceManager:
         self._runner = web.AppRunner(app)
         await self._runner.setup()
         site = web.TCPSite(self._runner, self._webhook_host, self._webhook_port)
-        await site.start()
+        try:
+            await site.start()
+        except OSError as e:
+            LOG.error(
+                "GitHub Webhook Server 启动失败 (%s:%d): %s",
+                self._webhook_host,
+                self._webhook_port,
+                e,
+            )
+            await self._runner.cleanup()
+            self._runner = None
+            return
 
         LOG.info(
             "GitHub Webhook Server 已启动: http://%s:%d%s",
@@ -90,7 +101,11 @@ class SourceManager:
         )
 
         # 阻塞直到 stop
-        await self._stop_event.wait()
+        try:
+            await self._stop_event.wait()
+        finally:
+            await self._runner.cleanup()
+            self._runner = None
 
     async def _handle_webhook(self, request: web.Request) -> web.Response:
         """处理 GitHub webhook POST 请求"""
