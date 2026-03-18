@@ -48,14 +48,34 @@ class BilibiliAdapter(BaseAdapter):
 
     async def setup(self) -> None:
         from bilibili_api import Credential
+        from .auth import qrcode_login
+        from .credential_store import has_valid_credential, save_credential_to_config
 
-        self._credential = Credential(
-            sessdata=self._config.sessdata,
-            bili_jct=self._config.bili_jct,
-            buvid3=self._config.buvid3,
-            dedeuserid=self._config.dedeuserid,
-        )
-        LOG.info("Bilibili 凭据已构建")
+        if has_valid_credential(self._config):
+            self._credential = Credential(
+                sessdata=self._config.sessdata,
+                bili_jct=self._config.bili_jct,
+                buvid3=self._config.buvid3,
+                dedeuserid=self._config.dedeuserid,
+                ac_time_value=self._config.ac_time_value,
+            )
+            # 验证凭据是否仍然有效
+            try:
+                valid = await self._credential.check_valid()
+            except Exception:
+                valid = False
+            if not valid:
+                LOG.warning("Bilibili 凭据已失效，需要重新扫码登录")
+                self._credential = await qrcode_login()
+                save_credential_to_config(self._credential)
+            else:
+                LOG.info("Bilibili 凭据验证通过")
+        else:
+            LOG.info("未检测到 Bilibili 凭据，启动扫码登录...")
+            self._credential = await qrcode_login()
+            save_credential_to_config(self._credential)
+
+        LOG.info("Bilibili 凭据已就绪")
 
     async def connect(self) -> None:
         from .source.manager import SourceManager
@@ -101,7 +121,7 @@ class BilibiliAdapter(BaseAdapter):
         if self._source_manager is not None:
             await self._source_manager.stop_all()
         self._connected = False
-        LOG.info("Bilibili 适配器已断开")
+        LOG.debug("Bilibili 适配器已断开")
 
     def get_api(self) -> "IAPIClient":
         return self._api

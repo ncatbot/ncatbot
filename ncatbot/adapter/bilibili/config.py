@@ -22,6 +22,7 @@ class BilibiliConfig(BaseModel):
     bili_jct: str = ""
     buvid3: str = ""
     dedeuserid: str = ""
+    ac_time_value: str = ""
 
     # 初始监听源
     live_rooms: List[int] = Field(default_factory=list)

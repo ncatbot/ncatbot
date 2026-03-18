@@ -128,4 +128,4 @@ class CommentSource(BaseSource):
                 pass
         self._running = False
         self._task = None
-        LOG.info("评论源 %s 已停止", self._resource_id)
+        LOG.debug("评论源 %s 已停止", self._resource_id)

@@ -85,4 +85,4 @@ class SessionSource(BaseSource):
         self._running = False
         self._session = None
         self._task = None
-        LOG.info("私信源已停止")
+        LOG.debug("私信源已停止")
