@@ -1,15 +1,21 @@
+"""QQ 请求事件实体"""
+
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from ncatbot.types import (
+from ncatbot.types.qq.request import (
     FriendRequestEventData,
     GroupRequestEventData,
     RequestEventData,
-    RequestType,
 )
+from ncatbot.types.qq.enums import RequestType
 
-from .base import BaseEvent
+from ncatbot.event.common.base import BaseEvent
+from ncatbot.event.common.mixins import Approvable, GroupScoped, HasSender
+
+if TYPE_CHECKING:
+    from ncatbot.api.qq import QQAPIClient
 
 __all__ = [
     "RequestEvent",
@@ -18,12 +24,15 @@ __all__ = [
 ]
 
 
-class RequestEvent(BaseEvent):
-    """请求事件实体"""
+class RequestEvent(BaseEvent, HasSender, Approvable):
+    """QQ 请求事件实体"""
 
     _data: RequestEventData
+    _api: QQAPIClient
 
-    # ---- RequestEventData 字段 ----
+    @property
+    def api(self) -> QQAPIClient:
+        return self._api
 
     @property
     def request_type(self) -> RequestType:
@@ -40,8 +49,6 @@ class RequestEvent(BaseEvent):
     @property
     def flag(self) -> str:
         return self._data.flag
-
-    # ---- 行为方法 ----
 
     async def approve(self, remark: str = "", reason: str = "") -> Any:
         if self._data.request_type is RequestType.FRIEND:
@@ -71,17 +78,15 @@ class RequestEvent(BaseEvent):
 
 
 class FriendRequestEvent(RequestEvent):
-    """好友请求事件"""
+    """QQ 好友请求事件"""
 
     _data: FriendRequestEventData
 
 
-class GroupRequestEvent(RequestEvent):
-    """群请求事件"""
+class GroupRequestEvent(RequestEvent, GroupScoped):
+    """QQ 群请求事件"""
 
     _data: GroupRequestEventData
-
-    # ---- GroupRequestEventData 字段 ----
 
     @property
     def sub_type(self) -> str:

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ncatbot.types import BaseEventData, PostType
+from ncatbot.types.common import BaseEventData
 
 if TYPE_CHECKING:
-    from ncatbot.api import IBotAPI
+    from ncatbot.api import IAPIClient
 
 __all__ = [
     "BaseEvent",
@@ -13,27 +13,22 @@ __all__ = [
 
 
 class BaseEvent:
-    """事件实体基类 — 包装数据模型 + API，提供行为方法
-
-    插件代码可直接访问 event.user_id / event.message 等，
-    通过显式 @property 暴露底层数据模型字段。
-    """
+    """事件实体基类 — 包装数据模型 + API，提供行为方法"""
 
     __slots__ = ("_data", "_api")
 
-    def __init__(self, data: BaseEventData, api: IBotAPI) -> None:
+    def __init__(self, data: BaseEventData, api: IAPIClient) -> None:
         self._data = data
         self._api = api
 
     # ---- 底层访问 ----
 
     @property
-    def api(self) -> IBotAPI:
+    def api(self) -> IAPIClient:
         return self._api
 
     @property
     def data(self) -> BaseEventData:
-        """获取底层纯数据模型（可序列化）"""
         return self._data
 
     # ---- BaseEventData 字段 ----
@@ -47,8 +42,12 @@ class BaseEvent:
         return self._data.self_id
 
     @property
-    def post_type(self) -> PostType:
+    def post_type(self) -> str:
         return self._data.post_type
+
+    @property
+    def platform(self) -> str:
+        return self._data.platform
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(data={self._data!r})"

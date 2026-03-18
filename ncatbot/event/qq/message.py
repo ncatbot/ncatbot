@@ -1,24 +1,33 @@
+"""QQ 消息事件实体"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from ncatbot.types import (
-    BaseSender,
+from ncatbot.types.common.sender import BaseSender
+from ncatbot.types.common.segment.array import MessageArray
+from ncatbot.types.common.segment.media import Image, Video
+from ncatbot.types.qq.enums import MessageType
+from ncatbot.types.qq.message import (
     GroupMessageEventData,
-    GroupSender,
-    Image,
-    MessageArray,
     MessageEventData,
-    MessageType,
-    Anonymous,
     PrivateMessageEventData,
-    Video,
+)
+from ncatbot.types.qq.sender import GroupSender
+from ncatbot.types.qq.misc import Anonymous
+
+from ncatbot.event.common.base import BaseEvent
+from ncatbot.event.common.mixins import (
+    Bannable,
+    Deletable,
+    GroupScoped,
+    HasSender,
+    Kickable,
+    Replyable,
 )
 
-from .base import BaseEvent
-
 if TYPE_CHECKING:
-    pass
+    from ncatbot.api.qq import QQAPIClient
 
 __all__ = [
     "MessageEvent",
@@ -27,12 +36,15 @@ __all__ = [
 ]
 
 
-class MessageEvent(BaseEvent):
-    """消息事件实体"""
+class MessageEvent(BaseEvent, Replyable, Deletable, HasSender):
+    """QQ 消息事件实体"""
 
     _data: MessageEventData
+    _api: QQAPIClient
 
-    # ---- MessageEventData 字段 ----
+    @property
+    def api(self) -> QQAPIClient:
+        return self._api
 
     @property
     def message_type(self) -> MessageType:
@@ -65,8 +77,6 @@ class MessageEvent(BaseEvent):
     @property
     def font(self) -> int:
         return self._data.font
-
-    # ---- 便捷方法 ----
 
     def is_group_msg(self) -> bool:
         return self._data.message_type is MessageType.GROUP
@@ -111,17 +121,15 @@ class MessageEvent(BaseEvent):
 
 
 class PrivateMessageEvent(MessageEvent):
-    """私聊消息事件"""
+    """QQ 私聊消息事件"""
 
     _data: PrivateMessageEventData
 
 
-class GroupMessageEvent(MessageEvent):
-    """群消息事件"""
+class GroupMessageEvent(MessageEvent, GroupScoped, Kickable, Bannable):
+    """QQ 群消息事件"""
 
     _data: GroupMessageEventData
-
-    # ---- GroupMessageEventData 字段 ----
 
     @property
     def group_id(self) -> str:
@@ -134,8 +142,6 @@ class GroupMessageEvent(MessageEvent):
     @property
     def sender(self) -> GroupSender:  # type: ignore[override]
         return self._data.sender
-
-    # ---- 行为方法 ----
 
     async def kick(self, reject_add_request: bool = False) -> Any:
         return await self._api.set_group_kick(
