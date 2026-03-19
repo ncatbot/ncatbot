@@ -304,7 +304,7 @@ app.add_adapter(MyAdapter())
 运行测试：
 
 ```bash
-uv run python -m unittest discover -s tests
+uv run pytest
 ```
 
 ## 当前状态

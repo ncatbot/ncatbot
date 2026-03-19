@@ -249,6 +249,15 @@ class NcatBotApp:
             )
         return self._expand_event_types(event_type)
 
+    def _is_handler_registration(self, arg: object) -> bool:
+        if isinstance(arg, type):
+            return False
+        return get_origin(arg) not in (Union, UnionType) and callable(arg)
+
+    def _ensure_async_handler(self, func: Callable[..., Any]) -> None:
+        if not inspect.iscoroutinefunction(func):
+            raise TypeError("事件处理函数必须使用 async def 定义")
+
     @overload
     def on_event[T](self, arg: type[T]) -> Callable[[EventHandler[T]], EventHandler[T]]: ...
 
@@ -266,8 +275,9 @@ class NcatBotApp:
         1) @app.on_event(EventType) 或 @app.on_event(A | B | C)
         2) @app.on_event  # 从 handler 第一个参数注解推断事件类型（支持联合类型）
         """
-        if inspect.isfunction(arg):
+        if self._is_handler_registration(arg):
             func = cast(EventHandler[T], arg)
+            self._ensure_async_handler(func)
             event_types = self._get_event_types_from_handler(func)
             for event_type in event_types:
                 self.handlers[event_type].append(func)
@@ -276,6 +286,7 @@ class NcatBotApp:
         event_types = self._expand_event_types(arg)
 
         def decorator(func: EventHandler[Any]) -> EventHandler[Any]:
+            self._ensure_async_handler(func)
             for event_type in event_types:
                 self.handlers[event_type].append(func)
             return func
