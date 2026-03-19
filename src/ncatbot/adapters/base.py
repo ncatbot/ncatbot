@@ -1,48 +1,33 @@
-from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from types import TracebackType
-from typing import Self
+from typing import Protocol, Self, runtime_checkable
 
 
-class BaseAdapter(ABC):
+@runtime_checkable
+class BaseAdapter(Protocol):
     """
-    适配器基类
+    适配器协议
     """
 
     @property
-    @abstractmethod
-    def platform_name(self) -> str:
-        pass
+    def platform_name(self) -> str: ...
 
     @property
-    @abstractmethod
-    def adapter_name(self) -> str:
-        pass
+    def adapter_name(self) -> str: ...
 
     @property
-    @abstractmethod
-    def adapter_version(self) -> str:
-        pass
+    def adapter_version(self) -> str: ...
 
     @property
-    @abstractmethod
-    def base_event_type(self) -> type:
-        pass
+    def base_event_type(self) -> type: ...
 
-    @abstractmethod
-    async def __aenter__(self) -> Self:
-        pass
+    async def __aenter__(self) -> Self: ...
 
-    @abstractmethod
     async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
-    ):
-        pass
+    ): ...
 
-    @abstractmethod
-    def __aiter__(self) -> AsyncIterator[object]:
-        pass
-
+    def __aiter__(self) -> AsyncIterator[object]: ...

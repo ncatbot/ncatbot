@@ -17,7 +17,7 @@ def _package_version() -> str:
 
 class InternalEventAdapter(BaseAdapter):
     def __init__(self) -> None:
-        self._queue: Queue[object] = Queue()
+        self._queue: Queue[FrameworkEvent] = Queue()
         self._adapter_version = _package_version()
 
     @property
@@ -47,12 +47,12 @@ class InternalEventAdapter(BaseAdapter):
     ) -> None:
         return None
 
-    def __aiter__(self) -> AsyncIterator[object]:
-        async def iterator() -> AsyncIterator[object]:
+    def __aiter__(self) -> AsyncIterator[FrameworkEvent]:
+        async def iterator() -> AsyncIterator[FrameworkEvent]:
             while True:
                 yield await self._queue.get()
 
         return iterator()
 
-    def publish_nowait(self, event: object) -> None:
+    def publish_nowait(self, event: FrameworkEvent) -> None:
         self._queue.put_nowait(event)
