@@ -3,7 +3,7 @@ from collections.abc import Callable, Coroutine
 from types import UnionType
 from typing import Any, cast, overload
 
-from ._app_support import (
+from .support import (
     ensure_async_handler,
     ensure_handler_accepts_event,
     expand_event_types,

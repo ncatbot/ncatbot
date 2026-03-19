@@ -3,8 +3,8 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Literal, TypedDict
 
-from .adapters import BaseAdapter, InternalEventAdapter
-from .events import (
+from ..adapters import BaseAdapter, InternalEventAdapter
+from ..events import (
     AdapterAdded,
     AdapterRestartScheduled,
     AdapterRunExited,

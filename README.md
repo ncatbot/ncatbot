@@ -132,9 +132,9 @@ app.run()
 推荐阅读顺序：
 
 1. 先看 `src/ncatbot/app.py`，理解总流程
-2. 再看 `src/ncatbot/_handler_registry.py`，理解 handler 是怎么登记和匹配的
-3. 再看 `src/ncatbot/_event_broadcaster.py`，理解 `events()` / `wait_event()` 为什么能工作
-4. 最后看 `src/ncatbot/_adapter_runtime.py`，理解 adapter 生命周期和重启逻辑
+2. 再看 `src/ncatbot/_internal/handlers.py`，理解 handler 是怎么登记和匹配的
+3. 再看 `src/ncatbot/_internal/broadcaster.py`，理解 `events()` / `wait_event()` 为什么能工作
+4. 最后看 `src/ncatbot/_internal/runtime.py`，理解 adapter 生命周期和重启逻辑
 
 ### 2. `Adapter`
 

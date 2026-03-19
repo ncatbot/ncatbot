@@ -7,10 +7,10 @@ from time import perf_counter
 from types import UnionType
 from typing import Any, overload
 
-from ._adapter_runtime import AdapterRuntime, adapter_event_kwargs
-from ._app_support import callable_name, event_type_name
-from ._event_broadcaster import EventBroadcaster
-from ._handler_registry import EventHandler, HandlerRegistry, HandlerType
+from ._internal.broadcaster import EventBroadcaster
+from ._internal.handlers import EventHandler, HandlerRegistry, HandlerType
+from ._internal.runtime import AdapterRuntime, adapter_event_kwargs
+from ._internal.support import callable_name, event_type_name
 from .adapters import BaseAdapter
 from .events import (
     AppStarted,
