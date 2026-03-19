@@ -117,7 +117,7 @@ self._save_data()                         # 手动持久化（通常不需要，
 | `Image(path)` | `Image(file=path)` | **Pydantic model，必须关键字参数** |
 | `Image(file="url")` | `Image(file="url")` | 不变 |
 | `Text("hello")` | `PlainText("hello")` 或 `MessageArray().add_text("hello")` | 类名变更 |
-| `At("123")` | `At(qq="123")` | 确认是否需要关键字参数 |
+| `At("123")` | `At(user_id="123")` | 必须关键字参数；`qq` 也可作为别名 |
 | `Record(file="path")` | `Record(file="path")` | 不变 |
 | `Video(file="path")` | `Video(file="path")` | 不变 |
 | `Node(user_id, nickname, content)` | `ForwardNode(...)` | 类名变更 |

@@ -65,7 +65,7 @@ await self.api.qq.messaging.send_group_msg(group_id, msg.to_list())
 # 直接构造
 msg = MessageArray([
     PlainText(text="Hello "),
-    At(qq="123456"),
+    At(user_id="123456"),
     Image(file="https://example.com/pic.jpg"),
 ])
 await self.api.qq.messaging.send_group_msg(group_id, msg.to_list())
@@ -83,7 +83,7 @@ await self.api.qq.messaging.send_group_msg(group_id, msg.to_list())
 | 类名 | 构造 | 说明 |
 |------|------|------|
 | `PlainText` | `PlainText(text="内容")` | 纯文本 |
-| `At` | `At(qq="123456")` | @某人（qq 为字符串或 `"all"`） |
+| `At` | `At(user_id="123456")` | @某人（user_id 为字符串或 `"all"`） |
 | `Reply` | `Reply(id="msg_id")` | 引用消息 |
 
 ### 媒体类（通用）
