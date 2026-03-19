@@ -37,6 +37,10 @@ type EventHandler[T] = Callable[[T], HandlerReturn]
 type HandlerType = Callable[..., HandlerReturn]
 
 
+class WaitEventCancelledError(asyncio.CancelledError):
+    """Raised when wait_event() is interrupted because the app is stopping."""
+
+
 class AdapterEventKwargs(TypedDict):
     adapter_name: str
     platform_name: str
@@ -97,6 +101,8 @@ class NcatBotApp:
         return self._running
 
     def _attach_adapter(self, adapter: BaseAdapter):
+        if any(existing is adapter for existing in self.adapters):
+            raise ValueError("同一个 adapter 实例不能重复添加")
         self.adapters.append(adapter)
 
     def _callable_name(self, func: Callable[..., Any]) -> str:
@@ -235,10 +241,19 @@ class NcatBotApp:
 
         raise TypeError("事件类型必须是具体类类型，或由它们组成的联合类型（A | B）")
 
-    def _get_event_types_from_handler[T](self, func: EventHandler[T]) -> tuple[type[Any], ...]:
-        params = list(inspect.signature(func).parameters.values())
-        if not params:
+    def _ensure_handler_accepts_event(self, func: Callable[..., Any]) -> None:
+        signature = inspect.signature(func)
+        if not signature.parameters:
             raise TypeError("事件处理函数必须至少接收一个事件参数")
+
+        try:
+            signature.bind(object())
+        except TypeError as exc:
+            raise TypeError("事件处理函数必须能以单个事件参数调用") from exc
+
+    def _get_event_types_from_handler[T](self, func: EventHandler[T]) -> tuple[type[Any], ...]:
+        self._ensure_handler_accepts_event(func)
+        params = list(inspect.signature(func).parameters.values())
 
         first_param = params[0]
         annotations = inspect.get_annotations(func, eval_str=True)
@@ -287,6 +302,7 @@ class NcatBotApp:
 
         def decorator(func: EventHandler[Any]) -> EventHandler[Any]:
             self._ensure_async_handler(func)
+            self._ensure_handler_accepts_event(func)
             for event_type in event_types:
                 self.handlers[event_type].append(func)
             return func
@@ -324,7 +340,7 @@ class NcatBotApp:
                         )
                     )
                     return event_obj
-            raise RuntimeError("事件流已关闭，未等到匹配事件")
+            raise WaitEventCancelledError("应用正在停止，等待事件已取消")
 
         try:
             if timeout is None:

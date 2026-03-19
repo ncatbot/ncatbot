@@ -1,3 +1,3 @@
-from .app import NcatBotApp
+from .app import NcatBotApp, WaitEventCancelledError
 
-__all__ = ["NcatBotApp"]
+__all__ = ["NcatBotApp", "WaitEventCancelledError"]
