@@ -28,3 +28,32 @@ class BaseEventData(BaseModel):
                 if key.endswith("_id") and isinstance(value, (int, float)):
                     data[key] = str(int(value))
         return data
+
+    def resolve_type(self) -> str:
+        """推导点分格式事件类型字符串。
+
+        默认实现通过平台注册的 secondary key 查注册表。
+        子类可 override 提供自定义逻辑（如 QQ NotifyEventData）。
+
+        Returns:
+            如 ``"message.group"``、``"meta_event.heartbeat"``、``"live.danmu_msg"``。
+        """
+        from ncatbot.event.common.factory import get_secondary_key
+
+        post_type = self.post_type
+        if hasattr(post_type, "value"):
+            post_type = post_type.value
+        post_type = str(post_type)
+
+        platform = self.platform
+        if hasattr(platform, "value"):
+            platform = platform.value
+
+        attr_name = get_secondary_key(str(platform), post_type)
+        if attr_name:
+            val = getattr(self, attr_name, "")
+            secondary = val.value if hasattr(val, "value") else str(val) if val else ""
+            if secondary:
+                return f"{post_type}.{secondary.lower()}"
+
+        return post_type

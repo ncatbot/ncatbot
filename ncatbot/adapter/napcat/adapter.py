@@ -10,6 +10,7 @@ from ..base import BaseAdapter
 from ncatbot.api import IAPIClient
 from ncatbot.utils import get_log
 from ncatbot.utils.config.models import NapCatConfig
+from ncatbot.utils.logger import resolve_event_log_level
 
 from .api.bot_api import NapCatBotAPI
 from .connection.protocol import OB11Protocol
@@ -87,9 +88,19 @@ class NapCatAdapter(BaseAdapter):
         data_model = self._parser.parse(raw_data)
         if data_model is None:
             return
-        s = data_model.model_dump_json()
-        if len(s) > 2000:
-            s = s[:2000] + "..."
-        LOG.info(f"收到事件 {data_model.post_type.value}: {s}")
+
+        # 根据配置决定事件日志级别
+        from ncatbot.utils.config import get_config_manager
+
+        event_type = data_model.resolve_type()
+        overrides = get_config_manager().config.logging.event_log_levels
+        log_level = resolve_event_log_level(event_type, overrides)
+
+        if log_level is not None:
+            s = data_model.model_dump_json()
+            if len(s) > 2000:
+                s = s[:2000] + "..."
+            LOG._log(log_level, f"收到事件 {data_model.post_type.value}: {s}", (), {})
+
         if self._event_callback:
             await self._event_callback(data_model)

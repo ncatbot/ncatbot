@@ -86,6 +86,16 @@ class NotifyEventData(NoticeEventData):
     notice_type: NoticeType = Field(default=NoticeType.NOTIFY)
     sub_type: str
 
+    def resolve_type(self) -> str:
+        """Notify 事件使用 sub_type 作为二级类型。"""
+        sub = self.sub_type
+        if hasattr(sub, "value"):
+            sub = sub.value
+        sub = str(sub) if sub else ""
+        if sub:
+            return f"notice.{sub.lower()}"
+        return "notice.notify"
+
 
 class PokeNotifyEventData(NotifyEventData):
     sub_type: str = Field(default=NotifySubType.POKE)
