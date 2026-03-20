@@ -1,7 +1,7 @@
 """
 pytest 插件 — 自动发现并参数化插件冒烟测试
 
-用法: 在 conftest.py 中导入此模块，或通过 pytest --plugin-dir=examples/ 使用。
+用法: 在 conftest.py 中导入此模块，或通过 pytest --plugin-dir=docs/docs/examples/ 使用。
 
 功能:
   - @pytest.mark.plugin(name="xxx") marker 支持

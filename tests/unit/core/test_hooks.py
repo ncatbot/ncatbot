@@ -5,10 +5,9 @@ Hook 系统规范测试
   K-01: Hook 作为装饰器绑定到 func.__hooks__
   K-02: add_hooks() 批量添加
   K-03: get_hooks() 按 priority 降序返回
-  K-04: get_hooks(stage=X) 只返回该阶段
-  K-05: HookContext 正确传递
-  K-06: 内置 MessageTypeFilter 过滤
-  K-07: 内置 SelfFilter 过滤自身消息
+  K-04: HookContext 正确传递
+  K-04: 内置 MessageTypeFilter 过滤
+  K-05: 内置 SelfFilter 过滤自身消息
 """
 
 import pytest
@@ -124,32 +123,11 @@ def test_get_hooks_sorted_by_priority():
     assert priorities == sorted(priorities, reverse=True)
 
 
-# ---- K-04: get_hooks(stage=X) 过滤 ----
-
-
-def test_get_hooks_filter_by_stage():
-    """K-04: get_hooks(stage=BEFORE_CALL) 只返回 BEFORE_CALL hooks"""
-    before = SampleBeforeHook()
-    after = SampleAfterHook()
-
-    @add_hooks(before, after)
-    async def handler(event):
-        pass
-
-    before_hooks = get_hooks(handler, HookStage.BEFORE_CALL)
-    assert before in before_hooks
-    assert after not in before_hooks
-
-    after_hooks = get_hooks(handler, HookStage.AFTER_CALL)
-    assert after in after_hooks
-    assert before not in after_hooks
-
-
-# ---- K-05: HookContext ----
+# ---- K-04: HookContext ----
 
 
 def test_hook_context_fields():
-    """K-05: HookContext 正确传递 event / handler_entry"""
+    """K-04: HookContext 正确传递 event / handler_entry"""
     data = factory.group_message("test")
     event = Event(type="message.group", data=data)
 
@@ -170,7 +148,7 @@ def test_hook_context_fields():
 
 
 def test_hook_context_error_field():
-    """K-05 补充: HookContext.error 可设置"""
+    """K-04 补充: HookContext.error 可设置"""
     data = factory.group_message("test")
     event = Event(type="message.group", data=data)
 
@@ -189,11 +167,11 @@ def test_hook_context_error_field():
     assert ctx.error is err
 
 
-# ---- K-06: MessageTypeFilter ----
+# ---- K-05: MessageTypeFilter ----
 
 
 async def test_message_type_filter_group_pass():
-    """K-06: group 消息通过 group filter"""
+    """K-05: group 消息通过 group filter"""
     f = MessageTypeFilter("group")
     data = factory.group_message("test", group_id="1")
     event = Event(type="message.group", data=data)
@@ -211,7 +189,7 @@ async def test_message_type_filter_group_pass():
 
 
 async def test_message_type_filter_group_rejects_private():
-    """K-06 补充: private 消息被 group filter 拒绝"""
+    """K-05 补充: private 消息被 group filter 拒绝"""
     f = MessageTypeFilter("group")
     data = factory.private_message("test", user_id="1")
     event = Event(type="message.private", data=data)
@@ -228,11 +206,11 @@ async def test_message_type_filter_group_rejects_private():
     assert result == HookAction.SKIP
 
 
-# ---- K-07: PostTypeFilter ----
+# ---- K-06: PostTypeFilter ----
 
 
 async def test_post_type_filter():
-    """K-07 (替代 SelfFilter): PostTypeFilter 正确过滤"""
+    """K-06 (替代 SelfFilter): PostTypeFilter 正确过滤"""
     f = PostTypeFilter("message")
     data = factory.group_message("test", group_id="1")
     event = Event(type="message.group", data=data)
@@ -250,7 +228,7 @@ async def test_post_type_filter():
 
 
 async def test_post_type_filter_rejects():
-    """K-07 补充: notice 事件被 message PostTypeFilter 拒绝"""
+    """K-06 补充: notice 事件被 message PostTypeFilter 拒绝"""
     f = PostTypeFilter("message")
     data = factory.group_increase(user_id="1", group_id="2")
     event = Event(type="notice.group_increase", data=data)

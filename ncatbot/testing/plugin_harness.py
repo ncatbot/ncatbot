@@ -27,7 +27,7 @@ class PluginTestHarness(TestHarness):
 
         async with PluginTestHarness(
             plugin_names=["hello_world"],
-            plugin_dir=Path("examples/01_hello_world"),
+            plugin_dir=Path("docs/docs/examples/common/01_hello_world"),
         ) as harness:
             await harness.inject(group_message("hello"))
             await harness.settle()

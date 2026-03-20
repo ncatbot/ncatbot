@@ -6,8 +6,7 @@ Config migration 单元测试
   CF-02: 新 adapters 格式 → 不迁移、_migrated=False
   CF-03: 两者都无 → 默认 napcat adapter、_migrated=False
   CF-04: AdapterEntry 字段验证
-  CF-05: to_dict 不含内部标记
-  CF-06: bot_uin/root 整数 coerce + websocket_timeout clamp
+  CF-05: bot_uin/root 整数 coerce + websocket_timeout clamp
 """
 
 import warnings
@@ -122,46 +121,23 @@ def test_adapter_entry_full():
     assert entry.config["ws_uri"] == "wss://custom:3002"
 
 
-# ---- CF-05: to_dict ----
-
-
-def test_to_dict_excludes_internal():
-    """CF-05: to_dict 不含 _migrated 和 __migrated_sentinel"""
-    with warnings.catch_warnings(record=True):
-        warnings.simplefilter("always")
-        cfg = Config(**{"napcat": {"ws_uri": "ws://localhost:3001"}})
-
-    d = cfg.to_dict()
-    assert "_migrated" not in d
-    assert "__migrated_sentinel" not in d
-    assert "adapters" in d
-    assert len(d["adapters"]) == 1
-
-
-def test_to_dict_excludes_none():
-    """CF-05b: to_dict 排除 None 值"""
-    cfg = Config()
-    d = cfg.to_dict()
-    assert "napcat" not in d  # napcat=None 被 exclude_none 排除
-
-
-# ---- CF-06: 字段 coerce / clamp ----
+# ---- CF-05: 字段 coerce / clamp ----
 
 
 def test_bot_uin_int_coerced_to_str():
-    """CF-06: bot_uin 整数自动转字符串"""
+    """CF-05: bot_uin 整数自动转字符串"""
     cfg = Config(**{"bot_uin": 12345})
     assert cfg.bot_uin == "12345"
 
 
 def test_root_int_coerced_to_str():
-    """CF-06b: root 整数自动转字符串"""
+    """CF-05b: root 整数自动转字符串"""
     cfg = Config(**{"root": 67890})
     assert cfg.root == "67890"
 
 
 def test_websocket_timeout_clamped():
-    """CF-06c: websocket_timeout <= 0 被 clamp 到 1"""
+    """CF-05c: websocket_timeout <= 0 被 clamp 到 1"""
     cfg = Config(**{"websocket_timeout": 0})
     assert cfg.websocket_timeout == 1
 

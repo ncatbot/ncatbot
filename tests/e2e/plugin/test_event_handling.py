@@ -20,7 +20,7 @@ PLUGIN_NAME = "event_handling_qq"
 def examples_dir():
     from pathlib import Path
 
-    return Path(__file__).resolve().parents[3] / "examples" / "qq"
+    return Path(__file__).resolve().parents[3] / "docs" / "docs" / "examples" / "qq"
 
 
 # ---- PL-10: ping → pong ----

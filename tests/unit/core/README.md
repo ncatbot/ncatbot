@@ -18,32 +18,31 @@
 | D-08 | `close()` 终止 | 所有活跃 stream 终止 |
 | D-09 | 队列溢出 | 队列满时丢弃最旧事件，不阻塞生产者 |
 
-### Hook 系统 (`test_hooks.py`)
+### Hook 系统 (`test_hooks.py` + `test_builtin_hooks.py`)
 
 | 规范 ID | 说明 | 验证点 |
 |---------|------|--------|
 | K-01 | 装饰器绑定 | `Hook` 作为装饰器写入 `func.__hooks__` |
 | K-02 | `add_hooks()` 批量添加 | 多个 Hook 同时添加 |
 | K-03 | `get_hooks()` 优先级排序 | 按 `priority` 降序返回 |
-| K-04 | `get_hooks(stage=X)` 过滤 | 只返回指定阶段的 Hook |
-| K-05 | `HookContext` 传递 | 正确传递上下文信息 |
-| K-06 | `MessageTypeFilter` | 内置消息类型过滤 Hook |
-| K-07 | `PostTypeFilter` | 内置 post_type 过滤 Hook |
-| K-08 | `StartsWithHook` | 前缀匹配过滤，不匹配 → SKIP |
-| K-09 | `KeywordHook` | 任一关键词命中 → CONTINUE，全不匹配 → SKIP |
-| K-10 | `RegexHook` | 正则匹配 → CONTINUE + 注入 `match`，否则 SKIP |
-| K-11 | `NoticeTypeFilter` | `notice_type` 枚举匹配过滤 |
-| K-12 | `RequestTypeFilter` | `request_type` 枚举匹配过滤 |
-| K-13 | `CommandHook` 精确匹配 | 无额外参数时 `text.strip() == name` |
-| K-14 | `CommandHook` ignore_case | 大小写不敏感匹配 |
-| K-15 | `CommandHook` str 参数绑定 | 前缀匹配 + 剩余文本提取 |
-| K-16 | `CommandHook` At 参数绑定 | 从 `message.filter_at()` 按序提取 At |
-| K-17 | `CommandHook` int/float 转换 | 文本 token 中查找可转换值 |
-| K-18 | `CommandHook` 可选参数 | 有默认值的参数缺失时使用默认值 |
-| K-19 | `CommandHook` 必选参数缺失 | 必选参数缺失 → SKIP |
-| K-20 | `on_group_command` 等便捷方法 | 单装饰器封装 `MessageTypeFilter` + `CommandHook` |
-| K-21 | `registrar.qq.on_group_increase` 等 QQ 平台子注册器方法 | 通过子注册器注册精确事件类型 |
-| K-22 | 所有文本匹配使用 `message.text` | 统一使用 `MessageArray.text`，不使用 `raw_message` |
+| K-04 | `HookContext` 传递 | 正确传递上下文信息 |
+| K-05 | `MessageTypeFilter` | 内置消息类型过滤 Hook |
+| K-06 | `PostTypeFilter` | 内置 post_type 过滤 Hook |
+| K-07 | `StartsWithHook` | 前缀匹配过滤，不匹配 → SKIP |
+| K-08 | `KeywordHook` | 任一关键词命中 → CONTINUE，全不匹配 → SKIP |
+| K-09 | `RegexHook` | 正则匹配 → CONTINUE + 注入 `match`，否则 SKIP |
+| K-10 | `NoticeTypeFilter` | `notice_type` 枚举匹配过滤 |
+| K-11 | `RequestTypeFilter` | `request_type` 枚举匹配过滤 |
+| K-12 | `CommandHook` 精确匹配 | 无额外参数时 `text.strip() == name` |
+| K-13 | `CommandHook` ignore_case | 大小写不敏感匹配 |
+| K-14 | `CommandHook` str 参数绑定 | 前缀匹配 + 剩余文本提取 |
+| K-15 | `CommandHook` At 参数绑定 | 从 `message.filter_at()` 按序提取 At |
+| K-16 | `CommandHook` int/float 转换 | 文本 token 中查找可转换值 |
+| K-17 | `CommandHook` 可选参数 | 有默认值的参数缺失时使用默认值 |
+| K-18 | `CommandHook` 必选参数缺失 | 必选参数缺失 → SKIP |
+| K-19 | `on_group_command` 等便捷方法 | 单装饰器封装 `MessageTypeFilter` + `CommandHook` |
+| K-20 | QQ 平台子注册器方法 | `registrar.qq.on_group_increase` 等注册精确事件类型 |
+| K-21 | 所有文本匹配使用 `message.text` | 统一使用 `MessageArray.text`，不使用 `raw_message` |
 
 ### HandlerDispatcher (`test_handler_dispatcher.py`)
 
@@ -58,9 +57,8 @@
 | H-07 | AFTER_CALL 执行顺序 | AFTER_CALL Hook 在 handler 之后执行 |
 | H-08 | ON_ERROR Hook | handler 异常时触发 ON_ERROR Hook |
 | H-09 | `revoke_plugin` | 移除指定插件的所有 handler |
-| H-10 | 拒绝同步函数 | 注册同步函数抛出异常 |
-| H-11 | handler 接收 EventEntity | handler 接收到的是 EventEntity 而非原始 data |
-| H-12 | `stop()` | 停止后不再处理新事件 |
+| H-10 | handler 接收 EventEntity | handler 接收到的是 EventEntity 而非原始 data |
+| H-11 | `stop()` | 停止后不再处理新事件 |
 
 ### Registrar (`test_registrar.py`)
 
@@ -68,15 +66,24 @@
 |---------|------|--------|
 | R-01 | `on()` 收集 + `flush_pending` | handler 先收集到 pending，flush 后注册 |
 | R-02 | ContextVar 隔离 | 不同 `plugin_name` 的 handler 分开收集 |
-| R-03 | `on_group_message()` | 自动附加 `MessageTypeFilter("group")` |
-| R-04 | `on_private_message()` | 自动附加 `MessageTypeFilter("private")` |
-| R-05 | `fork()` | 创建独立 Registrar 实例 |
-| R-06 | `clear_pending()` | 清理残留的 pending handler |
+| R-03 | `fork()` | 创建独立 Registrar 实例 |
+| R-04 | `clear_pending()` | 清理残留的 pending handler |
 
 ### Registrar 堆叠装饰器去重 (`test_duplicate_handler.py`)
 
 | 规范 ID | 说明 | 验证点 |
 |---------|------|--------|
-| R-07 | 堆叠装饰器 pending 去重 | 同一函数堆叠装饰器后 pending 只收集 1 次 |
-| R-08 | 堆叠装饰器 flush 去重 | flush 后同一函数只注册 1 个 entry |
-| R-09 | 堆叠装饰器端到端分发去重 | 注入一条群消息 handler 只执行 1 次 |
+| R-05 | 堆叠装饰器 pending 去重 | 同一函数堆叠装饰器后 pending 只收集 1 次 |
+| R-06 | 堆叠装饰器 flush 去重 | flush 后同一函数只注册 1 个 entry |
+| R-07 | 堆叠装饰器端到端分发去重 | 注入一条群消息 handler 只执行 1 次 |
+
+### Predicate 谓词 DSL (`test_predicate.py`)
+
+| 规范 ID | 说明 | 验证点 |
+|---------|------|--------|
+| PR-01 | `match_event_type` 谓词 | 精确匹配事件类型 |
+| PR-02 | `match_prefix` 谓词 | 前缀匹配事件类型 |
+| PR-03 | `match_any` 组合 | 任一谓词满足即通过 |
+| PR-04 | `match_all` 组合 | 所有谓词满足才通过 |
+| PR-05 | `match_not` 取反 | 否定谓词 |
+| PR-06 | 谓词用于 `wait_event` | 与 `AsyncEventDispatcher` 集成 |

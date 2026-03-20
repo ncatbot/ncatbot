@@ -2,9 +2,9 @@
 Registrar 堆叠装饰器去重测试
 
 规范:
-  R-07: 堆叠装饰器 pending 去重
-  R-08: 堆叠装饰器 flush 去重
-  R-09: 堆叠装饰器端到端分发去重
+  R-05: 堆叠装饰器 pending 去重
+  R-06: 堆叠装饰器 flush 去重
+  R-07: 堆叠装饰器端到端分发去重
 """
 
 import asyncio
@@ -31,11 +31,11 @@ def clean_pending():
     _pending_handlers.clear()
 
 
-# ---- R-07: 堆叠装饰器 pending 去重 ----
+# ---- R-05: 堆叠装饰器 pending 去重 ----
 
 
 def test_stacked_decorators_pending_count():
-    """R-07: 堆叠 on_group_message + on_command → pending 只收集 1 次"""
+    """R-05: 堆叠 on_group_message + on_command → pending 只收集 1 次"""
     reg = Registrar()
 
     @reg.on_group_message()
@@ -47,11 +47,11 @@ def test_stacked_decorators_pending_count():
     assert len(pending) == 1
 
 
-# ---- R-08: 堆叠装饰器 flush 去重 ----
+# ---- R-06: 堆叠装饰器 flush 去重 ----
 
 
 def test_stacked_decorators_register_count():
-    """R-08: flush 后同一函数只注册 1 个 entry"""
+    """R-06: flush 后同一函数只注册 1 个 entry"""
     reg = Registrar()
     hd = HandlerDispatcher(api=MockBotAPI())
 
@@ -65,11 +65,11 @@ def test_stacked_decorators_register_count():
     assert len(hd.get_handlers("message")) == 1
 
 
-# ---- R-09: 堆叠装饰器端到端分发去重 ----
+# ---- R-07: 堆叠装饰器端到端分发去重 ----
 
 
 async def test_stacked_decorators_dispatch_count():
-    """R-09: 注入一条群消息，handler 只执行 1 次"""
+    """R-07: 注入一条群消息，handler 只执行 1 次"""
     reg = Registrar()
     ed = AsyncEventDispatcher()
     hd = HandlerDispatcher(api=MockBotAPI())

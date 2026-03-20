@@ -15,7 +15,7 @@ import pytest_asyncio
 from ncatbot.testing import PluginTestHarness
 
 # examples/ 目录（相对于项目根目录）
-EXAMPLES_DIR = Path(__file__).resolve().parents[3] / "examples"
+EXAMPLES_DIR = Path(__file__).resolve().parents[3] / "docs" / "docs" / "examples"
 
 
 @pytest_asyncio.fixture
