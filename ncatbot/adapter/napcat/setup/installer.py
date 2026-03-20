@@ -103,6 +103,14 @@ class NapCatInstaller:
 
         return NapCatInstaller._get_version_from_redirect()
 
+    def install(self, *, skip_confirm: bool = False) -> bool:
+        """安装 NapCat（供 CLI 直接调用）。
+
+        Args:
+            skip_confirm: 跳过交互确认，适用于 Docker build / CI 等非交互场景。
+        """
+        return self._install("install", skip_confirm=skip_confirm)
+
     def ensure_installed(self) -> bool:
         """确保 NapCat 已安装并为最新版本"""
         if not self._platform.is_napcat_installed():
@@ -121,20 +129,23 @@ class NapCatInstaller:
         LOG.info("当前 NapCat 已是最新版本")
         return True
 
-    def _install(self, install_type: str) -> bool:
+    def _install(self, install_type: str, *, skip_confirm: bool = False) -> bool:
         """安装或更新 NapCat"""
         if isinstance(self._platform, LinuxOps):
-            return self._install_linux(install_type)
-        return self._install_windows(install_type)
+            return self._install_linux(install_type, skip_confirm=skip_confirm)
+        return self._install_windows(install_type, skip_confirm=skip_confirm)
 
-    def _install_windows(self, install_type: str) -> bool:
-        prompt = (
-            "未找到 napcat，是否要自动安装？\n输入 Y 继续安装或 N 退出: "
-            if install_type == "install"
-            else "输入 Y 继续更新或 N 跳过更新: "
-        )
-        if not PlatformOps._confirm_action(prompt):
-            return False
+    def _install_windows(
+        self, install_type: str, *, skip_confirm: bool = False
+    ) -> bool:
+        if not skip_confirm:
+            prompt = (
+                "未找到 napcat，是否要自动安装？\n输入 Y 继续安装或 N 退出: "
+                if install_type == "install"
+                else "输入 Y 继续更新或 N 跳过更新: "
+            )
+            if not PlatformOps._confirm_action(prompt):
+                return False
 
         version = self.get_latest_version()
         if not version:
@@ -155,22 +166,22 @@ class NapCatInstaller:
             LOG.error(f"安装失败: {e}")
             return False
 
-    def _install_linux(self, install_type: str) -> bool:
-        prompt = (
-            "未找到 napcat，是否要使用一键安装脚本安装？\n输入 Y 继续安装或 N 退出: "
-            if install_type == "install"
-            else "是否要更新 napcat 客户端？\n输入 Y 继续更新或 N 跳过更新: "
-        )
-        if not PlatformOps._confirm_action(prompt):
-            return False
-
-        if not LinuxOps._check_root():
-            LOG.error("请使用 root 权限运行 ncatbot")
-            return False
+    def _install_linux(self, install_type: str, *, skip_confirm: bool = False) -> bool:
+        if not skip_confirm:
+            prompt = (
+                "未找到 napcat，是否要使用一键安装脚本安装？\n输入 Y 继续安装或 N 退出: "
+                if install_type == "install"
+                else "是否要更新 napcat 客户端？\n输入 Y 继续更新或 N 跳过更新: "
+            )
+            if not PlatformOps._confirm_action(prompt):
+                return False
 
         try:
             LOG.info("正在下载一键安装脚本...")
-            cmd = f"sudo bash -c 'curl -sS {INSTALL_SCRIPT_URL} -o install && printf \"n\\ny\\n\" | sudo bash install'"
+            cmd = (
+                f"bash -c 'curl -sS {INSTALL_SCRIPT_URL} -o install "
+                f'&& printf "n\\ny\\n" | bash install\''
+            )
             process = subprocess.Popen(
                 cmd,
                 shell=True,
