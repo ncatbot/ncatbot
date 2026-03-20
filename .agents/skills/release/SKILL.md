@@ -37,12 +37,43 @@ license: MIT
 
 若上述路径 **均未变更**，自动进入推送模式；否则进入发布模式。拿不准时用 `vscode_askQuestions` 询问用户。
 
+> **注意**：docs 是 Git submodule，其指针变更不触发发布模式。submodule 指针变更在 `git diff` 中显示为 `docs`（无尾部斜杠），而非具体文件路径。
+
 ## 前置条件
 
 - Python 虚拟环境已激活（`.venv\Scripts\activate.ps1`）
 - GitHub CLI（`gh`）已登录（`gh auth login --web`）
 - GitHub 仓库 Secrets 已配置 `PYPI_TOKEN`（CI 使用）
 - （仅本地备用发布）已安装 `build` 和 `twine`，`TWINE_PASSWORD` 环境变量已配置
+- docs submodule 已初始化（`git submodule update --init`）
+
+## docs 子模块说明
+
+`docs/` 是一个 Git submodule，指向独立仓库 `huan-yp/NcatBotDocs`。这影响发布流程中的以下环节：
+
+- **CI 打包**：`pypi-publish.yml` 的 checkout 步骤已配置 `submodules: true`，自动拉取 docs 内容
+- **本地打包**：执行 user-reference 打包前需确保 submodule 已初始化
+- **变更检测**：docs 内容变更在主仓库中表现为 submodule 指针更新（`git diff` 显示 `docs` 而非 `docs/xxx`）
+- **提交流程**：docs 变更需先在 docs 子仓库中提交推送，再更新主仓库的 submodule 指针
+
+### docs 变更的提交流程
+
+当 docs 内容有修改时，需要两步提交：
+
+```powershell
+# 步骤 1：在 docs 子仓库中提交并推送
+cd docs
+git add .
+git commit -m "docs: 变更描述"
+git push origin master
+cd ..
+
+# 步骤 2：在主仓库中更新 submodule 指针
+git add docs
+git commit -m "docs: 更新文档子模块"
+```
+
+> 如果工作区同时有 docs 变更和其他代码变更，docs 的 submodule 指针更新可合并到其他 commit 中，不必单独一个 commit。
 
 ## 发布模式：CI/CD 全链路流程总览
 
@@ -281,6 +312,9 @@ python -m twine upload dist/* -u __token__
 将 `examples/`、`.agents/skills/`、`docs/` 打包为 zip（排除 `__pycache__`）：
 
 ```powershell
+# 确保 docs submodule 内容已拉取
+git submodule update --init
+
 $ver = "X.Y.Z"  # 替换为实际版本
 $zipPath = "dist\ncatbot5-$ver-user-reference.zip"
 $tempDir = "dist\_pack_temp"
@@ -357,7 +391,8 @@ git push origin main
 
 ```powershell
 $lastTag = git describe --tags --abbrev=0 2>$null
-git diff --name-only "$lastTag..HEAD" | Select-String "^(docs/|examples/|\.agents/skills/)"
+# 注意：docs 是 submodule，指针变更在 diff 中显示为 "docs"（无尾部斜杠）
+git diff --name-only "$lastTag..HEAD" | Select-String "^(docs$|docs/|examples/|\.agents/skills/)"
 ```
 
 若匹配到文件 → 执行 P4；否则流程结束。
@@ -374,6 +409,9 @@ $ver = $latestTag -replace '^v', ''
 #### 4b. 打包参考资料（同发布模式阶段 7）
 
 ```powershell
+# 确保 docs submodule 内容已拉取
+git submodule update --init
+
 $zipPath = "dist\ncatbot5-$ver-user-reference.zip"
 $tempDir = "dist\_pack_temp"
 

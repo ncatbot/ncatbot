@@ -159,6 +159,7 @@ if __name__ == "__main__":
 | `ncatbot` | 交互式 REPL |
 | `ncatbot plugin create/list/enable/disable` | 插件管理 |
 | `ncatbot config show/get/set/check` | 配置管理 |
+| `ncatbot napcat install [--yes]` | 安装 NapCat + QQ（`--yes` 跳过确认，Docker/CI 用） |
 | `ncatbot napcat diagnose` | 连接诊断 |
 
 ### CLI 交互式命令注意事项

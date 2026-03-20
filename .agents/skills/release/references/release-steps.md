@@ -71,7 +71,12 @@ python -m twine upload dist/* -u __token__
 
 目标：将 `examples/`、`.agents/skills/`、`docs/` 打包为一个 zip 文件，供用户下载参考。
 
+> `docs/` 是 Git submodule，打包前需确保已拉取内容。
+
 ```powershell
+# 确保 docs submodule 内容已拉取
+git submodule update --init
+
 $ver = "{version}"
 $zipPath = "dist\ncatbot5-$ver-user-reference.zip"
 $tempDir = "dist\_pack_temp"
