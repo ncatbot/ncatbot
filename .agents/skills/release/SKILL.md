@@ -31,7 +31,7 @@ license: MIT
 1. **同步远端** — `git pull --rebase origin main`
 2. **Commit 编排** — 处理未提交变更（含 docs submodule）→ 参见 [commit-workflow.md](references/commit-workflow.md)
 3. **审查历史 commits + 生成 Release Notes** — 确认哪些进 release notes，确定版本号 → 参见 [versioning.md](references/versioning.md)
-4. **本地预检 + 分步推送 tag** — ruff + pytest → push branch + push tag → 参见 [ci-publish.md](references/ci-publish.md)
+4. **本地预检 + 分步推送 tag** — ruff + pytest → 确保 pyproject.toml 的版本号正确 → push branch + push tag → 参见 [ci-publish.md](references/ci-publish.md)
 5. **（备用）本地人工发布** — CI 不可用时 → 参见 [local-publish.md](references/local-publish.md)
 
 ---

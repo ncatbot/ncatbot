@@ -14,6 +14,12 @@ uv run python .agents/skills/release/scripts/precheck.py
 
 全部 exit code 0 才能继续。若 lint/format 已自动修复，提交修复后重新运行；测试失败则修复代码或测试。
 
+## 检查 pyproject.toml
+
+主要检查版本号是否和期望要发布的版本号一致。
+
+如果不一致，新开一个 commit 修改 pyproject.toml 中的版本号，提交后再继续后续步骤。
+
 ## 分步推送
 
 **必须分步**，避免 branch push 和 tag push 同时触发重复 CI 运行：
