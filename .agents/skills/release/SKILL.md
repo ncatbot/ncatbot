@@ -12,7 +12,7 @@ license: MIT
 
 **主要方式：CI/CD 自动发布**（推荐）
 
-推送 `v*` 格式的 tag 到 GitHub 即自动触发 `.github/workflows/pypi-publish.yml`，完成 lint → test → 构建 → PyPI 发布 → user-ref 打包 → GitHub Release 创建的全流程。
+推送 `v*` 格式的 tag 到 GitHub 即自动触发 `.github/workflows/ci.yml`，完成 lint → test → 构建 → PyPI 发布 → user-ref 打包 → GitHub Release 创建的全流程。
 **只有 pytest 测试全部通过后才会执行发布步骤。**
 
 > CI 工作流也支持在 GitHub Actions 页面手动触发（`workflow_dispatch`）。
@@ -51,7 +51,7 @@ license: MIT
 
 `docs/` 是一个 Git submodule，指向独立仓库 `huan-yp/NcatBotDocs`。这影响发布流程中的以下环节：
 
-- **CI 打包**：`pypi-publish.yml` 的 checkout 步骤已配置 `submodules: true`，自动拉取 docs 内容
+- **CI 打包**：`ci.yml` 的 publish job checkout 步骤已配置 `submodules: true`，自动拉取 docs 内容
 - **本地打包**：执行 user-reference 打包前需确保 submodule 已初始化
 - **变更检测**：docs 内容变更在主仓库中表现为 submodule 指针更新（`git diff` 显示 `docs` 而非 `docs/xxx`）
 - **提交流程**：docs 变更需先在 docs 子仓库中提交推送，再更新主仓库的 submodule 指针
@@ -272,11 +272,23 @@ uv run pytest --no-cov
 
 ### 阶段 5：创建 Tag 并推送（触发 CI/CD 发布）
 
+**必须分步推送**，避免 branch push 和 tag push 同时触发重复的 CI 运行：
+
 ```powershell
 $ver = "X.Y.Z"  # 替换为实际版本
+
+# 步骤 1：推送 commits 到 main（触发 CI test-only 运行）
+git push origin main
+
+# 步骤 2：创建并推送 tag（触发 CI test + publish 运行）
+# CI 的 concurrency group 会自动取消步骤 1 触发的仅测试运行
 git tag "v$ver"
-git push origin main --tags
+git push origin "v$ver"
 ```
+
+> **为什么分步推送？** `ci.yml` 使用 `concurrency: group: ci-${{ github.sha }}` + `cancel-in-progress: true`。
+> 当步骤 2 的 tag push 到达时，会取消步骤 1 的 branch push 运行（同 SHA 同 group），
+> 最终只有 tag push 触发的完整运行（test + publish）会执行。
 
 推送 tag 后 CI 自动执行:
 1. **Lint** — ruff check + format check
@@ -287,7 +299,7 @@ git push origin main --tags
 6. **Package user-reference** — 打包 examples / docs / skills 为 zip
 7. **Create GitHub Release** — 附带 whl、tar.gz、user-reference.zip 和自动生成的 release notes
 
-> CI 工作流定义见 `.github/workflows/pypi-publish.yml`。
+> CI 工作流定义见 `.github/workflows/ci.yml`。
 
 #### 阶段 5.1：验证发布结果
 
@@ -295,7 +307,7 @@ git push origin main --tags
 
 ```powershell
 # 查看 workflow 运行状态
-gh run list --workflow=pypi-publish.yml --limit=1
+gh run list --workflow=ci.yml --limit=1
 
 # 查看最新 release
 gh release view "v$ver" --repo ncatbot/NcatBot
