@@ -496,6 +496,14 @@ class PluginLoader:
         """实例化插件并注入运行时属性。"""
         plugin = plugin_class()
 
+        # 注入插件元数据（manifest 优先于类属性）
+        plugin.name = manifest.name
+        plugin.version = manifest.version
+        if manifest.author:
+            plugin.author = manifest.author
+        if manifest.description:
+            plugin.description = manifest.description
+
         # 注入框架属性
         plugin._manifest = manifest
         plugin._debug = self._debug

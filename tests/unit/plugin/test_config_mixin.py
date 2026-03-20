@@ -141,3 +141,14 @@ def test_mixin_unload_saves(plugin):
 
     raw = yaml.safe_load(plugin._config_path.read_text(encoding="utf-8"))
     assert raw == {"saved": True}
+
+
+# ---- _apply_global_overrides 不因 name 缺失崩溃 ----
+
+
+def test_apply_global_overrides_with_name(tmp_path):
+    """_apply_global_overrides 在 name 已设置时不抛异常"""
+    p = FakePlugin(tmp_path)
+    # 应正常执行（get_config_manager 可能不可用，但 exception 应被捕获）
+    p._apply_global_overrides()
+    # 不崩溃即通过

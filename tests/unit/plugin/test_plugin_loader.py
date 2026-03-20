@@ -191,3 +191,30 @@ class TestLoadAll:
                     loaded = await loader.load_all(Path("plugins"))
 
         assert "b" in loaded
+
+
+class TestInstantiate:
+    """LD-06: _instantiate 注入元数据"""
+
+    def test_ld06_injects_name_and_version(self, loader: PluginLoader):
+        """LD-06: _instantiate 从 manifest 注入 name/version/author/description"""
+        manifest = _make_manifest("my_plugin")
+        manifest.author = "TestAuthor"
+        manifest.description = "A test plugin"
+
+        plugin = loader._instantiate(_StubPlugin, manifest)
+
+        assert plugin.name == "my_plugin"
+        assert plugin.version == "1.0.0"
+        assert plugin.author == "TestAuthor"
+        assert plugin.description == "A test plugin"
+        assert plugin.workspace == Path("data/my_plugin")
+
+    def test_ld06_logger_property(self, loader: PluginLoader):
+        """LD-06: 实例化后 plugin.logger 可正常使用"""
+        manifest = _make_manifest("logger_test")
+        plugin = loader._instantiate(_StubPlugin, manifest)
+
+        assert plugin.logger is not None
+        # logger 不应抛异常
+        plugin.logger.info("test log from plugin")

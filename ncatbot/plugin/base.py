@@ -127,6 +127,11 @@ class BasePlugin:
         return self._debug
 
     @property
+    def logger(self):
+        """返回以插件名为标签的 logger。"""
+        return get_log(self.name)
+
+    @property
     def meta_data(self) -> Dict[str, Any]:
         if self._manifest is not None:
             return self._manifest.as_dict()
