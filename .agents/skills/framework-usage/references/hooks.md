@@ -1,6 +1,6 @@
 # Hook 系统参考
 
-> 参考文档：`guide/3. 插件开发/9. Hooks.md`、`reference/4. 核心模块/1. 内部实现.md`
+> 参考文档：`docs/docs/notes/guide/3. 插件开发/9. Hooks.md`、`docs/docs/notes/reference/4. 核心模块/`
 
 ## Hook 三阶段
 
@@ -128,6 +128,66 @@ class CooldownHook(Hook):
 | `kwargs` | `Dict[str, Any]` | 注入参数 |
 | `result` | `Any` | handler 结果（AFTER_CALL） |
 | `error` | `Optional[Exception]` | 异常（ON_ERROR） |
+
+## CommandGroupHook — 分层命令
+
+> 参考文档：`docs/docs/notes/reference/4. 核心模块/3. 注册表.md`
+> 完整示例：`docs/docs/examples/common/08_command_group/`
+
+将命令按组织结构分层，支持 `/admin kick <uid>` 形式的子命令路由。
+
+### 导入
+
+```python
+from ncatbot.core import CommandGroupHook, registrar
+```
+
+### 构造
+
+```python
+# CommandGroupHook(*names, ignore_case=False)
+admin_hook = CommandGroupHook("admin", "/admin", "a", ignore_case=True)
+calc_hook = CommandGroupHook("calc")
+```
+
+- `*names`：命令名（多个为别名），匹配消息首个 token
+- `ignore_case`：是否忽略大小写
+
+### 注册子命令
+
+```python
+@admin_hook.subcommand("kick", "remove")  # 子命令名（多个为别名）
+async def admin_kick(self, event: GroupMessageEvent, user_id: int):
+    await event.api.manage.set_group_kick(event.group_id, user_id)
+    await event.reply(f"已踢出 {user_id}")
+
+@admin_hook.subcommand("ban")
+async def admin_ban(self, event: GroupMessageEvent, user_id: int, minutes: int = 60):
+    await event.api.manage.set_group_ban(event.group_id, user_id, duration=minutes * 60)
+    await event.reply(f"已禁言 {user_id} {minutes} 分钟")
+```
+
+子命令参数类型绑定规则与 CommandHook 一致（见上方"命令参数自动绑定"）。
+
+### 主 handler 分发
+
+```python
+@registrar.on_group_message()
+@admin_hook
+async def on_admin(self, event: GroupMessageEvent, **kwargs):
+    """CommandGroupHook 自动匹配子命令并注入参数到 kwargs"""
+    # 在主 handler 中根据子命令名分发到对应子命令方法
+    ...
+```
+
+### 与 CommandHook 的区别
+
+| 特性 | CommandHook | CommandGroupHook |
+|------|-------------|------------------|
+| 结构 | 单层命令 | 命令 + 子命令 |
+| 匹配 | `/cmd args` | `/cmd subcmd args` |
+| 注册方式 | `@registrar.on_*_command()` | `@hook.subcommand()` + `@hook` 装饰器 |
+| 参数绑定 | ✅ | ✅（子命令级别） |
 
 ## 执行顺序示例
 

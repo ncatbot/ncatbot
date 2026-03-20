@@ -1,15 +1,17 @@
 # 多平台使用参考
 
-> 参考文档：`guide/10. 多平台开发/`、`guide/2. 适配器/`（各平台登录与配置）、`reference/7. 适配器/`、`reference/1. Bot API/`
+> 参考文档：`docs/docs/notes/guide/10. 多平台开发/`、`docs/docs/notes/guide/2. 适配器/`、`docs/docs/notes/reference/7. 适配器/`
 
 ## 各平台登录与配置
 
 | 平台 | 认证方式 | 指南 |
 |------|---------|------|
-| QQ (NapCat) | WebUI 扫码 / 快速登录 | `docs/guide/2. 适配器/1. NapCat QQ.md` |
-| Bilibili | 终端扫码 (bilibili-api-python) | `docs/guide/2. 适配器/2. Bilibili.md` |
-| GitHub | Personal Access Token | `docs/guide/2. 适配器/3. GitHub.md` |
-| Mock | 无需认证 | `docs/guide/2. 适配器/4. Mock 适配器.md` |
+| QQ (NapCat) | WebUI 扫码 / 快速登录 | `docs/docs/notes/guide/2. 适配器/1. NapCat QQ.md` |
+| Bilibili | 终端扫码（sessdata 留空自动弹码） | `docs/docs/notes/guide/2. 适配器/2. Bilibili.md` |
+| GitHub | Personal Access Token | `docs/docs/notes/guide/2. 适配器/3. GitHub.md` |
+| Mock | 无需认证 | `docs/docs/notes/guide/2. 适配器/4. Mock 适配器.md` |
+
+> Bilibili 适配器支持扫码登录：config.yaml 中 `sessdata` 留空即可在启动时自动弹出二维码，扫码后凭据自动写回配置文件。
 
 ## 多适配器启动
 
@@ -21,7 +23,6 @@ from ncatbot.adapter.github import GitHubAdapter
 bot = BotClient(adapters=[
     NapCatAdapter(),           # platform="qq"
     GitHubAdapter(),           # platform="github"
-    # TelegramAdapter(),       # platform="telegram" (未来)
 ])
 bot.run()
 ```
@@ -30,13 +31,10 @@ bot.run()
 
 ### GitHub 适配器配置
 
-GitHub 适配器支持 Webhook 和 Polling 两种模式：
-
 ```yaml
-# config.yaml
 adapters:
   - type: github
-    token: "ghp_xxxx"          # GitHub Personal Access Token
+    token: "ghp_xxxx"
     repos:
       - "owner/repo1"
       - "owner/repo2"
@@ -52,17 +50,13 @@ adapters:
 
 ## 多平台 API 访问
 
+各平台 API 通过 `self.api.<platform>` 访问，详见 [bot-api.md](./bot-api.md)。
+
 ```python
-# 默认委托（第一个注册的平台）
-await api.send_group_msg(group_id, message)
-
-# 显式平台
-await api.qq.send_group_msg(group_id, message)
-await api.github.create_issue_comment(repo, issue_number, body)
-# await api.platform("telegram").send_message(chat_id, text)
-
-# 查看已注册平台
-print(api.platforms)  # {"qq": <QQAPIClient>, "github": <GitHubBotAPI>, ...}
+await self.api.qq.post_group_msg(group_id, text="Hello!")
+await self.api.bilibili.send_danmu(room_id, "弹幕")
+await self.api.github.create_issue_comment(repo, number, body)
+print(self.api.platforms)  # {"qq": ..., "bilibili": ..., "github": ...}
 ```
 
 ## 平台过滤

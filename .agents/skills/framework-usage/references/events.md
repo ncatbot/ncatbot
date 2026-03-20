@@ -1,6 +1,6 @@
 # 事件系统参考
 
-> 参考文档：`guide/3. 插件开发/4. 事件注册.md`、`reference/4. 核心模块/1. 内部实现.md`
+> 参考文档：`docs/docs/notes/guide/3. 插件开发/4. 事件注册.md`、`docs/docs/notes/guide/3. 插件开发/5. 事件高级.md`、`docs/docs/notes/guide/3. 插件开发/6. 谓词 DSL.md`
 
 ## 装饰器注册（最常用）
 
@@ -187,6 +187,23 @@ pred = from_event(event) * P.of(lambda e: int(e.data.raw_message) > 0)
 | `"meta_event.heartbeat"` | 心跳 | `HeartbeatMetaEventData` |
 | `"meta_event.heartbeat_timeout"` | 心跳超时 | `HeartbeatTimeoutMetaEventData` |
 
+### Bilibili 事件实体
+
+> 参考文档：`docs/docs/notes/reference/2. 事件类型/3. Bilibili 事件.md`
+
+| 实体类 | 说明 | 注册装饰器 |
+|--------|------|-----------|
+| `DanmuMsgEvent` | 弹幕消息 | `@registrar.bilibili.on_danmu()` |
+| `SuperChatEvent` | 醒目留言 (SC) | `@registrar.bilibili.on_superchat()` |
+| `GiftEvent` | 礼物 | `@registrar.bilibili.on_gift()` |
+| `GuardBuyEvent` | 大航海购买 | `@registrar.bilibili.on_guard_buy()` |
+| `InteractEvent` | 互动（进入/关注/分享） | `@registrar.bilibili.on_interact()` |
+| `LikeEvent` | 点赞 | `@registrar.bilibili.on_like()` |
+| `BiliPrivateMessageEvent` | 私信消息 | `@registrar.on_private_message(platform="bilibili")` |
+| `BiliCommentEvent` | 评论 | `@registrar.bilibili.on_comment()` |
+
+导入：`from ncatbot.event.bilibili import DanmuMsgEvent, BiliPrivateMessageEvent, ...`
+
 ## 前缀匹配规则
 
 ```json
@@ -356,5 +373,11 @@ for t in pending:
 | `meta_event.heartbeat` | 确认连接就绪 |
 | `meta_event.heartbeat_timeout` | 断线检测 |
 | `meta_event.lifecycle` | 监控连接状态 |
+
+## 相关示例
+
+- 事件处理：`docs/docs/examples/qq/02_event_handling/`
+- 多步对话：`docs/docs/examples/common/06_multi_step_dialog/`
+- Bilibili 直播间事件：`docs/docs/examples/bilibili/02_live_room/`
 
 > 完整模式（插件并发编排、工作流清理）→ `guide/3. 插件开发/10. 模式.md` § 事件驱动工作流编排

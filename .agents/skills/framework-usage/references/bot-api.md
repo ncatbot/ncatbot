@@ -1,6 +1,6 @@
 # Bot API 完整参考
 
-> 参考文档：`guide/5. API 使用/`、`reference/1. Bot API/`、`reference/3. 数据类型/4. QQ 响应.md`
+> 参考文档：`docs/docs/notes/guide/5. API 使用/`、`docs/docs/notes/reference/1. Bot API/`、`docs/docs/notes/reference/3. 数据类型/4. QQ 响应.md`
 
 ## 响应类型与错误处理
 
@@ -270,6 +270,53 @@ await event.reply("评论内容")       # 创建 Issue/PR 评论
 await event.reply("回复内容")       # 在同一 Issue/PR 下回复
 await event.delete()                # 删除该评论
 ```
+
+## Bilibili 平台 API
+
+> 参考文档：`docs/docs/notes/guide/5. API 使用/3. Bilibili/`
+
+通过 `self.api.bilibili.*` 访问。
+
+### 直播间（弹幕/禁言/房间管理）
+
+```python
+await self.api.bilibili.send_danmu(room_id, text)                    # 发送弹幕
+await self.api.bilibili.ban_user(room_id, user_id, hour=1)           # 禁言用户
+await self.api.bilibili.unban_user(room_id, user_id)                 # 解除禁言
+await self.api.bilibili.set_room_silent(room_id, enable=True)        # 全员禁言
+info = await self.api.bilibili.get_room_info(room_id)                # 获取直播间信息
+```
+
+### 私信
+
+```python
+await self.api.bilibili.send_private_msg(user_id, content)           # 发送私信
+await self.api.bilibili.send_private_image(user_id, image_url)       # 发送图片私信
+history = await self.api.bilibili.get_session_history(user_id, count=20)  # 私信历史
+```
+
+### 评论
+
+```python
+await self.api.bilibili.send_comment(resource_id, resource_type, text)               # 发送评论
+await self.api.bilibili.reply_comment(resource_id, resource_type, root_id, parent_id, text)  # 回复评论
+await self.api.bilibili.delete_comment(resource_id, resource_type, comment_id)       # 删除评论
+await self.api.bilibili.like_comment(resource_id, resource_type, comment_id)         # 点赞评论
+comments = await self.api.bilibili.get_comments(resource_id, resource_type, page=1)  # 获取评论列表
+```
+
+### 数据源管理
+
+```python
+await self.api.bilibili.add_live_room(room_id)                       # 添加直播间监听
+await self.api.bilibili.remove_live_room(room_id)                    # 移除直播间监听
+await self.api.bilibili.add_comment_watch(resource_id, resource_type)  # 添加评论监听
+await self.api.bilibili.remove_comment_watch(resource_id)             # 移除评论监听
+sources = await self.api.bilibili.list_sources()                     # 列出所有数据源
+```
+
+> 详细参数说明与实战示例：`docs/docs/notes/guide/5. API 使用/3. Bilibili/`
+> Bilibili 示例插件：`docs/docs/examples/bilibili/`
 
 ## 事件实体快捷方法
 

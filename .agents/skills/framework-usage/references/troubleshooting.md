@@ -1,6 +1,6 @@
 # 调试排错参考
 
-> 参考文档：`guide/6. 配置管理/`、`reference/8. 工具模块/1. 配置.md`
+> 参考文档：`docs/docs/notes/guide/6. 配置管理/`、`docs/docs/notes/reference/8. 工具模块/1. 配置.md`、`docs/docs/notes/reference/8. 工具模块/2. IO 与日志.md`
 
 ## 快速诊断
 

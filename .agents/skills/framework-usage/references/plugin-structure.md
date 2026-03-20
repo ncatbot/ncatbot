@@ -1,5 +1,7 @@
 # 插件结构与验证参考
 
+> 参考文档：`docs/docs/notes/guide/3. 插件开发/2. 插件结构.md`、`docs/docs/notes/guide/3. 插件开发/3. 生命周期.md`、`docs/docs/notes/reference/5. 插件系统/1. 基类.md`
+
 ## 目录结构
 
 ```python
@@ -110,3 +112,8 @@ async with PluginTestHarness(
     plugin = h.get_plugin("my_plugin")
     assert plugin is not None
 ```
+
+## 相关示例
+
+- Hello World 插件：`docs/docs/examples/common/01_hello_world/`
+- 全功能 Bot：`docs/docs/examples/qq/09_full_featured_bot/`

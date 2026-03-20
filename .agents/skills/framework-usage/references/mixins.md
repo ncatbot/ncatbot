@@ -1,6 +1,6 @@
 # Mixin 详解参考
 
-> 参考文档：`reference/5. 插件系统/2. Mixins.md`
+> 参考文档：`docs/docs/notes/guide/3. 插件开发/7. 配置与数据.md`、`docs/docs/notes/guide/3. 插件开发/8. RBAC 定时任务与事件.md`、`docs/docs/notes/reference/5. 插件系统/2. Mixins.md`
 
 `NcatBotPlugin` 已包含全部 5 个 Mixin，按需使用。
 
@@ -139,3 +139,9 @@ async def _monitor(self):
 ```
 
 **注意**：`events()` 流在插件卸载时自动关闭。后台 task 需在 `on_close()` 取消。
+
+## 相关示例
+
+- 配置与数据：`docs/docs/examples/common/02_config_and_data/`
+- RBAC 权限：`docs/docs/examples/common/04_rbac/`
+- 定时任务：`docs/docs/examples/common/05_scheduled_tasks/`

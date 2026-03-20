@@ -1,6 +1,6 @@
 # 消息构造与发送参考
 
-> 参考文档：`guide/4. 消息发送/`、`reference/3. 数据类型/`
+> 参考文档：`docs/docs/notes/guide/4. 消息发送/`、`docs/docs/notes/reference/3. 数据类型/`
 
 ## 三种发送方式
 
@@ -170,9 +170,39 @@ if event.message.is_at(event.self_id):       # 是否 @了我
     ...
 ```
 
+## Bilibili 平台消息发送
+
+> 参考文档：`docs/docs/notes/guide/4. 消息发送/3. Bilibili/`
+
+Bilibili 平台不使用 MessageArray，消息为纯文本。支持三种消息通道：弹幕、私信、评论。
+
+### 弹幕
+
+```python
+await self.api.bilibili.send_danmu(room_id=12345, text="Hello!")
+```
+
+### 私信
+
+```python
+await self.api.bilibili.send_private_msg(user_id=67890, content="你好！")
+await self.api.bilibili.send_private_image(user_id=67890, image_url="https://example.com/img.png")
+```
+
+### 评论
+
+```python
+await self.api.bilibili.send_comment(resource_id="BV1xx411c7mD", resource_type="video", text="好视频！")
+await self.api.bilibili.reply_comment(resource_id="BV1xx411c7mD", resource_type="video",
+    root_id=123456, parent_id=789012, text="谢谢！")
+```
+
+> 完整 API 参数与示例：`docs/docs/notes/guide/5. API 使用/3. Bilibili/`
+> 示例插件：`docs/docs/examples/bilibili/`
+
 ## GitHub 平台消息发送
 
-> 参考文档：`guide/4. 消息发送/4. GitHub/`
+> 参考文档：`docs/docs/notes/guide/4. 消息发送/4. GitHub/`
 
 GitHub 平台不使用 MessageArray 或消息段，消息以纯文本 / Markdown 发送。
 
@@ -204,15 +234,16 @@ await self.api.github.update_comment("owner/repo", comment_id, "更新内容")
 await self.api.github.delete_comment("owner/repo", comment_id)
 ```
 
-### 与 QQ/Bilibili 的差异
+### 各平台消息能力对比
 
 | 特性 | QQ | Bilibili | GitHub |
 |------|-----|----------|--------|
 | 消息格式 | 富文本（消息段） | 纯文本 | 纯文本 / Markdown |
-| At / 图片 / 视频 | ✅ | 部分 | ❌ |
+| At / 图片 / 视频 | ✅ | 图片仅私信 | ❌ |
 | MessageArray | ✅ | — | — |
 | `event.reply()` | ✅ | ✅ | ✅ |
 | `event.delete()` | ✅ | ✅ | ✅（仅评论事件） |
+| 消息通道 | 群/私聊 | 弹幕/私信/评论 | Issue/PR 评论 |
 
 ## 常见陷阱
 
