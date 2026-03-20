@@ -36,7 +36,8 @@ class ConfigStorage:
 
     def _load_raw(self) -> Dict[str, Any]:
         if not os.path.exists(self.path):
-            _log.info("配置文件不存在, 使用默认配置: %s", self.path)
+            _log.warning("配置文件不存在: %s", self.path)
+            _log.info("配置文件不存在, 使用默认配置")
             return {}
         with open(self.path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f) or {}

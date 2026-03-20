@@ -16,6 +16,7 @@ from .platform import PlatformOps
 
 if TYPE_CHECKING:
     from ncatbot.utils.config.models import NapCatConfig
+    from .webui_client import WebUIClient
 
 LOG = get_log("NapCatConfigManager")
 
@@ -38,12 +39,14 @@ class NapCatConfigManager:
         platform_ops: Optional[PlatformOps] = None,
         napcat_config: Optional["NapCatConfig"] = None,
         bot_uin: str = "",
+        webui_client: Optional["WebUIClient"] = None,
     ):
         self._platform = platform_ops or PlatformOps.create()
         self._napcat_dir = self._platform.napcat_dir
         self._config_dir = self._platform.config_dir
         self._napcat_config = napcat_config
         self._bot_uin = bot_uin
+        self._webui_client = webui_client
 
     @property
     def uin(self) -> str:
@@ -104,6 +107,7 @@ class NapCatConfigManager:
         }
 
     def configure_onebot(self) -> None:
+        """通过文件写入配置 OneBot11（NapCat 启动前调用）。"""
         if self.onebot_config_path.exists():
             config = self._read_json(self.onebot_config_path)
         else:
@@ -134,6 +138,33 @@ class NapCatConfigManager:
         except Exception as e:
             LOG.error(f"配置 OneBot 失败: {e}")
             raise
+
+    def configure_onebot_http(self, webui_client: "WebUIClient") -> None:
+        """通过 WebUI HTTP API 配置 OneBot11（NapCat 运行中调用）。"""
+        resp = webui_client.api_call("/api/OB11Config/GetConfig")
+        config_str = resp.get("data", {}).get("config", "{}")
+        config = json.loads(config_str) if isinstance(config_str, str) else config_str
+
+        if "network" not in config:
+            config["network"] = {"websocketServers": []}
+        if "websocketServers" not in config["network"]:
+            config["network"]["websocketServers"] = []
+
+        expected_server = self._build_expected_ws_server()
+        servers = config["network"]["websocketServers"]
+
+        if expected_server not in servers:
+            target_port = expected_server["port"]
+            for server in servers[:]:
+                if server.get("port") == target_port:
+                    servers.remove(server)
+            servers.append(expected_server)
+
+        webui_client.api_call(
+            "/api/OB11Config/SetConfig",
+            payload={"config": json.dumps(config, ensure_ascii=False)},
+        )
+        LOG.info("通过 HTTP API 配置 OneBot11 成功")
 
     # ==================== WebUI 配置 ====================
 
