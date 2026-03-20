@@ -50,6 +50,8 @@ from .registry import (
     regex,
     # 命令 Hook
     CommandHook,
+    CommandGroup,
+    CommandGroupHook,
     # Dispatcher
     HandlerDispatcher,
     HandlerEntry,
@@ -109,6 +111,8 @@ __all__ = [
     "regex",
     # Registry — 命令 Hook
     "CommandHook",
+    "CommandGroup",
+    "CommandGroupHook",
     # Registry — Dispatcher
     "HandlerDispatcher",
     "HandlerEntry",

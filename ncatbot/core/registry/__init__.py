@@ -45,6 +45,9 @@ from .builtin_hooks import (
 # 命令 Hook
 from .command_hook import CommandHook
 
+# 命令组 Hook
+from .command_group_hook import CommandGroup, CommandGroupHook
+
 # Dispatcher
 from .dispatcher import HandlerDispatcher, HandlerEntry
 
@@ -84,6 +87,8 @@ __all__ = [
     "regex",
     # 命令 Hook (高级匹配 + 参数绑定)
     "CommandHook",
+    "CommandGroup",
+    "CommandGroupHook",
     # Dispatcher
     "HandlerDispatcher",
     "HandlerEntry",
