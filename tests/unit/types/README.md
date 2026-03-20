@@ -9,20 +9,15 @@
 | 规范 ID | 说明 | 验证点 |
 |---------|------|--------|
 | T-01 | BaseEventData ID 强转 | `int` 类型的 `self_id`、`user_id` 自动转为 `str` |
-| T-02 | GroupMessageEventData | 必须包含 `group_id` 字段 |
-| T-03 | PrivateMessageEventData | 不含 `group_id` 字段 |
-| T-04 | NoticeEventData 子类 | 各子类包含对应 `notice_type` |
-| T-05 | RequestEventData 子类 | 各子类包含 `flag` 字段 |
 
 ### 消息段体系 (`test_segments.py`)
 
 | 规范 ID | 说明 | 验证点 |
 |---------|------|--------|
-| T-10 | `to_dict()` 输出格式 | 输出符合 OB11 `{"type": ..., "data": {...}}` 格式 |
-| T-11 | `parse_segment()` 反序列化 | 从 dict 正确还原为 Segment 实例 |
-| T-12 | 类型注册机制 | `SEGMENT_MAP` 包含所有内置类型，自定义类型可注册 |
-| T-13 | MessageArray 链式构造 | `append()` 链式调用，`__len__`、`__iter__` 正确 |
-| T-14 | Segment 子类字段校验 | `At` 必须有 `qq` 字段，`Image` 必须有 `file` 等 |
+| T-02 | `to_dict()` 输出格式 | 输出符合 OB11 `{"type": ..., "data": {...}}` 格式 |
+| T-03 | `parse_segment()` 反序列化 | 从 dict 正确还原为 Segment 实例 |
+| T-04 | 类型注册机制 | `SEGMENT_MAP` 包含所有内置类型，自定义类型可注册 |
+| T-05 | MessageArray 链式构造 | `append()` 链式调用，`__len__`、`__iter__` 正确 |
 
 ### parse_segment 直接解析 (`test_segment_parsing.py`)
 
@@ -67,3 +62,26 @@
 | N-03 | 允许额外字段 | 未知字段不报错 |
 | N-04 | `SendMessageResult` | 正确解析 `message_id` |
 | N-05 | 各模型基本构造 | 20+ 种 NapCat 模型均可正常实例化 |
+
+### MessageArray 容器 (`test_message_array.py`)
+
+| 规范 ID | 说明 | 验证点 |
+|---------|------|--------|
+| MA-01 | filter 按类型过滤 | `filter(PlainText)` 只返回对应类型段 |
+| MA-02 | is_at 判断 @ | 精确匹配 / @all 检测 |
+| MA-03 | text 属性拼接 | `.text` 拼接所有 PlainText 段 |
+| MA-04 | 链式构造 | `add_text().add_image().add_at()` 链式调用 |
+
+### Forward 转发消息 (`test_forward.py`)
+
+| 规范 ID | 说明 | 验证点 |
+|---------|------|--------|
+| FW-01 | `Forward.from_dict` 反序列化 | legacy API 格式 / id-only 格式 |
+| FW-02 | `Forward.to_dict` 序列化 | content 模式 / id 模式 |
+| FW-03 | ForwardNode 内容解析 | 消息段正确解析为 Segment 列表 |
+
+### 消息段附件桥接 (`test_segment_attachments.py`)
+
+| 规范 ID | 说明 | 验证点 |
+|---------|------|--------|
+| SEG-01 | 纯文本消息返回空 | `get_attachments()` 返回空 `AttachmentList` |

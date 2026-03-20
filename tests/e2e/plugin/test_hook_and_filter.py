@@ -21,7 +21,7 @@ PLUGIN_NAME = "hook_and_filter"
 def examples_dir():
     from pathlib import Path
 
-    return Path(__file__).resolve().parents[3] / "examples" / "common"
+    return Path(__file__).resolve().parents[3] / "docs" / "docs" / "examples" / "common"
 
 
 # ---- PL-20: 关键词过滤 ----

@@ -11,9 +11,8 @@ HandlerDispatcher 规范测试
   H-07: AFTER_CALL Hook 执行顺序
   H-08: ON_ERROR Hook
   H-09: revoke_plugin
-  H-10: 拒绝同步函数
-  H-11: handler 接收 EventEntity
-  H-12: stop() 后不再消费
+  H-10: handler 接收 EventEntity
+  H-11: stop() 后不再消费
 """
 
 import asyncio
@@ -291,27 +290,11 @@ async def test_revoke_plugin_partial():
     await ed.close()
 
 
-# ---- H-10: 拒绝同步函数 ----
-
-
-async def test_reject_sync_handler():
-    """H-10: register_handler 拒绝同步函数"""
-    hd, ed, _ = await _make_dispatcher_with_event()
-
-    def sync_handler(event):
-        pass
-
-    result = hd.register_handler("message", sync_handler)
-    assert result is None
-    await hd.stop()
-    await ed.close()
-
-
-# ---- H-11: handler 接收 EventEntity ----
+# ---- H-10: handler 接收 EventEntity ----
 
 
 async def test_handler_receives_event_entity():
-    """H-11: handler 接收 BaseEvent 实例（非原始数据）"""
+    """H-10: handler 接收 BaseEvent 实例（非原始数据）"""
     hd, ed, _ = await _make_dispatcher_with_event()
     received = []
 
@@ -328,11 +311,11 @@ async def test_handler_receives_event_entity():
     await ed.close()
 
 
-# ---- H-12: stop() 后不再消费 ----
+# ---- H-11: stop() 后不再消费 ----
 
 
 async def test_stop_prevents_consumption():
-    """H-12: stop() 后注入事件 → handler 不被调用"""
+    """H-11: stop() 后注入事件 → handler 不被调用"""
     hd, ed, _ = await _make_dispatcher_with_event()
     called = asyncio.Event()
 

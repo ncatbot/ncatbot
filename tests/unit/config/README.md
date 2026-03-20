@@ -14,5 +14,4 @@
 | CF-02 | 新格式不迁移 | 已有 `adapters` → 不触发迁移、`_migrated=False` |
 | CF-03 | 两者都无 | 无 `napcat` 也无 `adapters` → 默认 napcat adapter |
 | CF-04 | AdapterEntry 字段验证 | 字段类型、必填项校验 |
-| CF-05 | `to_dict()` 不含内部标记 | 序列化输出不含 `_migrated` 等内部字段 |
-| CF-06 | 字段 coerce / clamp | `bot_uin`/`root` 整数强转、`websocket_timeout` 范围限制 |
+| CF-05 | 字段 coerce / clamp | `bot_uin`/`root` 整数强转、`websocket_timeout` 范围限制 |

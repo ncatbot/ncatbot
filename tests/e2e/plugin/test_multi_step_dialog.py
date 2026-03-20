@@ -23,7 +23,7 @@ USER_ID = "67890"
 def examples_dir():
     from pathlib import Path
 
-    return Path(__file__).resolve().parents[3] / "examples" / "common"
+    return Path(__file__).resolve().parents[3] / "docs" / "docs" / "examples" / "common"
 
 
 # ---- PL-40: 完整注册流程 ----

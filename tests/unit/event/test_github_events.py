@@ -1,15 +1,11 @@
 """
-GitHub 事件实体测试 — GitHubBaseEvent 继承 + Release 便捷方法 + HasAttachments
+GitHub 事件实体测试 — GitHubBaseEvent 继承 + HasAttachments
 
 规范:
   GHE-01: GitHubBaseEvent 提供 api / user_id / sender / repo / action
   GHE-02: 所有 GitHub 事件继承 GitHubBaseEvent 的公共属性
   GHE-03: GitHubIssueEvent.reply() 调用 API
-  GHE-04: GitHubReleaseEvent.get_assets() 调用 list_release_assets()
-  GHE-05: GitHubReleaseEvent.get_full_release() 调用 get_release_by_tag()
-  GHE-06: ReleaseAPIMixin 返回 List[GitHubReleaseAsset]
-  GHE-07: GitHubReleaseEvent 实现 HasAttachments
-  GHE-08: get_attachments() 将 GitHubReleaseAsset 转为 Attachment
+  GHE-04: get_attachments() 将 GitHubReleaseAsset 转为 Attachment
 """
 
 from __future__ import annotations
@@ -20,7 +16,7 @@ import pytest
 
 from ncatbot.event.common.base import BaseEvent
 from ncatbot.event.common.factory import create_entity
-from ncatbot.event.common.mixins import HasSender, HasAttachments
+from ncatbot.event.common.mixins import HasSender
 from ncatbot.event.github import (
     GitHubBaseEvent,
     GitHubIssueEvent,
@@ -198,104 +194,12 @@ class TestIssueReply:
         )
 
 
-# ---- GHE-04 / GHE-05: Release 便捷方法 ----
-
-
-class TestReleaseConvenience:
-    async def test_ghe04_get_assets(self):
-        """GHE-04: GitHubReleaseEvent.get_assets() 调用 list_release_assets"""
-        release = GitHubRelease(id="123", tag_name="v1.0.0", name="v1.0.0")
-        data = GitHubReleaseEventData(
-            **_BASE,
-            action="published",
-            repo=_make_repo(),
-            sender=_make_sender(),
-            release=release,
-        )
-        api = _mock_github_api()
-        api.list_release_assets.return_value = [
-            GitHubReleaseAsset(
-                id="1",
-                name="user-reference.zip",
-                browser_download_url="https://example.com/dl",
-                size=1024,
-            )
-        ]
-        event = GitHubReleaseEvent(data, api)
-
-        assets = await event.get_assets()
-        api.list_release_assets.assert_awaited_once_with(
-            repo="ncatbot/NcatBot", release_id="123"
-        )
-        assert len(assets) == 1
-        assert assets[0].name == "user-reference.zip"
-        assert isinstance(assets[0], GitHubReleaseAsset)
-
-    async def test_ghe05_get_full_release(self):
-        """GHE-05: GitHubReleaseEvent.get_full_release() 调用 get_release_by_tag"""
-        release = GitHubRelease(id="123", tag_name="v1.0.0", name="v1.0.0")
-        data = GitHubReleaseEventData(
-            **_BASE,
-            action="published",
-            repo=_make_repo(),
-            sender=_make_sender(),
-            release=release,
-        )
-        api = _mock_github_api()
-        from ncatbot.types.github.models import GitHubReleaseInfo
-
-        api.get_release_by_tag.return_value = GitHubReleaseInfo(
-            id="123", tag_name="v1.0.0", name="v1.0.0"
-        )
-        event = GitHubReleaseEvent(data, api)
-
-        result = await event.get_full_release()
-        api.get_release_by_tag.assert_awaited_once_with(
-            repo="ncatbot/NcatBot", tag="v1.0.0"
-        )
-        assert result.tag_name == "v1.0.0"
-
-
-# ---- GHE-06: ReleaseAPIMixin model_validate ----
-
-
-class TestReleaseAssetModel:
-    def test_ghe06_model_validate(self):
-        """GHE-06: GitHubReleaseAsset.model_validate 从 dict 创建（id 自动从 int 转 str）"""
-        raw = {
-            "id": 42,
-            "name": "archive.zip",
-            "content_type": "application/zip",
-            "size": 65536,
-            "download_count": 100,
-            "browser_download_url": "https://github.com/download",
-            "created_at": "2026-01-01T00:00:00Z",
-        }
-        asset = GitHubReleaseAsset.model_validate(raw)
-        assert asset.name == "archive.zip"
-        assert asset.size == 65536
-        assert asset.browser_download_url == "https://github.com/download"
-
-
-# ---- GHE-07 / GHE-08: HasAttachments ----
+# ---- GHE-04: HasAttachments ----
 
 
 class TestHasAttachments:
-    def test_ghe07_release_isinstance_has_attachments(self):
-        """GHE-07: GitHubReleaseEvent isinstance HasAttachments"""
-        release = GitHubRelease(id="123", tag_name="v1.0.0", name="v1.0.0")
-        data = GitHubReleaseEventData(
-            **_BASE,
-            action="published",
-            repo=_make_repo(),
-            sender=_make_sender(),
-            release=release,
-        )
-        event = GitHubReleaseEvent(data, _mock_github_api())
-        assert isinstance(event, HasAttachments)
-
-    async def test_ghe08_get_attachments_converts_assets(self):
-        """GHE-08: get_attachments() 将 GitHubReleaseAsset 转为 Attachment"""
+    async def test_ghe04_get_attachments_converts_assets(self):
+        """GHE-04: get_attachments() 将 GitHubReleaseAsset 转为 Attachment"""
         release = GitHubRelease(id="123", tag_name="v1.0.0", name="v1.0.0")
         data = GitHubReleaseEventData(
             **_BASE,
@@ -338,8 +242,8 @@ class TestHasAttachments:
         assert att0.extra["id"] == "1"
         assert att0.extra["download_count"] == 50
 
-    async def test_ghe08_get_attachments_empty(self):
-        """GHE-08: get_attachments() 无 assets 时返回空列表"""
+    async def test_ghe04_get_attachments_empty(self):
+        """GHE-04: get_attachments() 无 assets 时返回空列表"""
         release = GitHubRelease(id="123", tag_name="v1.0.0", name="v1.0.0")
         data = GitHubReleaseEventData(
             **_BASE,

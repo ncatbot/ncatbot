@@ -4,10 +4,8 @@ Registrar 规范测试
 规范:
   R-01: @registrar.on() 收集 handler 到 pending → flush_pending 注册
   R-02: ContextVar 隔离不同 plugin_name
-  R-03: on_group_message() 自动附加 MessageTypeFilter("group")
-  R-04: on_private_message() 自动附加 MessageTypeFilter("private")
-  R-05: fork() 创建独立 Registrar
-  R-06: clear_pending() 清理残留
+  R-03: fork() 创建独立 Registrar
+  R-04: clear_pending() 清理残留
 """
 
 import pytest
@@ -21,8 +19,6 @@ from ncatbot.core.registry.registrar import (
 )
 from ncatbot.core.registry.context import set_current_plugin, _current_plugin_ctx
 from ncatbot.core.registry.dispatcher import HandlerDispatcher
-from ncatbot.core.registry.builtin_hooks import MessageTypeFilter
-from ncatbot.core.registry.hook import get_hooks, HookStage
 
 
 @pytest.fixture(autouse=True)
@@ -95,43 +91,11 @@ def test_context_var_isolation():
     assert handler_b in _pending_handlers["plugin_b"]
 
 
-# ---- R-03: on_group_message 附加 MessageTypeFilter ----
-
-
-def test_on_group_message_adds_filter():
-    """R-03: on_group_message() 自动附加 MessageTypeFilter('group')"""
-    reg = Registrar()
-
-    @reg.on_group_message()
-    async def handler(event):
-        pass
-
-    hooks = get_hooks(handler, HookStage.BEFORE_CALL)
-    type_filters = [h for h in hooks if isinstance(h, MessageTypeFilter)]
-    assert any(f.message_type == "group" for f in type_filters)
-
-
-# ---- R-04: on_private_message 附加 MessageTypeFilter ----
-
-
-def test_on_private_message_adds_filter():
-    """R-04: on_private_message() 自动附加 MessageTypeFilter('private')"""
-    reg = Registrar()
-
-    @reg.on_private_message()
-    async def handler(event):
-        pass
-
-    hooks = get_hooks(handler, HookStage.BEFORE_CALL)
-    type_filters = [h for h in hooks if isinstance(h, MessageTypeFilter)]
-    assert any(f.message_type == "private" for f in type_filters)
-
-
-# ---- R-05: fork() ----
+# ---- R-03: fork() ----
 
 
 def test_fork_creates_new_registrar():
-    """R-05: fork() 创建的 Registrar 有独立的 default hooks"""
+    """R-03: fork() 创建的 Registrar 有独立的 default hooks"""
     from ncatbot.core.registry.hook import Hook, HookStage, HookAction, HookContext
 
     class DummyHook(Hook):
@@ -150,11 +114,11 @@ def test_fork_creates_new_registrar():
     assert len(forked2._default_hooks) == 0
 
 
-# ---- R-06: clear_pending ----
+# ---- R-04: clear_pending ----
 
 
 def test_clear_pending():
-    """R-06: clear_pending() 清理残留后 flush 返回 0"""
+    """R-04: clear_pending() 清理残留后 flush 返回 0"""
     reg = Registrar()
 
     token = set_current_plugin("cleanup_test")

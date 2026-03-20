@@ -6,14 +6,14 @@
 
 | 目录 | 源码模块 | 规范范围 |
 |------|----------|----------|
-| [types/](types/) | `ncatbot.types` | T-01 ~ T-14, S-01 ~ S-10, CQ-01 ~ CQ-08, N-01 ~ N-05 |
-| [event/](event/) | `ncatbot.event` | E-01 ~ E-07 |
-| [api/](api/) | `ncatbot.api` | A-01 ~ A-04, AE-01 ~ AE-07 |
-| [core/](core/) | `ncatbot.core` | D-01 ~ D-09, K-01 ~ K-22, H-01 ~ H-12, R-01 ~ R-09 |
-| [service/](service/) | `ncatbot.service` | SM-01 ~ SM-08 |
-| [plugin/](plugin/) | `ncatbot.plugin.mixin` | M-01 ~ M-41, ID-01 ~ ID-02 |
+| [types/](types/) | `ncatbot.types` | T-01 ~ T-05, S-01 ~ S-10, CQ-01 ~ CQ-08, N-01 ~ N-05, MA-01 ~ MA-04, FW-01 ~ FW-03, SEG-01 |
+| [event/](event/) | `ncatbot.event` | E-01 ~ E-04, GHE-01 ~ GHE-04, QMA-01 ~ QMA-03 |
+| [api/](api/) | `ncatbot.api` | A-01 ~ A-02, AE-01 ~ AE-07, SG-01 ~ SG-06, FL-01 ~ FL-06 |
+| [core/](core/) | `ncatbot.core` | D-01 ~ D-09, K-01 ~ K-21, H-01 ~ H-11, R-01 ~ R-07, PR-01 ~ PR-06 |
+| [service/](service/) | `ncatbot.service` | SM-01 ~ SM-08, SC-01 ~ SC-12, TS-01 ~ TS-06 |
+| [plugin/](plugin/) | `ncatbot.plugin.mixin` | M-01 ~ M-41, ID-01 ~ ID-02, LD-01 ~ LD-05 |
 | [adapter/](adapter/) | `ncatbot.adapter.napcat` | P-01 ~ P-07, RF-01 ~ RF-08, AR-01 ~ AR-05, GM-01 ~ GM-05, BL-01 ~ BL-14, GH-01 ~ GH-11 |
-| [config/](config/) | `ncatbot.utils.config` | CF-01 ~ CF-06 |
+| [config/](config/) | `ncatbot.utils.config` | CF-01 ~ CF-05, CS-01 ~ CS-05 |
 
 ## 公共 Fixtures (`conftest.py`)
 
