@@ -28,7 +28,7 @@ license: MIT
 
 **流程：**
 
-1. **同步远端** — `git pull --rebase origin main`
+1. **同步远端（不可跳过）** — `git pull --rebase origin main`。即使刚做完 commit 编排，也必须在生成 release notes 前拉取远端，否则 `git log` 看不到其他人合入的 PR/commit，release notes 会缺失内容。
 2. **Commit 编排** — 处理未提交变更（含 docs submodule）→ 参见 [commit-workflow.md](references/commit-workflow.md)
 3. **审查历史 commits + 生成 Release Notes** — 确认哪些进 release notes，确定版本号 → 参见 [versioning.md](references/versioning.md)
 4. **本地预检 + 分步推送 tag** — ruff + pytest → 确保 pyproject.toml 的版本号正确 → push branch + push tag → 参见 [ci-publish.md](references/ci-publish.md)

@@ -2,6 +2,21 @@
 
 ## 1. 获取候选 Commits
 
+### 前置校验：远端同步
+
+```powershell
+git fetch origin main
+$behind = git rev-list --count HEAD..origin/main
+if ($behind -gt 0) {
+    Write-Host "⚠️ 本地落后远端 $behind 个 commit，必须先 pull！"
+    git pull --rebase origin main
+}
+```
+
+> **不可跳过**：若不拉取远端，下面的 `git log` 只包含本地 commits，release notes 会缺失其他人合入的 PR。这是静默错误，push 时才会暴露。
+
+### 列出候选
+
 ```powershell
 $lastTag = git describe --tags --abbrev=0 2>$null
 if (!$lastTag) { $lastTag = (git rev-list --max-parents=0 HEAD) }

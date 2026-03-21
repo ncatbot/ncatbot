@@ -20,6 +20,19 @@ uv run python .agents/skills/release/scripts/precheck.py
 
 如果不一致，新开一个 commit 修改 pyproject.toml 中的版本号，提交后再继续后续步骤。
 
+## 推送前远端检查
+
+```powershell
+git fetch origin main
+$behind = git rev-list --count HEAD..origin/main
+if ($behind -gt 0) {
+    Write-Host "⚠️ 本地落后远端 $behind 个 commit — 必须 rebase 后重新审查 release notes"
+    # 回到 versioning.md 步骤 1 重新执行
+}
+```
+
+> 若此处发现远端有新 commit，说明之前的 release notes 不完整，必须 rebase 后回到 versioning.md 重新生成。
+
 ## 分步推送
 
 **必须分步**，避免 branch push 和 tag push 同时触发重复 CI 运行：
