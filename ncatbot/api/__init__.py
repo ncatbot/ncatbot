@@ -10,6 +10,7 @@ from .traits import IMessaging, IGroupManage, IQuery, IFileTransfer
 from .qq import IQQAPIClient, QQAPIClient
 from .bilibili import IBiliAPIClient
 from .github import IGitHubAPIClient
+from .misc import MiscAPI
 
 __all__ = [
     "IAPIClient",
@@ -30,4 +31,6 @@ __all__ = [
     "IBiliAPIClient",
     # github
     "IGitHubAPIClient",
+    # misc
+    "MiscAPI",
 ]

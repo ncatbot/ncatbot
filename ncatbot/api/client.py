@@ -19,6 +19,7 @@ from .qq import QQAPIClient
 from .bilibili import IBiliAPIClient
 from .github import IGitHubAPIClient
 from .ai import IAIAPIClient
+from .misc import MiscAPI
 
 
 LOG = get_log("BotAPIClient")
@@ -68,6 +69,11 @@ class BotAPIClient:
     def ai(self) -> IAIAPIClient:
         """AI 平台 API 快捷访问"""
         return self.platform("ai")
+
+    @property
+    def misc(self) -> MiscAPI:
+        """杂项工具 API（下载、HTTP 请求、代理检查）"""
+        return self.platform("misc")
 
     @property
     def platforms(self) -> Dict[str, Any]:
