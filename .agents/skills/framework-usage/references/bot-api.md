@@ -439,3 +439,33 @@ resp = await self.api.ai.image_generation("一只猫", size="1024x1024")
 image = await self.api.ai.generate_image("一只猫")  # → Image 消息段
 await event.reply(image)
 ```
+
+## MiscAPI（杂项工具）
+
+> 参考文档：`reference/1. Bot API/6. Misc/1. API.md`
+
+通过 `self.api.misc.*` 访问，提供与平台无关的 HTTP/下载/代理工具。
+所有带 `proxy` 参数的方法：显式传值时使用传入值；省略时自动使用主配置 `http_proxy`；配置也为空则直连。
+
+```python
+# 下载文件
+path = await self.api.misc.download_to_file(url, "./downloads")
+path = await self.api.misc.download_to_file(url, "./downloads", filename="data.zip")
+path = await self.api.misc.download_to_file(url, "./downloads", proxy="http://127.0.0.1:7890")
+
+# 下载到内存
+data = await self.api.misc.download_to_bytes(url)
+
+# GET 请求
+body = await self.api.misc.http_get("https://api.example.com/data")
+body = await self.api.misc.http_get(url, headers={"Authorization": "Bearer ..."}, timeout=30)
+
+# 代理检查
+ok = await self.api.misc.is_proxy_valid()                            # 检查配置的 http_proxy
+ok = await self.api.misc.is_proxy_valid("socks5://127.0.0.1:1080")   # 检查指定代理
+
+# 获取当前配置代理
+proxy = self.api.misc.get_proxy()  # str | None
+```
+
+> ⚠️ **网络提醒**：从 GitHub 获取资源时（包括使用 `Attachment.download()` / `as_bytes()` 隐式下载），国内网络可能无法直连。建议在 `config.yaml` 中配置 `http_proxy`，或自行对 GitHub URL 添加镜像前缀（如 `ghfast.top`）以避免网络阻塞。

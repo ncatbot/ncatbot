@@ -34,7 +34,7 @@ description: '定位 NcatBot 代码实现：锁定模块目录、找到关键类
 | Handler 注册 | `ncatbot/core/registry/` | `HandlerDispatcher`, `Registrar` |
 | 插件基类 | `ncatbot/plugin/` | `NcatBotPlugin`, `BasePlugin` |
 | 插件加载 | `ncatbot/plugin/loader/` | `PluginLoader`, `PluginIndexer` |
-| Bot API | `ncatbot/api/` | `BotAPIClient`, `IAPIClient` |
+| Bot API | `ncatbot/api/` | `BotAPIClient`, `IAPIClient`, `MiscAPI` |
 | 事件模型 | `ncatbot/event/` | `MessageEvent`, `NoticeEvent`, `RequestEvent` |
 | 类型定义 | `ncatbot/types/` | Pydantic 数据模型 |
 | 服务管理 | `ncatbot/service/` | `ServiceManager` |

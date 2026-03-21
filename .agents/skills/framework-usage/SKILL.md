@@ -114,6 +114,7 @@ Bot:  <输出>
 | 过滤/拦截/中间件 | Hook 系统 | [hooks.md](./references/hooks.md) |
 | 发送文字/图片/视频/转发 | 消息构造与发送 | [messaging.md](./references/messaging.md) |
 | 群管理/查询信息/文件/平台 API | Bot API | [bot-api.md](./references/bot-api.md) |
+| HTTP 下载/请求/代理检查 | MiscAPI (`api.misc`) | [bot-api.md](./references/bot-api.md) |
 | 持久化配置/数据 | ConfigMixin / DataMixin | [mixins.md](./references/mixins.md) |
 | 定时任务/权限控制/事件流 | TimeTaskMixin / RBACMixin / EventMixin | [mixins.md](./references/mixins.md) |
 | 多步对话/等待回复 | wait_event / EventStream | [events.md](./references/events.md) |
