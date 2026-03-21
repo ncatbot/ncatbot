@@ -10,7 +10,7 @@ import asyncio
 import json
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
 
-import aiohttp
+import httpx
 from aiohttp import web
 
 from ncatbot.utils import get_log
@@ -51,7 +51,7 @@ class SourceManager:
         self._seen_ids: Set[str] = set()
         # runtime
         self._runner: Optional[web.AppRunner] = None
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._client: Optional[httpx.AsyncClient] = None
         self._stop_event = asyncio.Event()
 
     async def run_forever(self) -> None:
@@ -67,9 +67,9 @@ class SourceManager:
         if self._runner is not None:
             await self._runner.cleanup()
             self._runner = None
-        if self._session is not None:
-            await self._session.close()
-            self._session = None
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     # ==================== Webhook 模式 ====================
 
@@ -149,7 +149,9 @@ class SourceManager:
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
 
-        self._session = aiohttp.ClientSession(headers=headers)
+        self._client = httpx.AsyncClient(
+            headers=headers, follow_redirects=True, timeout=30
+        )
 
         LOG.info(
             "GitHub Polling 已启动 (repos: %s, interval: %.0fs)",
@@ -171,13 +173,13 @@ class SourceManager:
                 except asyncio.TimeoutError:
                     pass  # 超时 → 继续下一轮
         finally:
-            if self._session is not None:
-                await self._session.close()
-                self._session = None
+            if self._client is not None:
+                await self._client.aclose()
+                self._client = None
 
     async def _poll_repo(self, repo: str) -> None:
         """轮询单个仓库的事件"""
-        if self._session is None:
+        if self._client is None:
             return
 
         url = f"https://api.github.com/repos/{repo}/events"
@@ -189,60 +191,61 @@ class SourceManager:
             req_headers["If-None-Match"] = etag
 
         try:
-            async with self._session.get(url, headers=req_headers) as resp:
-                # 检查速率限制
-                remaining = resp.headers.get("X-RateLimit-Remaining")
-                if remaining is not None and int(remaining) < 100:
-                    LOG.warning(
-                        "GitHub API 速率限制接近: remaining=%s, repo=%s",
-                        remaining,
-                        repo,
-                    )
+            resp = await self._client.get(url, headers=req_headers)
 
-                if resp.status == 304:
-                    return  # 无新事件
+            # 检查速率限制
+            remaining = resp.headers.get("X-RateLimit-Remaining")
+            if remaining is not None and int(remaining) < 100:
+                LOG.warning(
+                    "GitHub API 速率限制接近: remaining=%s, repo=%s",
+                    remaining,
+                    repo,
+                )
 
-                if resp.status != 200:
-                    LOG.debug("轮询 %s 失败: HTTP %d", repo, resp.status)
-                    return
+            if resp.status_code == 304:
+                return  # 无新事件
 
-                # 保存 ETag
-                new_etag = resp.headers.get("ETag")
-                if new_etag:
-                    self._etags[repo] = new_etag
+            if resp.status_code != 200:
+                LOG.debug("轮询 %s 失败: HTTP %d", repo, resp.status_code)
+                return
 
-                events: Any = await resp.json()
-                if not isinstance(events, list):
-                    return
+            # 保存 ETag
+            new_etag = resp.headers.get("ETag")
+            if new_etag:
+                self._etags[repo] = new_etag
 
-                # 反向遍历（最旧的先处理）
-                for event in reversed(events):
-                    event_id = str(event.get("id", ""))
-                    if event_id in self._seen_ids:
-                        continue
-                    self._seen_ids.add(event_id)
+            events: Any = resp.json()
+            if not isinstance(events, list):
+                return
 
-                    event_type = event.get("type", "")
-                    payload = event.get("payload", {})
+            # 反向遍历（最旧的先处理）
+            for event in reversed(events):
+                event_id = str(event.get("id", ""))
+                if event_id in self._seen_ids:
+                    continue
+                self._seen_ids.add(event_id)
 
-                    # GitHub Events API 的 type 与 webhook event 类型映射
-                    webhook_type = _POLL_TYPE_MAP.get(event_type)
-                    if webhook_type is None:
-                        continue
+                event_type = event.get("type", "")
+                payload = event.get("payload", {})
 
-                    # 注入 repository 和 sender (polling payload 结构不同)
-                    if "repository" not in payload:
-                        payload["repository"] = event.get("repo", {})
-                        # Events API 的 repo 只有 id/name，补充 full_name
-                        repo_obj = payload["repository"]
-                        if "full_name" not in repo_obj and "name" in repo_obj:
-                            repo_obj["full_name"] = repo_obj["name"]
-                    if "sender" not in payload:
-                        payload["sender"] = event.get("actor", {})
+                # GitHub Events API 的 type 与 webhook event 类型映射
+                webhook_type = _POLL_TYPE_MAP.get(event_type)
+                if webhook_type is None:
+                    continue
 
-                    await self._callback(webhook_type, payload)
+                # 注入 repository 和 sender (polling payload 结构不同)
+                if "repository" not in payload:
+                    payload["repository"] = event.get("repo", {})
+                    # Events API 的 repo 只有 id/name，补充 full_name
+                    repo_obj = payload["repository"]
+                    if "full_name" not in repo_obj and "name" in repo_obj:
+                        repo_obj["full_name"] = repo_obj["name"]
+                if "sender" not in payload:
+                    payload["sender"] = event.get("actor", {})
 
-        except aiohttp.ClientError as e:
+                await self._callback(webhook_type, payload)
+
+        except httpx.HTTPError as e:
             LOG.debug("轮询 %s 网络错误: %s", repo, e)
 
         # 清理过多的已见 ID（保留最近 5000 条）
