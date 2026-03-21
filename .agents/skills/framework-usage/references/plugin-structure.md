@@ -14,7 +14,7 @@ plugins/my_plugin/
 
 ## manifest.toml 完整格式
 
-> 参考文档：`guide/3. 插件开发/2. 插件结构.md`、`reference/5. 插件系统/1. 基类.md` § 3-pluginmanifest
+> 参考文档：`docs/docs/notes/guide/3. 插件开发/2. 插件结构.md`、`docs/docs/notes/reference/5. 插件系统/1. 基类.md` § 3-pluginmanifest
 
 ```toml
 # ⚠️ 必填字段必须放在 TOML 顶层，不能放在任何 [section] 下
@@ -41,7 +41,7 @@ description = "插件说明"
 
 ## 基类选择
 
-> 参考文档：`reference/5. 插件系统/1. 基类.md`
+> 参考文档：`docs/docs/notes/reference/5. 插件系统/1. 基类.md`
 
 | 基类 | 适用场景 | 继承链 |
 |------|---------|--------|
@@ -50,7 +50,7 @@ description = "插件说明"
 
 ## 生命周期
 
-> 参考文档：`guide/3. 插件开发/3. 生命周期.md`
+> 参考文档：`docs/docs/notes/guide/3. 插件开发/3. 生命周期.md`
 
 ```python
 async def on_load(self):

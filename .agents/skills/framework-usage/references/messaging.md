@@ -73,7 +73,7 @@ await self.api.qq.messaging.send_group_msg(group_id, msg.to_list())
 
 ## 消息段类型速查
 
-> 参考文档：`reference/3. 数据类型/1. 通用消息段.md`
+> 参考文档：`docs/docs/notes/reference/3. 数据类型/1. 通用消息段.md`
 >
 > 5.2 起消息段分为 **通用**（`types.common.segment`）和 **QQ 平台**（`types.qq.segment`）两层，
 > 但 `from ncatbot.types import ...` 的导入方式保持不变。
@@ -115,7 +115,7 @@ await self.api.qq.messaging.send_group_msg(group_id, msg.to_list())
 
 ## MessageArray 方法速查
 
-> 参考文档：`reference/3. 数据类型/2. 消息数组.md`
+> 参考文档：`docs/docs/notes/reference/3. 数据类型/2. 消息数组.md`
 
 ### 链式添加
 

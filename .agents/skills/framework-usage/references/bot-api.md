@@ -106,7 +106,7 @@ await self.api.qq.send_private_forward_msg_by_id(user_id, [msg_id1, msg_id2])
 
 ## 群管理 API
 
-> 参考文档：`reference/1. Bot API/2. QQ/2. 管理 API.md`
+> 参考文档：`docs/docs/notes/reference/1. Bot API/2. QQ/2. 管理 API.md`
 
 通过 `self.api.qq.manage.*` 访问：
 
@@ -147,7 +147,7 @@ await self.api.qq.manage.set_online_status(status, ext_status=0, custom_status="
 
 ## 信息查询 API
 
-> 参考文档：`reference/1. Bot API/2. QQ/3. 信息支持 API.md`
+> 参考文档：`docs/docs/notes/reference/1. Bot API/2. QQ/3. 信息支持 API.md`
 
 通过 `self.api.qq.query.*` 访问：
 
@@ -216,7 +216,7 @@ result = await self.api.qq.file.download_file(url="", file="", headers="")
 
 ## GitHub 平台 API
 
-> 参考文档：`guide/5. API 使用/4. GitHub/`、`reference/1. Bot API/4. GitHub/1. API.md`
+> 参考文档：`docs/docs/notes/guide/5. API 使用/4. GitHub/`、`docs/docs/notes/reference/1. Bot API/4. GitHub/1. API.md`
 
 通过 `self.api.github.*` 访问：
 
@@ -416,7 +416,7 @@ await event.reject(reason="理由")
 
 ## AI 平台 API
 
-> 参考文档：`reference/1. Bot API/5. AI/1. API.md`
+> 参考文档：`docs/docs/notes/reference/1. Bot API/5. AI/1. API.md`
 
 通过 `self.api.ai.*` 访问（需配置 AI 适配器）：
 
@@ -442,7 +442,7 @@ await event.reply(image)
 
 ## MiscAPI（杂项工具）
 
-> 参考文档：`reference/1. Bot API/6. Misc/1. API.md`
+> 参考文档：`docs/docs/notes/reference/1. Bot API/6. Misc/1. API.md`
 
 通过 `self.api.misc.*` 访问，提供与平台无关的 HTTP/下载/代理工具。
 所有带 `proxy` 参数的方法：显式传值时使用传入值；省略时自动使用主配置 `http_proxy`；配置也为空则直连。
