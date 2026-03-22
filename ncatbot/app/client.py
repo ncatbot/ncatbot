@@ -51,8 +51,6 @@ class BotClient:
         adapter: Optional[BaseAdapter] = None,
         *,
         adapters: Optional[Sequence[BaseAdapter]] = None,
-        plugin_dir: str = "plugins",
-        debug: bool = False,
     ) -> None:
         setup_logging(debug=ncatbot_config.debug)
 
@@ -80,9 +78,7 @@ class BotClient:
         self._dispatcher: Optional[AsyncEventDispatcher] = None
         self._handler_dispatcher: Optional[HandlerDispatcher] = None
         self._service_manager = ServiceManager()
-        self._plugin_loader = PluginLoader(debug=debug)
-        self._plugin_dir = Path(plugin_dir)
-        self._debug = debug
+        self._plugin_loader = PluginLoader(debug=ncatbot_config.debug)
         self._running = False
         self._listen_task: Optional[asyncio.Task] = None
         self._listen_tasks: List[asyncio.Task] = []
@@ -348,7 +344,7 @@ class BotClient:
     async def _setup_services(self) -> None:
         """注册并加载所有内置服务。"""
         self._service_manager.set_event_callback(self.dispatcher.callback)
-        self._service_manager.register_builtin(debug=self._debug)
+        self._service_manager.register_builtin(debug=ncatbot_config.debug)
         await self._service_manager.load_all()
 
     async def _setup_plugins(self) -> None:
@@ -367,9 +363,9 @@ class BotClient:
 
         self._plugin_loader._on_plugin_init = _inject_plugin_deps
         await self._plugin_loader.load_builtin_plugins()
-        await self._plugin_loader.load_all(self._plugin_dir)
+        await self._plugin_loader.load_all(ncatbot_config.plugin.plugins_dir)
 
-        if self._debug and self._service_manager.has("file_watcher"):
+        if ncatbot_config.debug and self._service_manager.has("file_watcher"):
             fw = self._service_manager.file_watcher
-            fw.add_watch_dir(str(self._plugin_dir.resolve()))
+            fw.add_watch_dir(ncatbot_config.plugin.plugins_dir)
             self._plugin_loader.setup_hot_reload(fw)
