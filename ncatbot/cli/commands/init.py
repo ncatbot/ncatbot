@@ -3,6 +3,7 @@
 import getpass
 import re
 from pathlib import Path
+from typing import Optional
 
 import click
 import yaml
@@ -10,21 +11,22 @@ import yaml
 from ..utils.colors import success, warning, info
 
 
-@click.command()
-@click.option("--dir", "target_dir", default=".", help="目标目录")
-def init(target_dir: str):
-    """初始化 NcatBot 项目（创建 config.yaml + plugins/ + 模板插件）"""
+def ensure_project_initialized(target_dir: str = ".") -> Optional[Path]:
+    """确保项目基础结构存在，必要时执行交互式初始化。
+
+    返回创建/确认后的 config.yaml 路径；若用户取消初始化则返回 None。
+    """
     target = Path(target_dir).resolve()
     config_path = target / "config.yaml"
     plugins_path = target / "plugins"
 
     if config_path.exists():
-        click.echo(warning(f"config.yaml 已存在: {config_path}"))
-        if not click.confirm("是否覆盖?"):
-            click.echo(info("已跳过 config.yaml"))
-            _ensure_plugins_dir(plugins_path)
-            _generate_template_plugin(plugins_path)
-            return
+        _ensure_plugins_dir(plugins_path)
+        _generate_template_plugin(plugins_path)
+        return config_path
+
+    click.echo(warning(f"未检测到 config.yaml: {config_path}"))
+    click.echo(info("将执行初始化流程。"))
 
     bot_uin = click.prompt("请输入机器人 QQ 号", type=str)
     root = click.prompt("请输入管理员 QQ 号", type=str)
@@ -44,6 +46,40 @@ def init(target_dir: str):
     click.echo(success(f"config.yaml 已创建: {config_path}"))
     _ensure_plugins_dir(plugins_path)
     _generate_template_plugin(plugins_path)
+    return config_path
+
+
+@click.command()
+@click.option("--dir", "target_dir", default=".", help="目标目录")
+def init(target_dir: str):
+    """初始化 NcatBot 项目（创建 config.yaml + plugins/ + 模板插件）"""
+    target = Path(target_dir).resolve()
+    config_path = target / "config.yaml"
+
+    if config_path.exists():
+        click.echo(warning(f"config.yaml 已存在: {config_path}"))
+        if click.confirm("是否覆盖?"):
+            bot_uin = click.prompt("请输入机器人 QQ 号", type=str)
+            root = click.prompt("请输入管理员 QQ 号", type=str)
+            config_data = _build_default_config(bot_uin=bot_uin, root=root)
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.dump(
+                    config_data,
+                    f,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                    sort_keys=False,
+                )
+            click.echo(success(f"config.yaml 已覆盖: {config_path}"))
+            _ensure_plugins_dir(target / "plugins")
+            _generate_template_plugin(target / "plugins")
+            click.echo()
+            click.echo(info("下一步: 运行 'ncatbot run' 启动机器人"))
+            return
+
+        click.echo(info("已跳过 config.yaml"))
+
+    ensure_project_initialized(target_dir=target_dir)
     click.echo()
     click.echo(info("下一步: 运行 'ncatbot run' 启动机器人"))
 
