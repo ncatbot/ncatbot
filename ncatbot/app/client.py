@@ -9,21 +9,20 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, TYPE_CHECKING
+from typing import Any, List, Optional, Sequence
 
 from ncatbot.adapter import BaseAdapter, adapter_registry
-from ncatbot.api import BotAPIClient
-from ncatbot.api.qq import QQAPIClient
-from ncatbot.api.misc import MiscAPI
+from ncatbot.api import BotAPIClient, QQAPIClient, MiscAPI
 from ncatbot.core import AsyncEventDispatcher, HandlerDispatcher, flush_pending
 from ncatbot.plugin import PluginLoader
 from ncatbot.service import ServiceManager
-from ncatbot.utils import get_config_manager, get_log, setup_logging
-from ncatbot.utils.config.manager import MISSING
-from ncatbot.utils import ncatbot_config
-
-if TYPE_CHECKING:
-    pass
+from ncatbot.utils import (
+    get_config_manager,
+    get_log,
+    setup_logging,
+    ncatbot_config,
+    MISSING,
+)
 
 LOG = get_log("BotClient")
 
@@ -50,7 +49,6 @@ class BotClient:
 
     def __init__(
         self,
-        adapter: Optional[BaseAdapter] = None,
         *,
         adapters: Optional[Sequence[BaseAdapter]] = None,
         plugins_dir: Any = MISSING,
@@ -66,9 +64,7 @@ class BotClient:
         # 构建适配器列表
         if adapters is not None:
             self._adapters: List[BaseAdapter] = list(adapters)
-        elif adapter is not None:
-            self._adapters = [adapter]
-        else:
+        elif adapters is None:
             # 从配置文件加载
             self._adapters = self._create_adapters_from_config()
 
@@ -79,9 +75,6 @@ class BotClient:
             if p in seen:
                 raise ValueError(f"重复的平台 '{p}'：{a.name} 与 {seen[p]} 冲突")
             seen[p] = a.name
-
-        # 向后兼容：_adapter 指向第一个
-        self._adapter = self._adapters[0]
 
         self._api: Optional[BotAPIClient] = None
         self._dispatcher: Optional[AsyncEventDispatcher] = None
