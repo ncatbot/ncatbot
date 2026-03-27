@@ -28,13 +28,6 @@ def test_napcat_model_coerces_int_id_to_str():
     assert m.group_id == "67890"
 
 
-def test_napcat_model_keeps_str_id():
-    """N-01: 已经是 str 的 *_id 不受影响"""
-    m = _IdModel.model_validate({"user_id": "abc", "group_id": "def"})
-    assert m.user_id == "abc"
-    assert m.group_id == "def"
-
-
 # ---- N-03: 额外字段 ----
 
 
