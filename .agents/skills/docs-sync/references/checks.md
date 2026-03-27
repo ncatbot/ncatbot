@@ -1,6 +1,6 @@
 # 检查项规范
 
-> P0/P1/P2 严重程度定义及内容对齐标准以 [docs-maintenance/references/quality-spec.md](./../docs-maintenance/references/quality-spec.md) 为准；本文件定义各 Phase 的具体检查方法和报告格式。
+> P0/P1/P2 严重程度定义及内容对齐标准以 [docs-maintenance/references/quality-spec.md](../../docs-maintenance/references/quality-spec.md) 为准；本文件定义各 Phase 的具体检查方法和报告格式。
 
 ## Phase A：Docs 内部链接完整性
 
@@ -15,7 +15,7 @@
 **解析规则**：基于当前 `.md` 文件所在目录解析相对路径。
 
 **报告格式**：
-```
+```text
 P0 BROKEN_LINK | <chapter>/<file>.md:L<line> | link: <path> | target not found
 ```
 
@@ -29,7 +29,7 @@ P0 BROKEN_LINK | <chapter>/<file>.md:L<line> | link: <path> | target not found
    - README 引用但文件/目录不存在 → P0 INDEX_DANGLING
 
 **报告格式**：
-```
+```text
 P0 INDEX_DANGLING | <dir>/README.md:L<line> | references <path> | not found
 P1 INDEX_MISSING  | <dir>/README.md | <filename> exists but not indexed
 ```
@@ -58,7 +58,7 @@ P1 INDEX_MISSING  | <dir>/README.md | <filename> exists but not indexed
 - 返回类型差异
 
 **报告格式**：
-```
+```text
 P1 GUIDE_REF_MISMATCH | guide/<file>:L<n> vs reference/<file>:L<m> | <api> | guide says X, ref says Y
 ```
 
@@ -71,7 +71,7 @@ P1 GUIDE_REF_MISMATCH | guide/<file>:L<n> vs reference/<file>:L<m> | <api> | gui
 **方法**：提取 `.py` 文件中 `from ncatbot.xxx import yyy` 和 `import ncatbot.xxx`，验证 `ncatbot/xxx/` 目录或 `ncatbot/xxx.py` 文件存在。
 
 **报告格式**：
-```
+```python
 P1 IMPORT_INVALID | examples/<example>/<file>.py:L<line> | from ncatbot.<path> | module not found
 ```
 
@@ -80,7 +80,7 @@ P1 IMPORT_INVALID | examples/<example>/<file>.py:L<line> | from ncatbot.<path> |
 **方法**：读取 example 的 `manifest.toml`，对比 `ncatbot/cli/templates/plugin/manifest.toml` 中出现的字段名，标记缺少必填字段或使用已淘汰字段名。
 
 **报告格式**：
-```
+```text
 P1 MANIFEST_FIELD | examples/<example>/manifest.toml | missing required field: <field>
 ```
 
@@ -112,7 +112,7 @@ P1 MANIFEST_FIELD | examples/<example>/manifest.toml | missing required field: <
 | 代码新增 public API，docs 无记录 | P2 |
 
 **报告格式**：
-```
+```python
 P0 API_DELETED   | reference/<file>:L<n> | <ClassName.method> | not found in ncatbot/<module>/
 P1 API_CHANGED   | reference/<file>:L<n> | <ClassName.method> | code: (a,b,c), docs: (a,b)
 P2 API_UNDOCUMENTED | ncatbot/<module>/<file>.py | <ClassName.method> | no docs coverage

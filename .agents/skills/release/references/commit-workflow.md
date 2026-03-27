@@ -48,7 +48,7 @@ git add docs
 
 示例建议：
 
-```
+```python
 分组 1: fix(adapter): 修复 WebSocket 连接中断问题
   - ncatbot/adapter/ws.py
   - ncatbot/adapter/connection.py

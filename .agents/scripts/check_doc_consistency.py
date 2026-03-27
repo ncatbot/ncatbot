@@ -22,6 +22,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import unquote
 
 # Windows 默认 GBK 编码无法输出 emoji，强制 UTF-8
 if sys.stdout.encoding != "utf-8":
@@ -59,6 +60,10 @@ TEMPLATE_LINK_PATTERNS = [
     re.compile(r"前一篇"),  # 中文占位
     re.compile(r"/xxx"),  # 占位文件名
     re.compile(r"/XX/"),  # 占位目录名
+    re.compile(r"^path$"),  # 占位路径
+    re.compile(r"^file\.md$"),  # 占位文件名
+    re.compile(r"^filename\.md$"),  # 占位文件名
+    re.compile(r"^\.\./parent/?$"),  # 占位目录
 ]
 
 # skills references 目录（允许使用项目根相对路径）
@@ -69,6 +74,36 @@ LOC_WARN_ONLY = True
 
 # 跳过的目录名
 SKIP_DIRS = {"node_modules", ".git", "__pycache__", ".vuepress"}
+
+
+def _normalize_link_target(target: str) -> str:
+    """归一化 Markdown 链接目标，兼容 VuePress <> 与 URL 编码。
+
+    支持两种 VuePress 链接格式：
+    - ``<file.md#anchor>``  — anchor 在 ``<>`` 内
+    - ``<file.md>#anchor``  — anchor 在 ``<>`` 外（非标准但偶见）
+    """
+    target = target.strip()
+    if target.startswith("<") and target.endswith(">"):
+        target = target[1:-1].strip()
+    target = target.split("#")[0].strip()
+    if target.startswith("<") and target.endswith(">"):
+        target = target[1:-1].strip()
+    return unquote(target)
+
+
+def _iter_link_matches(content: str):
+    """只枚举代码块外部的 Markdown 链接。"""
+    inside_block = False
+    for line_no, line in enumerate(content.splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            inside_block = not inside_block
+            continue
+        if inside_block:
+            continue
+        for match in LINK_RE.finditer(line):
+            yield line_no, match
 
 
 def collect_md_files() -> list[Path]:
@@ -113,11 +148,11 @@ def check_broken_links(md_files: list[Path]) -> list[dict]:
     for md in md_files:
         content = md.read_text(encoding="utf-8", errors="replace")
         is_skill_ref = _is_under_skills_refs(md)
-        for match in LINK_RE.finditer(content):
-            target = match.group(2)
+        for line_no, match in _iter_link_matches(content):
+            target = match.group(2).strip()
             if target.startswith(("http://", "https://", "mailto:", "#")):
                 continue
-            target_path = target.split("#")[0]
+            target_path = _normalize_link_target(target)
             if not target_path:
                 continue
             if any(p.search(target_path) for p in TEMPLATE_LINK_PATTERNS):
@@ -125,6 +160,9 @@ def check_broken_links(md_files: list[Path]) -> list[dict]:
             resolved = (md.parent / target_path).resolve()
             if not resolved.exists():
                 if is_skill_ref:
+                    skills_root_resolved = (SKILLS_REF_DIR / target_path).resolve()
+                    if skills_root_resolved.exists():
+                        continue
                     root_resolved = (PROJECT_ROOT / target_path).resolve()
                     if root_resolved.exists():
                         continue

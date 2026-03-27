@@ -13,7 +13,7 @@ NcatBot 提供一套自定义测试框架，核心价值是：**在不启动 Nap
 
 ## 核心运行模型
 
-```
+```text
 TestHarness(platforms=["qq", "bilibili", "github"])
     │
     ├─ MockAdapter(qq)     → MockBotAPI     (IQQAPIClient)

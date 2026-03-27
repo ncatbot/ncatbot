@@ -7,7 +7,7 @@
 **方法**：正则提取 `[text](path)` 中路径以 `./` 或 `../` 开头的本地引用，用 `Test-Path` 验证目标文件是否存在。
 
 **报告格式**：
-```
+```text
 P0 BROKEN_LINK | <skill>/<file>.md:L<line> | link: <path> | target not found
 ```
 
@@ -18,7 +18,7 @@ P0 BROKEN_LINK | <skill>/<file>.md:L<line> | link: <path> | target not found
 **排除**：`**Code**`、`**Test**`、`**Docs**`、`**Skill**` 等非技能名关键字。
 
 **报告格式**：
-```
+```text
 P0 MISSING_SKILL | <skill>/SKILL.md:L<line> | references skill **<name>** | directory not found
 ```
 
@@ -32,7 +32,7 @@ P0 MISSING_SKILL | <skill>/SKILL.md:L<line> | references skill **<name>** | dire
 验证映射后的路径是否存在。
 
 **报告格式**：
-```
+```text
 P0 DOCS_PATH_MISSING | <skill>/references/<file>.md:L<line> | path: <docs_path> | not found in workspace
 ```
 
@@ -45,7 +45,7 @@ P0 DOCS_PATH_MISSING | <skill>/references/<file>.md:L<line> | path: <docs_path> 
 - P2：参数描述措辞不同但含义相同
 
 **报告格式**：
-```
+```text
 P1 API_MISMATCH | <skill>/references/<file>.md:L<line> | <api_name> | skill says <X>, docs says <Y>
 ```
 
@@ -58,6 +58,6 @@ P1 API_MISMATCH | <skill>/references/<file>.md:L<line> | <api_name> | skill says
 - P2：措辞差异但含义一致
 
 **报告格式**：
-```
+```text
 P1 SKILL_CONFLICT | <skillA> vs <skillB> | concept: <name> | <description of conflict>
 ```
