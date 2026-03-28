@@ -78,7 +78,7 @@ def confirm(message: str, *, default: bool = False) -> bool:
     try:
         answer = input(message + hint).strip().lower()
     except (EOFError, KeyboardInterrupt):
-        return default
+        return False
     if not answer:
         return default
     return answer in ("y", "yes")
@@ -168,7 +168,7 @@ async def async_confirm(message: str, *, default: bool = False) -> bool:
     try:
         answer = (await _async_input(message + hint)).strip().lower()
     except (EOFError, KeyboardInterrupt):
-        return default
+        return False
     if not answer:
         return default
     return answer in ("y", "yes")
