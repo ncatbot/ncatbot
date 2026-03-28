@@ -42,6 +42,8 @@ class RuntimeOverrides:
     debug: Optional[bool] = None
     plugins_dir: Optional[str] = None
     hot_reload: Optional[bool] = None
+    bot_uin: Optional[str] = None
+    root: Optional[str] = None
 
 
 def _truthy_env(name: str) -> bool:
@@ -101,6 +103,8 @@ class ConfigManager:
         debug: Any = MISSING,
         plugins_dir: Any = MISSING,
         hot_reload: Any = MISSING,
+        bot_uin: Any = MISSING,
+        root: Any = MISSING,
     ) -> None:
         """进程内覆盖（CLI / BotClient 传参），不写入 config.yaml。"""
         if debug is not MISSING:
@@ -109,6 +113,10 @@ class ConfigManager:
             self._runtime.plugins_dir = plugins_dir
         if hot_reload is not MISSING:
             self._runtime.hot_reload = hot_reload
+        if bot_uin is not MISSING:
+            self._runtime.bot_uin = bot_uin
+        if root is not MISSING:
+            self._runtime.root = root
 
     def clear_runtime_overrides(self) -> None:
         self._runtime = RuntimeOverrides()
@@ -193,10 +201,14 @@ class ConfigManager:
 
     @property
     def bot_uin(self) -> str:
+        if self._runtime.bot_uin is not None:
+            return self._runtime.bot_uin
         return self.config.bot_uin
 
     @property
     def root(self) -> str:
+        if self._runtime.root is not None:
+            return self._runtime.root
         return self.config.root
 
     @property

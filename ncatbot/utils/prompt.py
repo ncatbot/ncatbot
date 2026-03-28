@@ -77,7 +77,12 @@ def confirm(message: str, *, default: bool = False) -> bool:
     hint = " [Y/n] " if default else " [y/N] "
     try:
         answer = input(message + hint).strip().lower()
-    except (EOFError, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        print()
+        LOG.info("用户中断确认，视为拒绝")
+        return False
+    except EOFError:
+        LOG.info("stdin 已关闭，confirm 视为拒绝")
         return False
     if not answer:
         return default
@@ -101,7 +106,12 @@ def ask(message: str, *, default: str = "") -> str:
     suffix = f" [{default}] " if default else " "
     try:
         answer = input(message + suffix).strip()
-    except (EOFError, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        print()
+        LOG.info("用户中断输入，返回默认值: %r", default)
+        return default
+    except EOFError:
+        LOG.info("stdin 已关闭，ask 返回默认值: %r", default)
         return default
     return answer if answer else default
 
@@ -134,7 +144,12 @@ def select(message: str, choices: List[str], *, default_index: int = 0) -> str:
         answer = input(
             f"请选择 [1-{len(choices)}] (默认 {default_index + 1}): "
         ).strip()
-    except (EOFError, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        print()
+        LOG.info("用户中断选择，返回默认项: %r", choices[default_index])
+        return choices[default_index]
+    except EOFError:
+        LOG.info("stdin 已关闭，select 返回默认项: %r", choices[default_index])
         return choices[default_index]
 
     if not answer:
@@ -167,7 +182,12 @@ async def async_confirm(message: str, *, default: bool = False) -> bool:
     hint = " [Y/n] " if default else " [y/N] "
     try:
         answer = (await _async_input(message + hint)).strip().lower()
-    except (EOFError, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        print()
+        LOG.info("用户中断确认，视为拒绝")
+        return False
+    except EOFError:
+        LOG.info("stdin 已关闭，async_confirm 视为拒绝")
         return False
     if not answer:
         return default
@@ -183,7 +203,12 @@ async def async_ask(message: str, *, default: str = "") -> str:
     suffix = f" [{default}] " if default else " "
     try:
         answer = (await _async_input(message + suffix)).strip()
-    except (EOFError, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        print()
+        LOG.info("用户中断输入，返回默认值: %r", default)
+        return default
+    except EOFError:
+        LOG.info("stdin 已关闭，async_ask 返回默认值: %r", default)
         return default
     return answer if answer else default
 
@@ -211,7 +236,12 @@ async def async_select(
                 f"请选择 [1-{len(choices)}] (默认 {default_index + 1}): "
             )
         ).strip()
-    except (EOFError, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        print()
+        LOG.info("用户中断选择，返回默认项: %r", choices[default_index])
+        return choices[default_index]
+    except EOFError:
+        LOG.info("stdin 已关闭，async_select 返回默认项: %r", choices[default_index])
         return choices[default_index]
 
     if not answer:
