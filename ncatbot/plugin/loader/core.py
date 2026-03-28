@@ -352,7 +352,7 @@ class PluginLoader:
                 main="__builtin__",
                 author=getattr(plugin_class, "author", "NcatBot"),
                 description=getattr(plugin_class, "description", ""),
-                plugins_dir=Path("data") / name,
+                plugin_path=Path("data") / name,
                 folder_name=name,
             )
 

@@ -39,7 +39,7 @@ def _make_manifest(name: str, deps=None) -> PluginManifest:
         version="1.0.0",
         main="main.py",
         dependencies=deps or {},
-        plugins_dir=Path("data") / name,
+        plugin_path=Path("data") / name,
         folder_name=name,
     )
 

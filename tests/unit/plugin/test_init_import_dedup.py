@@ -67,7 +67,7 @@ def plugin_with_init(tmp_path: Path) -> PluginManifest:
         version="0.0.1",
         main="main.py",
         entry_class="FakePlugin",
-        plugins_dir=plugins_dir,
+        plugin_path=plugins_dir,
         folder_name="_test_dedup_plugin",
     )
 
@@ -83,7 +83,7 @@ def test_init_import_no_double_exec(plugin_with_init: PluginManifest):
     修复后: load_module 发现 main 已在 sys.modules，直接复用。
     """
     importer = ModuleImporter()
-    importer.add_plugin_root(plugin_with_init.plugins_dir.parent)
+    importer.add_plugin_root(plugin_with_init.plugin_path.parent)
 
     token = set_current_plugin("FakeDedup")
     try:
@@ -136,7 +136,7 @@ def test_no_init_import_still_works(tmp_path: Path):
         version="0.0.1",
         main="main.py",
         entry_class="SimplePlugin",
-        plugins_dir=plugins_dir,
+        plugin_path=plugins_dir,
         folder_name="_test_dedup_noinit",
     )
 

@@ -31,7 +31,7 @@ class PluginManifest:
     pip_dependencies: Dict[str, str] = field(default_factory=dict)
 
     # 运行时附加（不来自 toml）
-    plugins_dir: Path = field(default=Path("."), repr=False)
+    plugin_path: Path = field(default=Path("."), repr=False)
     folder_name: str = ""
 
     # 保留原始数据供扩展使用
@@ -107,7 +107,7 @@ class PluginManifest:
             description=raw.get("description", ""),
             dependencies=raw.get("dependencies") or {},
             pip_dependencies=cls._normalize_deps(raw.get("pip_dependencies")),
-            plugins_dir=plugins_dir,
+            plugin_path=plugins_dir,
             folder_name=plugins_dir.name,
             _raw=raw,
         )
@@ -126,7 +126,7 @@ class PluginManifest:
     @property
     def entry_file(self) -> Path:
         """入口文件的完整路径"""
-        return self.plugins_dir / f"{self.entry_stem}.py"
+        return self.plugin_path / f"{self.entry_stem}.py"
 
     def as_dict(self) -> Dict[str, Any]:
         """返回元数据字典"""
