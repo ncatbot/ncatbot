@@ -215,6 +215,183 @@ class SystemManagerPlugin(NcatBotPlugin):
             await self._reply(event, "已关闭内置管理命令（本消息起生效，已写入配置）。")
 
     # ------------------------------------------------------------------
+    # 内置 ! 命令 — 查询
+    # ------------------------------------------------------------------
+
+    @registrar.on_command("!plugins", priority=50)
+    async def cmd_plugins(self, event: object) -> None:
+        """列出所有已加载插件。"""
+        if not await self._ensure_builtin_cmd(event, "sysinfo"):
+            return
+        plugins = self._plugin_loader.plugins
+        if not plugins:
+            await self._reply(event, "当前无已加载插件。")
+            return
+        lines = ["已加载插件:"]
+        for name, plugin in sorted(plugins.items()):
+            meta = getattr(plugin, "meta_data", {})
+            ver = meta.get("version", "?")
+            author = meta.get("author", "")
+            desc = meta.get("description", "")
+            line = f"  {name} v{ver}"
+            if author and author != "Unknown":
+                line += f" ({author})"
+            if desc:
+                line += f" — {desc}"
+            lines.append(line)
+        await self._reply(event, "\n".join(lines))
+
+    @registrar.on_command("!indexed", priority=50)
+    async def cmd_indexed(self, event: object) -> None:
+        """列出已索引但未加载的插件。"""
+        if not await self._ensure_builtin_cmd(event, "sysinfo"):
+            return
+        indexed = self._plugin_loader.list_indexed()
+        loaded = set(self._plugin_loader.plugins.keys())
+        not_loaded = {k: v for k, v in indexed.items() if k not in loaded}
+        if not not_loaded:
+            await self._reply(event, "所有已索引插件均已加载。")
+            return
+        lines = ["已索引但未加载:"]
+        for name, manifest in sorted(not_loaded.items()):
+            lines.append(f"  {name} v{manifest.version} (入口: {manifest.main})")
+        await self._reply(event, "\n".join(lines))
+
+    @registrar.on_command("!commands", priority=50)
+    async def cmd_commands(self, event: object) -> None:
+        """列出注册到 HandlerDispatcher 的所有命令。"""
+        if not await self._ensure_builtin_cmd(event, "sysinfo"):
+            return
+        dispatcher = self._plugin_loader._handler_dispatcher
+        if dispatcher is None:
+            await self._reply(event, "HandlerDispatcher 未就绪。")
+            return
+        from ncatbot.core.registry.command_hook import CommandHook
+
+        all_handlers = dispatcher.get_all_handlers()
+        cmd_lines = []
+        for event_type, entries in sorted(all_handlers.items()):
+            for entry in entries:
+                hooks = getattr(entry.func, "__hooks__", [])
+                for hook in hooks:
+                    if isinstance(hook, CommandHook):
+                        names = ", ".join(hook.names)
+                        cmd_lines.append(
+                            f"  {names} → {entry.plugin_name or '(global)'}"
+                            f" [{event_type}]"
+                        )
+        if not cmd_lines:
+            await self._reply(event, "当前无已注册命令。")
+            return
+        lines = [f"已注册命令 ({len(cmd_lines)}):"] + sorted(set(cmd_lines))
+        await self._reply(event, "\n".join(lines))
+
+    # ------------------------------------------------------------------
+    # 内置 ! 命令 — 分发过滤管理
+    # ------------------------------------------------------------------
+
+    def _get_filter_service(self):
+        """获取 DispatchFilterService。"""
+        return self.services.get("dispatch_filter")
+
+    @registrar.on_command("!filter", priority=50)
+    async def cmd_filter(self, event: object, sub: str, rest: str = "") -> None:
+        """管理分发过滤规则。"""
+        if not await self._ensure_builtin_cmd(event, "sysinfo"):
+            return
+
+        args = tuple(rest.split()) if rest else ()
+        sub = sub.strip().lower()
+        if sub == "add":
+            await self._filter_add(event, args)
+        elif sub == "remove":
+            await self._filter_remove(event, args)
+        elif sub == "list":
+            await self._filter_list(event, args)
+        elif sub == "clear":
+            await self._filter_clear(event, args)
+        else:
+            await self._reply(
+                event,
+                "用法:\n"
+                "  !filter add group|user <ID> <插件名> [命令1,命令2]\n"
+                "  !filter remove <规则ID>\n"
+                "  !filter list [group|user] [ID]\n"
+                "  !filter clear [插件名]",
+            )
+
+    async def _filter_add(self, event: object, args: tuple) -> None:
+        from ncatbot.service.builtin.dispatch_filter.model import FilterRule
+
+        if len(args) < 3:
+            await self._reply(
+                event, "用法: !filter add group|user <ID> <插件名> [命令1,命令2]"
+            )
+            return
+        scope_type, scope_id, plugin_name = args[0], args[1], args[2]
+        if scope_type not in ("group", "user"):
+            await self._reply(event, "作用域类型必须是 group 或 user。")
+            return
+        commands = []
+        if len(args) > 3:
+            commands = [c.strip() for c in args[3].split(",") if c.strip()]
+        svc = self._get_filter_service()
+        if svc is None:
+            await self._reply(event, "分发过滤服务不可用。")
+            return
+        rule = FilterRule(
+            scope_type=scope_type,
+            scope_id=scope_id,
+            plugin_name=plugin_name,
+            commands=commands,
+        )
+        svc.add_rule(rule)
+        await self._reply(event, f"已添加过滤规则: {rule.rule_id}")
+
+    async def _filter_remove(self, event: object, args: tuple) -> None:
+        if not args:
+            await self._reply(event, "用法: !filter remove <规则ID>")
+            return
+        svc = self._get_filter_service()
+        if svc is None:
+            await self._reply(event, "分发过滤服务不可用。")
+            return
+        ok = svc.remove_rule(args[0])
+        if ok:
+            await self._reply(event, f"已移除规则: {args[0]}")
+        else:
+            await self._reply(event, f"规则不存在: {args[0]}")
+
+    async def _filter_list(self, event: object, args: tuple) -> None:
+        svc = self._get_filter_service()
+        if svc is None:
+            await self._reply(event, "分发过滤服务不可用。")
+            return
+        scope_type = args[0] if len(args) > 0 else None
+        scope_id = args[1] if len(args) > 1 else None
+        rules = svc.list_rules(scope_type=scope_type, scope_id=scope_id)
+        if not rules:
+            await self._reply(event, "无匹配的过滤规则。")
+            return
+        lines = [f"过滤规则 ({len(rules)}):"]
+        for r in rules:
+            cmds = ",".join(r.commands) if r.commands else "*"
+            lines.append(
+                f"  [{r.rule_id}] {r.scope_type}:{r.scope_id}"
+                f" plugin={r.plugin_name} cmds={cmds}"
+            )
+        await self._reply(event, "\n".join(lines))
+
+    async def _filter_clear(self, event: object, args: tuple) -> None:
+        svc = self._get_filter_service()
+        if svc is None:
+            await self._reply(event, "分发过滤服务不可用。")
+            return
+        plugin_name = args[0] if args else None
+        count = svc.clear_rules(plugin_name=plugin_name)
+        await self._reply(event, f"已清除 {count} 条过滤规则。")
+
+    # ------------------------------------------------------------------
     # 功能 A: 插件配置管理
     # ------------------------------------------------------------------
 

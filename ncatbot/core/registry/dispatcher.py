@@ -15,7 +15,7 @@ from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 from ncatbot.event import create_entity as platform_create_entity
 from ncatbot.utils import get_log
 
-from .hook import HookAction, HookContext, HookStage, get_hooks
+from .hook import Hook, HookAction, HookContext, HookStage, get_hooks
 
 if TYPE_CHECKING:
     from ncatbot.api import IAPIClient
@@ -52,6 +52,7 @@ class HandlerDispatcher:
         api: Optional["IAPIClient"] = None,
         service_manager: Optional["ServiceManager"] = None,
         platform_apis: Optional[Dict[str, "IAPIClient"]] = None,
+        global_hooks: Optional[List["Hook"]] = None,
     ):
         self._handlers: Dict[str, List[HandlerEntry]] = {}
         self._api = api
@@ -59,6 +60,7 @@ class HandlerDispatcher:
         self._platform_apis: Dict[str, "IAPIClient"] = dict(platform_apis or {})
         self._stream: Optional["EventStream"] = None
         self._task: Optional[asyncio.Task] = None
+        self._global_before_hooks: List["Hook"] = list(global_hooks or [])
 
     def set_platform_api(self, platform: str, api: "IAPIClient") -> None:
         """注册平台特定 API，用于事件实体注入"""
@@ -202,7 +204,27 @@ class HandlerDispatcher:
                 services=self._service_manager,
             )
 
-            # --- BEFORE_CALL hooks ---
+            # --- 全局 BEFORE_CALL hooks ---
+            skip = False
+            for hook in self._global_before_hooks:
+                try:
+                    action = await hook.execute(ctx)
+                    if action == HookAction.SKIP:
+                        skip = True
+                        break
+                except Exception as e:
+                    LOG.exception(
+                        "全局 BEFORE_CALL hook %s 执行异常 (handler=%s): %s",
+                        hook,
+                        entry.func.__name__,
+                        e,
+                    )
+                    skip = True
+                    break
+            if skip:
+                continue
+
+            # --- handler 级 BEFORE_CALL hooks ---
             before_hooks = get_hooks(entry.func, HookStage.BEFORE_CALL)
             skip = False
             for hook in before_hooks:

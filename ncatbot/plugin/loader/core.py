@@ -265,6 +265,10 @@ class PluginLoader:
     def list_plugins(self) -> List[str]:
         return list(self.plugins.keys())
 
+    def list_indexed(self) -> Dict[str, "PluginManifest"]:
+        """返回所有已索引插件的清单快照。"""
+        return dict(self._indexer.all)
+
     def get_plugin_name_by_folder(self, folder_name: str) -> Optional[str]:
         """根据文件夹名查找插件名。"""
         manifest = self._indexer.get_by_folder(folder_name)

@@ -7,6 +7,7 @@
 
 from .config_mixin import ConfigMixin
 from .data_mixin import DataMixin
+from .dispatch_filter_mixin import DispatchFilterMixin
 from .event_mixin import EventMixin
 from .rbac_mixin import RBACMixin
 from .time_task_mixin import TimeTaskMixin
@@ -14,6 +15,7 @@ from .time_task_mixin import TimeTaskMixin
 __all__ = [
     "ConfigMixin",
     "DataMixin",
+    "DispatchFilterMixin",
     "EventMixin",
     "RBACMixin",
     "TimeTaskMixin",

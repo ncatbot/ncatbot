@@ -13,7 +13,12 @@ from typing import Any, List, Optional, Sequence
 
 from ncatbot.adapter import BaseAdapter, adapter_registry
 from ncatbot.api import BotAPIClient, QQAPIClient, MiscAPI
-from ncatbot.core import AsyncEventDispatcher, HandlerDispatcher, flush_pending
+from ncatbot.core import (
+    AsyncEventDispatcher,
+    HandlerDispatcher,
+    DispatchFilterHook,
+    flush_pending,
+)
 from ncatbot.plugin import PluginLoader
 from ncatbot.service import ServiceManager
 from ncatbot.utils import (
@@ -337,6 +342,7 @@ class BotClient:
             api=self._api,
             service_manager=self._service_manager,
             platform_apis=platform_apis,
+            global_hooks=[DispatchFilterHook()],
         )
         self._handler_dispatcher.start(self.dispatcher)
 

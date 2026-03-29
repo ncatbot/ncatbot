@@ -8,7 +8,12 @@ from collections import deque
 from typing import Any, Dict, List, Optional, Type, TYPE_CHECKING
 from ncatbot.utils import get_log
 from .base import BaseService, EventCallback
-from .builtin import RBACService, FileWatcherService, TimeTaskService
+from .builtin import (
+    RBACService,
+    FileWatcherService,
+    TimeTaskService,
+    DispatchFilterService,
+)
 
 if TYPE_CHECKING:
     pass
@@ -70,6 +75,7 @@ class ServiceManager:
         self.register(RBACService, storage_path="data/rbac.json")
         self.register(FileWatcherService)
         self.register(TimeTaskService)
+        self.register(DispatchFilterService)
 
     def register(self, service_class: Type[BaseService], **config: Any) -> None:
         """注册服务类"""

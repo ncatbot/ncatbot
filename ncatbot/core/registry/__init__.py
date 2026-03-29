@@ -48,6 +48,9 @@ from .command_hook import CommandHook
 # 命令组 Hook
 from .command_group_hook import CommandGroup, CommandGroupHook
 
+# 分发过滤 Hook
+from .dispatch_filter_hook import DispatchFilterHook
+
 # Dispatcher
 from .dispatcher import HandlerDispatcher, HandlerEntry
 
@@ -96,6 +99,8 @@ __all__ = [
     "CommandHook",
     "CommandGroup",
     "CommandGroupHook",
+    # 分发过滤 Hook
+    "DispatchFilterHook",
     # Dispatcher
     "HandlerDispatcher",
     "HandlerEntry",

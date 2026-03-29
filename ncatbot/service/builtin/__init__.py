@@ -3,6 +3,7 @@
 from .rbac import RBACService, PermissionPath, PermissionTrie
 from .file_watcher import FileWatcherService
 from .schedule import TimeTaskService
+from .dispatch_filter import DispatchFilterService
 
 __all__ = [
     "RBACService",
@@ -10,4 +11,5 @@ __all__ = [
     "PermissionTrie",
     "FileWatcherService",
     "TimeTaskService",
+    "DispatchFilterService",
 ]

@@ -53,6 +53,8 @@ from .registry import (
     CommandHook,
     CommandGroup,
     CommandGroupHook,
+    # 分发过滤 Hook
+    DispatchFilterHook,
     # Dispatcher
     HandlerDispatcher,
     HandlerEntry,
@@ -116,6 +118,8 @@ __all__ = [
     "CommandHook",
     "CommandGroup",
     "CommandGroupHook",
+    # Registry — 分发过滤 Hook
+    "DispatchFilterHook",
     # Registry — Dispatcher
     "HandlerDispatcher",
     "HandlerEntry",

@@ -12,6 +12,7 @@ from .base import BasePlugin
 from .mixin import (
     ConfigMixin,
     DataMixin,
+    DispatchFilterMixin,
     EventMixin,
     RBACMixin,
     TimeTaskMixin,
@@ -19,7 +20,13 @@ from .mixin import (
 
 
 class NcatBotPlugin(
-    BasePlugin, EventMixin, TimeTaskMixin, RBACMixin, ConfigMixin, DataMixin
+    BasePlugin,
+    EventMixin,
+    TimeTaskMixin,
+    RBACMixin,
+    DispatchFilterMixin,
+    ConfigMixin,
+    DataMixin,
 ):
     """
     NcatBot 插件基类
