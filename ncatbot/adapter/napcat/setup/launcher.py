@@ -109,7 +109,7 @@ class NapCatLauncher:
         warned_5 = False
         warned_10 = False
         while True:
-            if await self.is_service_ok():
+            if await self.is_service_ok(show_info=False):
                 return True
             elapsed = time.time() - start
             if not warned_5 and elapsed >= 5:

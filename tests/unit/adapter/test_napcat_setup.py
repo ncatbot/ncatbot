@@ -239,8 +239,12 @@ class TestLinuxOpsNapcatDir:
 
 
 class TestLinuxOpsNapcatCLI:
+    @patch(
+        "ncatbot.adapter.napcat.setup.platform.LinuxOps._has_napcat_cli",
+        return_value=True,
+    )
     @patch("ncatbot.adapter.napcat.setup.platform.subprocess.Popen")
-    def test_is_napcat_running_uses_cli(self, mock_popen):
+    def test_is_napcat_running_uses_cli(self, mock_popen, _mock_cli):
         """S-06: is_napcat_running 使用 'napcat status'（无 bash/sudo）"""
         from ncatbot.adapter.napcat.setup.platform import LinuxOps
 
@@ -261,9 +265,13 @@ class TestLinuxOpsNapcatCLI:
         assert "bash" not in cmd
         assert result is True
 
+    @patch(
+        "ncatbot.adapter.napcat.setup.platform.LinuxOps._has_napcat_cli",
+        return_value=True,
+    )
     @patch("ncatbot.adapter.napcat.setup.platform.time.sleep")
     @patch("ncatbot.adapter.napcat.setup.platform.subprocess.Popen")
-    def test_start_napcat_uses_cli(self, mock_popen, mock_sleep):
+    def test_start_napcat_uses_cli(self, mock_popen, mock_sleep, _mock_cli):
         """S-06: start_napcat 使用 'napcat start <uin>'（无 sudo）"""
         from ncatbot.adapter.napcat.setup.platform import LinuxOps
 
@@ -301,8 +309,12 @@ class TestLinuxOpsNapcatCLI:
         assert cmd == ["napcat", "start", "123456"]
         assert "sudo" not in cmd
 
+    @patch(
+        "ncatbot.adapter.napcat.setup.platform.LinuxOps._has_napcat_cli",
+        return_value=True,
+    )
     @patch("ncatbot.adapter.napcat.setup.platform.subprocess.Popen")
-    def test_stop_napcat_uses_cli(self, mock_popen):
+    def test_stop_napcat_uses_cli(self, mock_popen, _mock_cli):
         """S-06: stop_napcat 使用 'napcat stop'（无 bash/sudo）"""
         from ncatbot.adapter.napcat.setup.platform import LinuxOps
 

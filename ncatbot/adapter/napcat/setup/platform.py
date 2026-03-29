@@ -7,6 +7,7 @@
 
 import json
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -231,25 +232,70 @@ class LinuxOps(PlatformOps):
             return target
         return Path.home() / "Napcat/opt/QQ/resources/app/app_launcher/napcat"
 
-    def is_napcat_running(self, uin: Optional[str] = None) -> bool:
-        try:
-            process = subprocess.Popen(
-                ["napcat", "status"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            process.wait()
-            stdout = process.stdout
-            if stdout is None:
-                return False
-            output = stdout.read().decode(encoding="utf-8")
+    @property
+    def _qq_executable(self) -> Path:
+        """QQ 可执行文件路径 (系统安装优先, 回退 rootless 安装)"""
+        system_path = Path("/opt/QQ/qq")
+        if system_path.exists():
+            return system_path
+        return Path.home() / "Napcat/opt/QQ/qq"
 
-            if uin is None:
-                return "PID" in output
-            return str(uin) in output
-        except FileNotFoundError:
-            LOG.warning("napcat CLI 未安装或不在 PATH 中")
+    @staticmethod
+    def _has_napcat_cli() -> bool:
+        return shutil.which("napcat") is not None
+
+    def _is_napcat_screen_running(self) -> bool:
+        """通过 screen session 检测 NapCat 是否在运行"""
+        try:
+            result = subprocess.run(
+                ["screen", "-ls"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            return "napcat" in result.stdout
+        except Exception:
             return False
+
+    def _is_qq_process_running(self, uin: Optional[str] = None) -> bool:
+        """通过进程检测 QQ (NapCat) 是否在运行"""
+        try:
+            result = subprocess.run(
+                ["pgrep", "-fa", "qq.*--no-sandbox"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode != 0:
+                return False
+            if uin is not None:
+                return str(uin) in result.stdout
+            return bool(result.stdout.strip())
+        except Exception:
+            return False
+
+    def is_napcat_running(self, uin: Optional[str] = None) -> bool:
+        if self._has_napcat_cli():
+            try:
+                process = subprocess.Popen(
+                    ["napcat", "status"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                process.wait()
+                stdout = process.stdout
+                if stdout is None:
+                    return False
+                output = stdout.read().decode(encoding="utf-8")
+
+                if uin is None:
+                    return "PID" in output
+                return str(uin) in output
+            except FileNotFoundError:
+                pass
+
+        # 回退: screen session + 进程检测
+        return self._is_napcat_screen_running() or self._is_qq_process_running(uin)
 
     def start_napcat(self, uin: str) -> None:
         if self.is_napcat_running(uin):
@@ -264,6 +310,17 @@ class LinuxOps(PlatformOps):
                 raise RuntimeError("NapCat 正在运行, 但运行的不是该 QQ 号")
 
         LOG.info("正在启动 NapCat 服务")
+
+        if self._has_napcat_cli():
+            self._start_via_cli(uin)
+        else:
+            self._start_via_xvfb(uin)
+
+        time.sleep(0.5)
+        LOG.info("napcat 启动成功")
+
+    def _start_via_cli(self, uin: str) -> None:
+        """通过 napcat CLI 启动"""
         process = subprocess.Popen(
             ["napcat", "start", uin],
             stdout=subprocess.PIPE,
@@ -271,30 +328,64 @@ class LinuxOps(PlatformOps):
         process.wait()
 
         if process.returncode != 0:
-            raise FileNotFoundError(
+            raise RuntimeError(
                 "napcat CLI 启动失败, 请确认 napcat CLI 已正确安装到 /usr/local/bin/napcat"
             )
 
         if not self.is_napcat_running(uin):
             raise RuntimeError("napcat 启动失败")
 
-        time.sleep(0.5)
-        LOG.info("napcat 启动成功")
+    def _start_via_xvfb(self, uin: str) -> None:
+        """napcat CLI 不可用时, 通过 screen + xvfb-run 直接启动 QQ"""
+        qq_path = self._qq_executable
+        if not qq_path.exists():
+            raise FileNotFoundError(
+                f"找不到 QQ 可执行文件: {qq_path}, 请确认 NapCat 已正确安装"
+            )
+
+        LOG.warning("napcat CLI 不可用, 使用 xvfb-run 回退模式启动")
+
+        cmd = f"xvfb-run -a {qq_path} --no-sandbox -q {uin}"
+        subprocess.Popen(
+            ["screen", "-dmS", "napcat", "bash", "-c", cmd],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        # 等待进程启动
+        for _ in range(10):
+            time.sleep(0.5)
+            if self.is_napcat_running():
+                return
+
+        raise RuntimeError(
+            f"xvfb-run 回退模式启动失败, 请手动执行: screen -dmS napcat bash -c '{cmd}'"
+        )
 
     def stop_napcat(self) -> None:
+        if self._has_napcat_cli():
+            try:
+                process = subprocess.Popen(
+                    ["napcat", "stop"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                process.wait()
+                if process.returncode == 0:
+                    LOG.info("已成功停止 napcat")
+                    return
+                LOG.warning("napcat CLI 停止失败, 尝试回退方式")
+            except FileNotFoundError:
+                pass
+
+        # 回退: screen -S napcat -X quit
         try:
-            process = subprocess.Popen(
-                ["napcat", "stop"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+            subprocess.run(
+                ["screen", "-S", "napcat", "-X", "quit"],
+                capture_output=True,
+                timeout=5,
             )
-            process.wait()
-            if process.returncode != 0:
-                raise RuntimeError("停止 napcat 失败")
-            LOG.info("已成功停止 napcat")
-        except FileNotFoundError:
-            LOG.error("napcat CLI 未安装, 无法停止 NapCat")
-            raise
+            LOG.info("已通过 screen 停止 napcat")
         except Exception as e:
             LOG.error(f"停止 napcat 失败: {e}")
             raise
