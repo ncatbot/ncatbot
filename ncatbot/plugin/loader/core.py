@@ -58,6 +58,7 @@ class PluginLoader:
         self._reload_queue: asyncio.Queue[str] = asyncio.Queue()
         self._reload_task: Optional[asyncio.Task] = None
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
+        self._plugins_dir: Optional[Path] = None
 
         # 插件实例化时的注入回调（由外部设置）
         self._on_plugin_init: Optional[Callable[[BasePlugin, PluginManifest], None]] = (
@@ -79,6 +80,7 @@ class PluginLoader:
         """
         # 将插件根目录加入 sys.path（使跨插件导入可用）
         self._importer.add_plugin_root(plugins_dir)
+        self._plugins_dir = Path(plugins_dir).resolve()
 
         manifests = self._indexer.scan(plugins_dir)
         if not manifests:
@@ -123,6 +125,7 @@ class PluginLoader:
             成功加载的插件名列表
         """
         self._importer.add_plugin_root(plugins_dir)
+        self._plugins_dir = Path(plugins_dir).resolve()
 
         manifests = self._indexer.scan(plugins_dir)
         if not manifests:
@@ -320,17 +323,25 @@ class PluginLoader:
         while True:
             folder_name = await self._reload_queue.get()
             plugin_name = self.get_plugin_name_by_folder(folder_name)
+
+            # 未索引的目录：尝试自动索引（运行时新增插件）
+            if plugin_name is None and self._plugins_dir is not None:
+                candidate = self._plugins_dir / folder_name
+                manifest = self._indexer.index_plugin(candidate)
+                if manifest is not None:
+                    plugin_name = manifest.name
+                    LOG.info("自动索引新插件: %s (文件夹: %s)", plugin_name, folder_name)
+
             if plugin_name is None:
                 LOG.debug("未知插件目录: %s，跳过重载", folder_name)
                 continue
 
-            if plugin_name not in self.plugins:
-                LOG.debug("插件 %s 未加载，跳过重载", plugin_name)
-                continue
-
             LOG.info("热重载触发: %s (文件夹: %s)", plugin_name, folder_name)
             try:
-                await self.reload_plugin(plugin_name)
+                if plugin_name in self.plugins:
+                    await self.reload_plugin(plugin_name)
+                else:
+                    await self.load_plugin(plugin_name)
             except Exception as e:
                 LOG.error("热重载失败 [%s]: %s", plugin_name, e)
 
