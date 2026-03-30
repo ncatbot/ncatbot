@@ -71,7 +71,7 @@ python tests/e2e/napcat/run.py
 | CE | Config 分层与运行时覆盖 | CE-01 ~ CE-05 |
 | CX | CLI 冒烟 | CX-01 ~ CX-10 |
 | D | AsyncEventDispatcher | D-01 ~ D-09 |
-| K | Hook System | K-01 ~ K-21 |
+| K | Hook System | K-01 ~ K-22 |
 | H | HandlerDispatcher | H-01 ~ H-11 |
 | R | Registrar | R-01 ~ R-09 |
 | ID | Import Dedup (插件导入去重) | ID-01 ~ ID-02 |
@@ -85,7 +85,7 @@ python tests/e2e/napcat/run.py
 | SC | RBAC 权限系统 | SC-01 ~ SC-12 |
 | PR | Predicate 谓词 DSL | PR-01 ~ PR-06 |
 | TS | TimeTaskParser 调度解析 | TS-01 ~ TS-06 |
-| LD | PluginLoader 生命周期 | LD-01 ~ LD-05 |
+| LD | PluginLoader 生命周期 | LD-01 ~ LD-08 |
 | CS | Config 安全检查 | CS-01 ~ CS-05 |
 | SG | QQ Sugar 便捷方法 | SG-01 ~ SG-06 |
 | MA | MessageArray 容器 | MA-01 ~ MA-04 |

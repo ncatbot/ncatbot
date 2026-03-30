@@ -53,3 +53,16 @@
 |---------|------|--------|
 | ID-01 | `__init__.py` 导入不导致双重 exec | `from .main import X` 不会导致 handler 重复注册 |
 | ID-02 | 无 `__init__` 导入时行为不变 | `load_module` 复用已导入模块，pending 数量正确 |
+
+### PluginLoader 生命周期 (`test_plugin_loader.py`)
+
+| 规范 ID | 说明 | 验证点 |
+|---------|------|--------|
+| LD-01 | `load_plugin` 成功 | handler flush 到 dispatcher |
+| LD-02 | `load_plugin` 异常 | handler 清理回滚 |
+| LD-03 | `unload_plugin` | handler revoke + on_close |
+| LD-04 | `load_all` 拓扑排序 | 按依赖顺序加载 |
+| LD-05 | 缺失依赖跳过 | 跳过缺依赖的插件，继续加载其他 |
+| LD-06 | `_instantiate` 注入元数据 | name/version/author/description 正确注入 |
+| LD-07 | 热重载失败后重试 | reload 失败后再次文件变更仍应尝试加载 |
+| LD-08 | 运行时新插件自动索引 | 新放入的插件目录自动索引并加载 |

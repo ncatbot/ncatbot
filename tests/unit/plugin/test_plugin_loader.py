@@ -1,9 +1,10 @@
 """
 Plugin Loader 生命周期单元测试
 
-LD-01 ~ LD-05：覆盖 load/unload/load_all 的核心路径。
+LD-01 ~ LD-08：覆盖 load/unload/load_all/热重载消费 的核心路径。
 """
 
+import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -220,3 +221,127 @@ class TestInstantiate:
         assert plugin.logger is not None
         # logger 不应抛异常
         plugin.logger.info("test log from plugin")
+
+
+class TestReloadConsumer:
+    """LD-07: _reload_consumer 热重载消费逻辑"""
+
+    @pytest.mark.asyncio
+    async def test_ld07_reload_after_failed_load_retries(self, loader: PluginLoader):
+        """LD-07: 热重载失败后再次文件变更仍应尝试重新加载
+
+        场景：
+          1. 插件已加载 → 文件变更 → reload_plugin → load_plugin 失败（插件从 plugins 中移除）
+          2. 再次文件变更 → _reload_consumer 应重新尝试加载，而非跳过
+        """
+        manifest = _make_manifest("my_plugin")
+        manifest.folder_name = "04_my_plugin"
+        loader._indexer._manifests = {"my_plugin": manifest}
+
+        # 模拟插件最初已加载
+        stub = _StubPlugin()
+        stub._manifest = manifest
+        stub.workspace = Path("data/my_plugin")
+        stub.config = {}
+        stub.data = {}
+        loader.plugins["my_plugin"] = stub
+
+        reload_attempts = []
+        load_attempts = []
+
+        async def mock_reload(name):
+            reload_attempts.append(name)
+            # 模拟 reload 失败：unload 成功（从 plugins 移除），但 load 失败
+            loader.plugins.pop(name, None)
+            return False
+
+        async def mock_load(name):
+            load_attempts.append(name)
+            # 模拟第二次加载成功
+            p = _StubPlugin()
+            p._manifest = manifest
+            loader.plugins[name] = p
+            return p
+
+        loader.reload_plugin = mock_reload
+        loader.load_plugin = mock_load
+
+        # 启动 consumer
+        task = asyncio.create_task(loader._reload_consumer())
+
+        # 第一次文件变更 → 应触发 reload_plugin
+        await loader._reload_queue.put("04_my_plugin")
+        await asyncio.sleep(0.05)
+
+        assert reload_attempts == ["my_plugin"], "第一次变更应触发 reload"
+
+        # 此时 my_plugin 已不在 plugins 中（reload 失败移除了它）
+        assert "my_plugin" not in loader.plugins
+
+        # 第二次文件变更 → 应仍然尝试加载（而非跳过）
+        await loader._reload_queue.put("04_my_plugin")
+        await asyncio.sleep(0.05)
+
+        # 关键断言：第二次变更应触发某种加载尝试
+        total_attempts = len(reload_attempts) + len(load_attempts)
+        assert total_attempts >= 2, (
+            f"第二次文件变更后应触发加载尝试，但仅有 {total_attempts} 次: "
+            f"reload={reload_attempts}, load={load_attempts}"
+        )
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_ld08_runtime_added_plugin_auto_indexed(self, loader: PluginLoader, tmp_path: Path):
+        """LD-08: 运行时新放入的插件目录应自动索引并加载
+
+        场景：
+          1. Bot 启动时 load_all 扫描了 plugins/，此时无 new_plugin
+          2. 用户运行时将 new_plugin 文件夹放入 plugins/
+          3. FileWatcher 检测到变更，发送文件夹名到队列
+          4. _reload_consumer 应自动索引该插件并加载，而非跳过
+        """
+        # 构建临时插件目录
+        plugin_dir = tmp_path / "05_new_plugin"
+        plugin_dir.mkdir()
+        manifest_toml = plugin_dir / "manifest.toml"
+        manifest_toml.write_text(
+            'name = "new_plugin"\nversion = "1.0.0"\nmain = "main.py"\n'
+        )
+        main_py = plugin_dir / "main.py"
+        main_py.write_text("# placeholder")
+
+        # 模拟 load_all 已经执行过，设置 plugins_dir
+        loader._plugins_dir = tmp_path
+        # 索引器中无 new_plugin（模拟启动时不存在）
+        assert loader._indexer.get_by_folder("05_new_plugin") is None
+
+        load_attempts = []
+
+        async def mock_load(name):
+            load_attempts.append(name)
+            p = _StubPlugin()
+            loader.plugins[name] = p
+            return p
+
+        loader.load_plugin = mock_load
+
+        # 启动 consumer
+        task = asyncio.create_task(loader._reload_consumer())
+
+        # 模拟 FileWatcher 发送文件夹名
+        await loader._reload_queue.put("05_new_plugin")
+        await asyncio.sleep(0.05)
+
+        # 关键断言：新插件应被自动索引并尝试加载
+        assert load_attempts == ["new_plugin"], (
+            f"运行时新增插件应被自动索引并加载，但 load_attempts={load_attempts}"
+        )
+        # 索引器中应已有该插件
+        assert loader._indexer.get_by_folder("05_new_plugin") is not None
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task

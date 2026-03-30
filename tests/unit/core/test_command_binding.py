@@ -14,7 +14,14 @@
   K-20g: 必选参数缺失 → None
   K-20h: CommandHook.execute 预处理+前缀匹配集成
   K-20i: CommandHook.execute Reply 开头消息
+  K-22a: Optional[At] 参数绑定 — 提供 At 时绑定成功
+  K-22b: Optional[At] 参数绑定 — 未提供时使用默认值
+  K-22c: Optional[int] 参数绑定 — 提供时绑定成功
+  K-22d: Optional[int] 参数绑定 — 未提供时使用默认值
+  K-22e: Optional[At] CommandHook 集成 — 完整流程
 """
+
+from typing import Optional
 
 from ncatbot.core.registry.hook import HookAction, HookContext
 from ncatbot.core.registry.command_hook import CommandHook
@@ -596,3 +603,88 @@ class TestCommandHookExecuteIntegration:
         )
         ctx = _make_ctx(event, func=handler)
         assert await hook.execute(ctx) == HookAction.CONTINUE
+
+
+# ======================= Optional 类型参数绑定 =======================
+
+
+class TestOptionalBindParams:
+    """Optional[T] 注解的参数应正确识别内部类型 T 进行绑定"""
+
+    def _make_spec(self, params):
+        infos = []
+        for name, anno, has_default, default in params:
+            infos.append(_ParamInfo(name, anno, has_default, default))
+        return _ParamSpec(infos)
+
+    def test_optional_at_provided(self):
+        """K-22a: Optional[At] — 提供 At 时绑定成功"""
+        at_obj = At(user_id="12345")
+        stream = [("at", at_obj)]
+        spec = self._make_spec([("target", Optional[At], True, None)])
+        result = bind_params(spec, stream)
+        assert result is not None
+        assert result["target"] is at_obj
+
+    def test_optional_at_missing(self):
+        """K-22b: Optional[At] — 未提供时使用默认值 None"""
+        stream = [("token", "hello")]
+        spec = self._make_spec([("target", Optional[At], True, None)])
+        result = bind_params(spec, stream)
+        assert result is not None
+        assert result["target"] is None
+
+    def test_optional_int_provided(self):
+        """K-22c: Optional[int] — 提供时绑定成功"""
+        stream = [("token", "42")]
+        spec = self._make_spec([("count", Optional[int], True, None)])
+        result = bind_params(spec, stream)
+        assert result is not None
+        assert result["count"] == 42
+
+    def test_optional_int_missing(self):
+        """K-22d: Optional[int] — 未提供时使用默认值 None"""
+        stream = []
+        spec = self._make_spec([("count", Optional[int], True, None)])
+        result = bind_params(spec, stream)
+        assert result is not None
+        assert result["count"] is None
+
+
+class TestOptionalCommandHookIntegration:
+    """Optional[At] 参数在 CommandHook 完整流程中的绑定"""
+
+    async def test_optional_at_full_flow(self):
+        """K-22e: Optional[At] CommandHook 集成 — 群命令 @用户 正确绑定"""
+        hook = CommandHook("授权")
+
+        async def handler(self, event, target: Optional[At] = None):
+            pass
+
+        event = _msg_event_segments(
+            [
+                {"type": "text", "data": {"text": "授权"}},
+                {"type": "at", "data": {"qq": "12345"}},
+            ]
+        )
+        ctx = _make_ctx(event, func=handler)
+        result = await hook.execute(ctx)
+        assert result == HookAction.CONTINUE
+        assert ctx.kwargs["target"].user_id == "12345"
+
+    async def test_optional_at_full_flow_missing(self):
+        """K-22e+: Optional[At] CommandHook 集成 — 未 @用户 时使用默认值"""
+        hook = CommandHook("授权")
+
+        async def handler(self, event, target: Optional[At] = None):
+            pass
+
+        event = _msg_event_segments(
+            [
+                {"type": "text", "data": {"text": "授权"}},
+            ]
+        )
+        ctx = _make_ctx(event, func=handler)
+        result = await hook.execute(ctx)
+        assert result == HookAction.CONTINUE
+        assert ctx.kwargs["target"] is None
