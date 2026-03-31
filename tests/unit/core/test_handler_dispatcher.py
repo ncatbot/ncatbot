@@ -13,6 +13,8 @@ HandlerDispatcher 规范测试
   H-09: revoke_plugin
   H-10: handler 接收 EventEntity
   H-11: stop() 后不再消费
+  H-12: 慢 handler 不阻塞后续事件分发
+  H-13: stop() 清理所有活跃 dispatch task
 """
 
 import asyncio
@@ -326,4 +328,60 @@ async def test_stop_prevents_consumption():
     await asyncio.sleep(0.05)
 
     assert not called.is_set()
+    await ed.close()
+
+
+# ---- H-12: 慢 handler 不阻塞后续事件分发 ----
+
+
+async def test_slow_handler_does_not_block():
+    """H-12: 慢 handler 占住不放时，后续事件仍能分发到其他 handler"""
+    hd, ed, _ = await _make_dispatcher_with_event()
+    slow_entered = asyncio.Event()
+    fast_called = asyncio.Event()
+
+    async def slow_handler(event):
+        slow_entered.set()
+        await asyncio.sleep(10)  # 模拟长时间阻塞
+
+    async def fast_handler(event):
+        fast_called.set()
+
+    hd.register_handler("message.group", slow_handler)
+    hd.register_handler("message.private", fast_handler)
+
+    # 第 1 条事件：触发慢 handler
+    await ed.callback(factory.group_message("hi", group_id="1"))
+    await asyncio.sleep(0.05)
+    assert slow_entered.is_set()
+
+    # 第 2 条事件：应能立即分发到 fast_handler
+    await ed.callback(factory.private_message("hello", user_id="2"))
+    await asyncio.sleep(0.05)
+    assert fast_called.is_set(), "慢 handler 不应阻塞后续事件分发"
+
+    await hd.stop()
+    await ed.close()
+
+
+# ---- H-13: stop() 清理所有活跃 dispatch task ----
+
+
+async def test_stop_cleans_dispatch_tasks():
+    """H-13: stop() 后所有进行中的 dispatch task 被取消"""
+    hd, ed, _ = await _make_dispatcher_with_event()
+    entered = asyncio.Event()
+
+    async def blocking_handler(event):
+        entered.set()
+        await asyncio.sleep(10)
+
+    hd.register_handler("message.group", blocking_handler)
+    await ed.callback(factory.group_message("hi", group_id="1"))
+    await asyncio.sleep(0.05)
+    assert entered.is_set()
+
+    # stop 应清理所有 dispatch task
+    await hd.stop()
+    assert len(hd._dispatch_tasks) == 0
     await ed.close()

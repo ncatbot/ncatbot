@@ -60,6 +60,7 @@ class HandlerDispatcher:
         self._platform_apis: Dict[str, "IAPIClient"] = dict(platform_apis or {})
         self._stream: Optional["EventStream"] = None
         self._task: Optional[asyncio.Task] = None
+        self._dispatch_tasks: set[asyncio.Task] = set()
         self._global_before_hooks: List["Hook"] = list(global_hooks or [])
 
     def set_platform_api(self, platform: str, api: "IAPIClient") -> None:
@@ -85,20 +86,37 @@ class HandlerDispatcher:
             except asyncio.CancelledError:
                 pass
             self._task = None
+        # 等待所有进行中的 dispatch task 完成
+        if self._dispatch_tasks:
+            for t in self._dispatch_tasks:
+                t.cancel()
+            await asyncio.gather(*self._dispatch_tasks, return_exceptions=True)
+            self._dispatch_tasks.clear()
         if self._stream:
             await self._stream.aclose()
             self._stream = None
 
     async def _consume(self) -> None:
-        """后台消费事件流，逐个分发。"""
+        """后台消费事件流，并发分发事件。"""
         assert self._stream is not None
         try:
             async for event in self._stream:
-                await self._dispatch(event)
+                task = asyncio.create_task(self._safe_dispatch(event))
+                self._dispatch_tasks.add(task)
+                task.add_done_callback(self._dispatch_tasks.discard)
         except asyncio.CancelledError:
             raise
         except Exception:
             LOG.exception("事件消费循环异常")
+
+    async def _safe_dispatch(self, event: "Event") -> None:
+        """包装 _dispatch，捕获异常防止 task 静默失败。"""
+        try:
+            await self._dispatch(event)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            LOG.exception("事件分发异常 (type=%s)", event.type)
 
     # ==================== Handler 管理 ====================
 
