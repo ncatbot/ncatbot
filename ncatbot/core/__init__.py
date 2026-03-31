@@ -43,12 +43,14 @@ from .registry import (
     NoticeTypeFilter,
     RequestTypeFilter,
     PlatformFilter,
+    RateLimitHook,
     group_only,
     private_only,
     non_self,
     startswith,
     keyword,
     regex,
+    rate_limit,
     # 命令 Hook
     CommandHook,
     CommandGroup,
@@ -114,6 +116,8 @@ __all__ = [
     "startswith",
     "keyword",
     "regex",
+    "RateLimitHook",
+    "rate_limit",
     # Registry — 命令 Hook
     "CommandHook",
     "CommandGroup",

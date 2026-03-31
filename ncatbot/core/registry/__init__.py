@@ -34,12 +34,14 @@ from .builtin_hooks import (
     NoticeTypeFilter,
     RequestTypeFilter,
     PlatformFilter,
+    RateLimitHook,
     group_only,
     private_only,
     non_self,
     startswith,
     keyword,
     regex,
+    rate_limit,
 )
 
 # 命令 Hook
@@ -95,6 +97,8 @@ __all__ = [
     "startswith",
     "keyword",
     "regex",
+    "RateLimitHook",
+    "rate_limit",
     # 命令 Hook (高级匹配 + 参数绑定)
     "CommandHook",
     "CommandGroup",

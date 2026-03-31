@@ -17,9 +17,11 @@
   K-19: Registrar on_group_command 单装饰器
   K-20: Registrar on_group_increase 等便捷方法
   K-21: 文本匹配使用 message.text
+  K-23: RateLimitHook 滑动窗口速率限制
 """
 
 import re
+import time
 
 
 from ncatbot.core.registry.hook import HookAction, HookContext
@@ -29,9 +31,11 @@ from ncatbot.core.registry.builtin_hooks import (
     RegexHook,
     NoticeTypeFilter,
     RequestTypeFilter,
+    RateLimitHook,
     startswith,
     keyword,
     regex,
+    rate_limit,
 )
 from ncatbot.core.registry.command_hook import CommandHook
 from ncatbot.core.registry.registrar import Registrar
@@ -531,3 +535,97 @@ async def test_command_uses_message_text():
 
     ctx = _make_ctx(event, func=handler)
     assert await hook.execute(ctx) == HookAction.CONTINUE
+
+
+# ======================= K-23: RateLimitHook =======================
+
+
+async def test_rate_limit_under_limit(monkeypatch):
+    """K-23a: 窗口内未满 → CONTINUE"""
+    hook = RateLimitHook(max_calls=3, period=300, key="user")
+    event = _msg_event("hello", user_id="111")
+    ctx = _make_ctx(event)
+    assert await hook.execute(ctx) == HookAction.CONTINUE
+    assert await hook.execute(ctx) == HookAction.CONTINUE
+    assert await hook.execute(ctx) == HookAction.CONTINUE
+
+
+async def test_rate_limit_over_limit(monkeypatch):
+    """K-23b: 窗口内已满 → SKIP"""
+    hook = RateLimitHook(max_calls=2, period=300, key="user")
+    event = _msg_event("hello", user_id="111")
+    ctx = _make_ctx(event)
+    assert await hook.execute(ctx) == HookAction.CONTINUE
+    assert await hook.execute(ctx) == HookAction.CONTINUE
+    assert await hook.execute(ctx) == HookAction.SKIP
+
+
+async def test_rate_limit_window_slides(monkeypatch):
+    """K-23c: 滑动窗口 — 过期记录不计入"""
+    hook = RateLimitHook(max_calls=2, period=10, key="user")
+    event = _msg_event("hello", user_id="111")
+
+    t = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: t[0])
+
+    ctx = _make_ctx(event)
+    assert await hook.execute(ctx) == HookAction.CONTINUE  # t=1000
+    t[0] = 1005.0
+    assert await hook.execute(ctx) == HookAction.CONTINUE  # t=1005, window=[1000,1005]
+    assert await hook.execute(ctx) == HookAction.SKIP  # full
+
+    t[0] = 1011.0  # 1000 已过期 (1011-10=1001 > 1000)
+    assert await hook.execute(ctx) == HookAction.CONTINUE  # window=[1005,1011]
+
+
+async def test_rate_limit_independent_keys():
+    """K-23d: 不同 key 独立计数"""
+    hook = RateLimitHook(max_calls=1, period=300, key="user")
+    e1 = _msg_event("a", user_id="111")
+    e2 = _msg_event("b", user_id="222")
+    assert await hook.execute(_make_ctx(e1)) == HookAction.CONTINUE
+    assert await hook.execute(_make_ctx(e1)) == HookAction.SKIP
+    # 不同 user 不受影响
+    assert await hook.execute(_make_ctx(e2)) == HookAction.CONTINUE
+
+
+async def test_rate_limit_key_group():
+    """K-23e: key='group' 正确提取 group_id"""
+    hook = RateLimitHook(max_calls=1, period=300, key="group")
+    e1 = _msg_event("a", group_id="100", user_id="111")
+    e2 = _msg_event("b", group_id="100", user_id="222")
+    e3 = _msg_event("c", group_id="200", user_id="111")
+    assert await hook.execute(_make_ctx(e1)) == HookAction.CONTINUE
+    # 同群不同人，共享配额
+    assert await hook.execute(_make_ctx(e2)) == HookAction.SKIP
+    # 不同群，独立配额
+    assert await hook.execute(_make_ctx(e3)) == HookAction.CONTINUE
+
+
+async def test_rate_limit_key_callable():
+    """K-23f: key=callable 自定义提取"""
+    hook = RateLimitHook(
+        max_calls=1,
+        period=300,
+        key=lambda ctx: f"custom:{getattr(ctx.event.data, 'user_id', None)}",
+    )
+    event = _msg_event("a", user_id="111")
+    assert await hook.execute(_make_ctx(event)) == HookAction.CONTINUE
+    assert await hook.execute(_make_ctx(event)) == HookAction.SKIP
+
+
+async def test_rate_limit_key_none_passthrough():
+    """K-23g: key 提取为 None → 放行"""
+    hook = RateLimitHook(max_calls=1, period=300, key=lambda ctx: None)
+    event = _msg_event("a", user_id="111")
+    # key=None 始终放行
+    assert await hook.execute(_make_ctx(event)) == HookAction.CONTINUE
+    assert await hook.execute(_make_ctx(event)) == HookAction.CONTINUE
+
+
+def test_rate_limit_factory():
+    """K-23 补充: rate_limit() 工厂函数"""
+    hook = rate_limit(5, 60, key="group")
+    assert isinstance(hook, RateLimitHook)
+    assert hook.max_calls == 5
+    assert hook.period == 60

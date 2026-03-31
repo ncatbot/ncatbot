@@ -132,12 +132,39 @@ async def on_grant(self, event, target: Optional[At] = None):
 | `RegexHook(pattern, flags)` | `str`, `int = 0` | 90 | 正则，`ctx.kwargs["match"]` |
 | `CommandHook(*names, ignore_case)` | `str...`, `bool = False` | 95 | 命令 + 参数绑定 |
 
+### 速率限制（BEFORE_CALL）
+
+| Hook 类 | 构造参数 | 优先级 | 说明 |
+|---------|---------|--------|------|
+| `RateLimitHook(max_calls, period, *, key)` | `int`, `float`, `str` \| `Callable` | 80 | 滑动窗口限流 |
+
+`key` 支持: `"user"` / `"group"` / `"user_group"` / `"global"` / `Callable[[HookContext], Optional[str]]`。
+
+便捷工厂: `rate_limit(max_calls, period, *, key="user", priority=80)`
+
+```python
+from ncatbot.core import add_hooks, RateLimitHook, rate_limit, registrar
+
+# 5 分钟内每人最多 3 次
+@add_hooks(RateLimitHook(max_calls=3, period=300, key="user"))
+@registrar.on_group_message()
+async def handler(self, event): ...
+
+# 工厂函数写法（每群 10 分钟 5 次）
+@rate_limit(5, 600, key="group")
+@registrar.on_group_message()
+async def handler2(self, event): ...
+```
+
 ## 自定义 Hook
+
+> 框架已内置 `RateLimitHook` 提供滑动窗口限流。以下展示如何编写更定制化的 Hook。
 
 ```python
 from ncatbot.core import Hook, HookStage, HookAction, HookContext
 
 class CooldownHook(Hook):
+    """简单冷却（每次触发后固定冷却 N 秒，如需滑动窗口请用内置 RateLimitHook）"""
     stage = HookStage.BEFORE_CALL
     priority = 80
 
@@ -238,11 +265,11 @@ async def on_admin(self, event: GroupMessageEvent, **kwargs):
     non_self,            # priority=200，最先
     group_only,          # priority=100
     keyword("天气"),      # priority=90
-    CooldownHook(5.0),   # priority=80，最后
+    rate_limit(3, 300),  # priority=80，5分钟3次
 )
 @registrar.on_message()
 async def handler(self, event):
-    # 不是自己发的 → 群消息 → 包含"天气" → 未在冷却中
+    # 不是自己发的 → 群消息 → 包含"天气" → 未超速率限制
     ...
 ```
 

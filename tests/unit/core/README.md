@@ -43,6 +43,7 @@
 | K-19 | `on_group_command` 等便捷方法 | 单装饰器封装 `MessageTypeFilter` + `CommandHook` |
 | K-20 | QQ 平台子注册器方法 | `registrar.qq.on_group_increase` 等注册精确事件类型 |
 | K-21 | 所有文本匹配使用 `message.text` | 统一使用 `MessageArray.text`，不使用 `raw_message` |
+| K-23 | `RateLimitHook` 滑动窗口 | 窗口内计数、超限 SKIP、过期清除、多粒度 key、自定义 key、None 放行 |
 
 ### HandlerDispatcher (`test_handler_dispatcher.py`)
 

@@ -7,6 +7,9 @@
 """
 
 import re
+import time
+from collections import deque
+from typing import Callable, Optional, Union
 
 from .hook import Hook, HookAction, HookContext, HookStage
 
@@ -251,6 +254,89 @@ class RequestTypeFilter(Hook):
         return f"<RequestTypeFilter(type={self.request_type})>"
 
 
+# ==================== 速率限制 Hook ====================
+
+
+class RateLimitHook(Hook):
+    """滑动窗口速率限制
+
+    在 ``period`` 秒内最多允许 ``max_calls`` 次调用，超限返回 SKIP。
+
+    ``key`` 决定限流粒度:
+    - ``"user"``        → 按 user_id 独立计数
+    - ``"group"``       → 按 group_id 独立计数
+    - ``"user_group"``  → 按 user_id:group_id 独立计数
+    - ``"global"``      → 所有请求共享配额
+    - ``Callable[[HookContext], Optional[str]]`` → 自定义 key 提取函数
+
+    key 提取结果为 None 时放行（CONTINUE）。
+    """
+
+    stage = HookStage.BEFORE_CALL
+
+    def __init__(
+        self,
+        max_calls: int,
+        period: float,
+        *,
+        key: Union[str, Callable[["HookContext"], Optional[str]]] = "user",
+        priority: int = 80,
+    ):
+        self.max_calls = max_calls
+        self.period = period
+        self._key = key
+        self.priority = priority
+        self._windows: dict[str, deque[float]] = {}
+
+    def _extract_key(self, ctx: "HookContext") -> Optional[str]:
+        if callable(self._key):
+            return self._key(ctx)
+        data = ctx.event.data
+        if self._key == "user":
+            uid = getattr(data, "user_id", None)
+            return str(uid) if uid is not None else None
+        if self._key == "group":
+            gid = getattr(data, "group_id", None)
+            return str(gid) if gid is not None else None
+        if self._key == "user_group":
+            uid = getattr(data, "user_id", None)
+            gid = getattr(data, "group_id", None)
+            if uid is None or gid is None:
+                return None
+            return f"{uid}:{gid}"
+        if self._key == "global":
+            return "__global__"
+        return None
+
+    async def execute(self, ctx: "HookContext") -> HookAction:
+        k = self._extract_key(ctx)
+        if k is None:
+            return HookAction.CONTINUE
+
+        now = time.monotonic()
+        window = self._windows.get(k)
+        if window is None:
+            window = deque()
+            self._windows[k] = window
+
+        # 清除过期时间戳
+        cutoff = now - self.period
+        while window and window[0] <= cutoff:
+            window.popleft()
+
+        if len(window) >= self.max_calls:
+            return HookAction.SKIP
+
+        window.append(now)
+        return HookAction.CONTINUE
+
+    def __repr__(self) -> str:
+        return (
+            f"<RateLimitHook(max_calls={self.max_calls}, "
+            f"period={self.period}, key={self._key!r})>"
+        )
+
+
 # 工厂函数 (小写，方便用户使用)
 
 
@@ -267,3 +353,14 @@ def keyword(*words: str, priority: int = 90) -> KeywordHook:
 def regex(pattern: str, flags: int = 0, *, priority: int = 90) -> RegexHook:
     """创建正则匹配 Hook"""
     return RegexHook(pattern, flags, priority=priority)
+
+
+def rate_limit(
+    max_calls: int,
+    period: float,
+    *,
+    key: Union[str, Callable[["HookContext"], Optional[str]]] = "user",
+    priority: int = 80,
+) -> RateLimitHook:
+    """创建速率限制 Hook"""
+    return RateLimitHook(max_calls, period, key=key, priority=priority)
