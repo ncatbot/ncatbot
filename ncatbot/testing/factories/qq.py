@@ -160,6 +160,15 @@ def group_request(
     return GroupRequestEventData.model_validate(data)
 
 
+def napcat_comment(answer: str, question: str = "问题") -> str:
+    """构造 NapCat 格式的 comment 字符串。
+
+    NapCat 适配器下 event.comment 的实际格式为 ``问题：xxx\\n答案：yyy``，
+    而非纯答案文本。此函数用于在测试中快捷构造该格式。
+    """
+    return f"问题：{question}\n答案：{answer}"
+
+
 def group_increase(
     user_id: str = "99999",
     group_id: str = "100200",

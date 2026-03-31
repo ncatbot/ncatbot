@@ -10,9 +10,12 @@ from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 from urllib.parse import urlparse
 
-from ncatbot.utils import get_log, confirm
+from ncatbot.utils import get_log, get_config_manager, confirm
+from ncatbot.utils.config.security import strong_password_check, generate_strong_token
 from .default_webui_config import config as default_webui_config
 from .platform import PlatformOps
+
+_DEFAULT_WEBUI_TOKEN = "napcat_webui"
 
 if TYPE_CHECKING:
     from ncatbot.utils.config.models import NapCatConfig
@@ -66,6 +69,10 @@ class NapCatConfigManager:
     def quick_login_script_path(self) -> Path:
         return self._napcat_dir / f"{self.uin}_quickLogin.bat"
 
+    @property
+    def plugins_config_path(self) -> Path:
+        return self._config_dir / "plugins.json"
+
     # ==================== JSON 文件操作 ====================
 
     @staticmethod
@@ -77,6 +84,43 @@ class NapCatConfigManager:
     def _write_json(path: Path, data: dict) -> None:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
+
+    # ==================== WebUI Token 安全强制 ====================
+
+    def _enforce_webui_token_security(self) -> None:
+        """确保 webui_token 满足强密码策略，不满足则替换并写回 config.yaml。"""
+        nc = self._napcat_config
+        token = nc.webui_token
+
+        if strong_password_check(token):
+            return
+
+        is_default = token == _DEFAULT_WEBUI_TOKEN
+
+        if not is_default:
+            if not confirm(
+                f"WebUI 令牌 '{token}' 强度不足, 是否替换为自动生成的强密钥?",
+                default=True,
+            ):
+                LOG.warning("WebUI 令牌强度不足, 存在安全风险, 继续使用现有令牌")
+                return
+
+        new_token = generate_strong_token()
+        nc.webui_token = new_token
+
+        try:
+            mgr = get_config_manager()
+            entry = mgr.get_adapter_config("napcat")
+            if entry is not None:
+                entry.config["webui_token"] = new_token
+                mgr.save()
+        except Exception as e:
+            LOG.warning(f"写回 config.yaml 失败: {e}")
+
+        if is_default:
+            LOG.warning(f"WebUI 令牌为默认弱密钥, 已自动替换, 新令牌: {new_token}")
+        else:
+            LOG.warning(f"WebUI 令牌已替换为强密钥, 新令牌: {new_token}")
 
     # ==================== OneBot11 配置 ====================
 
@@ -209,10 +253,30 @@ class NapCatConfigManager:
         if template.exists():
             shutil.copy(template, self.quick_login_script_path)
 
+    # ==================== NapCat 内置插件配置 ====================
+
+    def configure_plugins(self) -> None:
+        """配置 NapCat 内置插件开关（plugins.json）。"""
+        nc = self._napcat_config
+        expected = {"napcat-plugin-builtin": nc.enable_napcat_builtin_plugins}
+
+        if self.plugins_config_path.exists():
+            config = self._read_json(self.plugins_config_path)
+            if config.get("napcat-plugin-builtin") == nc.enable_napcat_builtin_plugins:
+                return
+            LOG.warning(
+                f"NapCat 内置插件开关不匹配, "
+                f"将修改为: {nc.enable_napcat_builtin_plugins}"
+            )
+
+        self._write_json(self.plugins_config_path, expected)
+
     # ==================== 主配置方法 ====================
 
     def configure_all(self) -> None:
         self._config_dir.mkdir(parents=True, exist_ok=True)
+        self._enforce_webui_token_security()
         self.configure_onebot()
         self.configure_quick_login()
         self.configure_webui()
+        self.configure_plugins()

@@ -38,6 +38,7 @@ def mock_napcat_config():
     cfg.enable_webui = False
     cfg.webui_port = 6099
     cfg.webui_token = "webui_token"
+    cfg.enable_napcat_builtin_plugins = False
     return cfg
 
 
@@ -61,7 +62,13 @@ def config_manager(tmp_napcat_dir, mock_napcat_config):
 
 
 class TestConfigureAll:
-    def test_creates_config_dir_when_missing(self, config_manager, tmp_napcat_dir):
+    @patch(
+        "ncatbot.adapter.napcat.setup.config.NapCatConfigManager"
+        "._enforce_webui_token_security"
+    )
+    def test_creates_config_dir_when_missing(
+        self, _mock_sec, config_manager, tmp_napcat_dir
+    ):
         """S-01: config 目录不存在时 configure_all 自动创建"""
         config_dir = tmp_napcat_dir / "config"
         assert not config_dir.exists()
@@ -71,7 +78,13 @@ class TestConfigureAll:
         assert config_dir.exists()
         assert config_dir.is_dir()
 
-    def test_succeeds_when_config_dir_exists(self, config_manager, tmp_napcat_dir):
+    @patch(
+        "ncatbot.adapter.napcat.setup.config.NapCatConfigManager"
+        "._enforce_webui_token_security"
+    )
+    def test_succeeds_when_config_dir_exists(
+        self, _mock_sec, config_manager, tmp_napcat_dir
+    ):
         """S-01: config 目录已存在时不报错"""
         config_dir = tmp_napcat_dir / "config"
         config_dir.mkdir()
@@ -331,3 +344,162 @@ class TestLinuxOpsNapcatCLI:
         assert cmd == ["napcat", "stop"]
         assert "sudo" not in cmd
         assert "bash" not in cmd
+
+
+# ==================== S-08: _enforce_webui_token_security ====================
+
+
+class TestEnforceWebuiTokenSecurity:
+    """WebUI token 安全强制检查。"""
+
+    def _make_manager(self, tmp_path, webui_token="napcat_webui"):
+        from ncatbot.adapter.napcat.setup.config import NapCatConfigManager
+
+        cfg = MagicMock()
+        cfg.ws_uri = "ws://127.0.0.1:3001"
+        cfg.ws_token = "test_token"
+        cfg.ws_listen_ip = "0.0.0.0"
+        cfg.enable_webui = True
+        cfg.webui_port = 6099
+        cfg.webui_token = webui_token
+        cfg.enable_napcat_builtin_plugins = False
+
+        platform_ops = MagicMock()
+        platform_ops.napcat_dir = tmp_path / "napcat"
+        platform_ops.config_dir = tmp_path / "napcat" / "config"
+
+        mgr = NapCatConfigManager(
+            platform_ops=platform_ops,
+            napcat_config=cfg,
+            bot_uin="123456",
+        )
+        return mgr, cfg
+
+    @patch("ncatbot.adapter.napcat.setup.config.get_config_manager")
+    def test_default_weak_token_replaced(self, mock_gcm, tmp_path):
+        """S-08a: 默认弱密钥自动替换为强密钥"""
+        mock_entry = MagicMock()
+        mock_entry.config = {"webui_token": "napcat_webui"}
+        mock_gcm.return_value.get_adapter_config.return_value = mock_entry
+
+        mgr, cfg = self._make_manager(tmp_path, webui_token="napcat_webui")
+        mgr._enforce_webui_token_security()
+
+        # token 已被替换
+        assert cfg.webui_token != "napcat_webui"
+        # config.yaml entry 也已更新
+        assert mock_entry.config["webui_token"] == cfg.webui_token
+        mock_gcm.return_value.save.assert_called_once()
+
+    def test_strong_token_unchanged(self, tmp_path):
+        """S-08b: 强密钥不做任何修改"""
+        from ncatbot.utils.config.security import generate_strong_token
+
+        strong = generate_strong_token()
+        mgr, cfg = self._make_manager(tmp_path, webui_token=strong)
+        mgr._enforce_webui_token_security()
+
+        assert cfg.webui_token == strong
+
+    @patch("ncatbot.adapter.napcat.setup.config.confirm", return_value=True)
+    @patch("ncatbot.adapter.napcat.setup.config.get_config_manager")
+    def test_non_default_weak_token_confirm_yes(self, mock_gcm, mock_confirm, tmp_path):
+        """S-08c: 非默认弱密钥 + 确认替换 → 替换"""
+        mock_entry = MagicMock()
+        mock_entry.config = {"webui_token": "myweakpw"}
+        mock_gcm.return_value.get_adapter_config.return_value = mock_entry
+
+        mgr, cfg = self._make_manager(tmp_path, webui_token="myweakpw")
+        mgr._enforce_webui_token_security()
+
+        assert cfg.webui_token != "myweakpw"
+        mock_gcm.return_value.save.assert_called_once()
+        mock_confirm.assert_called_once()
+
+    @patch("ncatbot.adapter.napcat.setup.config.confirm", return_value=False)
+    def test_non_default_weak_token_confirm_no(self, mock_confirm, tmp_path):
+        """S-08d: 非默认弱密钥 + 拒绝替换 → 保持原样"""
+        mgr, cfg = self._make_manager(tmp_path, webui_token="myweakpw")
+        mgr._enforce_webui_token_security()
+
+        assert cfg.webui_token == "myweakpw"
+        mock_confirm.assert_called_once()
+
+
+# ==================== S-09: configure_plugins ====================
+
+
+class TestConfigurePlugins:
+    """NapCat 内置插件开关配置。"""
+
+    def _make_manager(self, tmp_path, enable_builtin=False):
+        from ncatbot.adapter.napcat.setup.config import NapCatConfigManager
+
+        cfg = MagicMock()
+        cfg.ws_uri = "ws://127.0.0.1:3001"
+        cfg.ws_token = "test_token"
+        cfg.ws_listen_ip = "0.0.0.0"
+        cfg.enable_webui = False
+        cfg.webui_port = 6099
+        cfg.webui_token = "webui_token"
+        cfg.enable_napcat_builtin_plugins = enable_builtin
+
+        platform_ops = MagicMock()
+        napcat_dir = tmp_path / "napcat"
+        napcat_dir.mkdir(parents=True, exist_ok=True)
+        config_dir = napcat_dir / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        platform_ops.napcat_dir = napcat_dir
+        platform_ops.config_dir = config_dir
+
+        mgr = NapCatConfigManager(
+            platform_ops=platform_ops,
+            napcat_config=cfg,
+            bot_uin="123456",
+        )
+        return mgr, config_dir
+
+    def test_creates_plugins_json_default_off(self, tmp_path):
+        """S-09a: 默认关闭内置插件 → 写入 false"""
+        mgr, config_dir = self._make_manager(tmp_path, enable_builtin=False)
+        mgr.configure_plugins()
+
+        plugins_path = config_dir / "plugins.json"
+        assert plugins_path.exists()
+        data = json.loads(plugins_path.read_text(encoding="utf-8"))
+        assert data == {"napcat-plugin-builtin": False}
+
+    def test_creates_plugins_json_enabled(self, tmp_path):
+        """S-09b: 开启内置插件 → 写入 true"""
+        mgr, config_dir = self._make_manager(tmp_path, enable_builtin=True)
+        mgr.configure_plugins()
+
+        plugins_path = config_dir / "plugins.json"
+        data = json.loads(plugins_path.read_text(encoding="utf-8"))
+        assert data == {"napcat-plugin-builtin": True}
+
+    def test_updates_existing_plugins_json(self, tmp_path):
+        """S-09c: 已有 plugins.json 且值不匹配 → 覆写"""
+        mgr, config_dir = self._make_manager(tmp_path, enable_builtin=False)
+        plugins_path = config_dir / "plugins.json"
+        plugins_path.write_text(
+            json.dumps({"napcat-plugin-builtin": True}), encoding="utf-8"
+        )
+
+        mgr.configure_plugins()
+
+        data = json.loads(plugins_path.read_text(encoding="utf-8"))
+        assert data == {"napcat-plugin-builtin": False}
+
+    def test_skips_write_when_matching(self, tmp_path):
+        """S-09d: 已有 plugins.json 且值匹配 → 不写入"""
+        mgr, config_dir = self._make_manager(tmp_path, enable_builtin=False)
+        plugins_path = config_dir / "plugins.json"
+        plugins_path.write_text(
+            json.dumps({"napcat-plugin-builtin": False}), encoding="utf-8"
+        )
+        mtime_before = plugins_path.stat().st_mtime
+
+        mgr.configure_plugins()
+
+        assert plugins_path.stat().st_mtime == mtime_before

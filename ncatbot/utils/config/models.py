@@ -98,6 +98,7 @@ class NapCatConfig(BaseConfig):
     enable_update_check: bool = False
     stop_napcat: bool = False
     skip_setup: bool = False
+    enable_napcat_builtin_plugins: bool = False
 
     @field_validator("ws_uri")
     @classmethod
