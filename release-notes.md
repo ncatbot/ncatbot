@@ -1,14 +1,5 @@
-## ✨ 新功能
-- **plugin**: 热重载支持运行时新增插件自动索引 (1bd81b67)
-
 ## 🐛 修复
-- **core**: 修复 `Optional[T]` 参数绑定静默失败 — `_is_type()` 增加 Union 泛型解包 (8030e3e2)
+- **dispatcher**: `_consume` 改为并发分发，解决长 handler（如私聊交互菜单）阻塞事件管线导致群命令无响应 (8c4e2dbf)
 
 ## ✅ 测试
-- 补充命令绑定和插件加载测试 (7a830d08)
-
-## 📝 文档
-- 更新 Skills 知识资产 (80a920ee)
-
-## 🔧 维护
-- 更新 uv.lock (dc190db3)
+- 新增 H-12/H-13: 慢 handler 不阻塞后续事件分发 + stop() 清理 dispatch task (8c4e2dbf)
