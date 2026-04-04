@@ -1,0 +1,9 @@
+name = "KeywordReply"
+version = "2.2.0"
+main = "plugin.py"
+author = "cheng160"
+description = "群聊关键词与正则回复"
+entry_class = "KeywordReply"
+pip_dependencies = []
+
+[dependencies]

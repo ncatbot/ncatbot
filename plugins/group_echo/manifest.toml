@@ -1,0 +1,9 @@
+name = "group_echo"
+version = "1.0.0"
+main = "plugin.py"
+author = "cheng160"
+description = "群聊白名单内，不同人连续发相同文本时复读一次"
+entry_class = "GroupEcho"
+pip_dependencies = []
+
+[dependencies]

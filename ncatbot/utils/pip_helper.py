@@ -23,6 +23,11 @@ LOG = get_log("PipHelper")
 _SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$")
 
 
+def _distribution_name_for_metadata(req_name: str) -> str:
+    """importlib.metadata 按发行版名匹配，不含 PEP 508 extras（如 foo[bar] → foo）。"""
+    return req_name.split("[", 1)[0].strip()
+
+
 def check_requirements(
     pip_deps: Dict[str, str],
 ) -> Tuple[List[str], List[str]]:
@@ -40,9 +45,10 @@ def check_requirements(
     for name, constraint in pip_deps.items():
         spec_str = constraint if constraint != "*" else ""
         req_label = f"{name}{spec_str}" if spec_str else name
+        dist_name = _distribution_name_for_metadata(name)
 
         try:
-            installed_ver = _meta.version(name)
+            installed_ver = _meta.version(dist_name)
         except _meta.PackageNotFoundError:
             missing.append(req_label)
             continue

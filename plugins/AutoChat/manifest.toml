@@ -1,0 +1,9 @@
+name = "AutoChat"
+version = "2.2.0"
+main = "plugin.py"
+author = "cheng160"
+description = "关键词 + 指令控制自动对话（火山方舟 API，需配置密钥）"
+entry_class = "AutoChat"
+pip_dependencies = ["volcengine-python-sdk[ark]"]
+
+[dependencies]

@@ -17,6 +17,16 @@ if TYPE_CHECKING:
 LOG = get_log("WebUIClient")
 
 
+def _canonical_webui_http_host(host: Optional[str]) -> str:
+    """将 loopback 主机名规范为 IPv4，避免 Windows 上 localhost→::1 而服务仅监听 IPv4 导致 10061。"""
+    if not host:
+        return "127.0.0.1"
+    h = host.strip().lower()
+    if h in ("localhost", "::1"):
+        return "127.0.0.1"
+    return host.strip()
+
+
 class WebUIAuthError(Exception):
     pass
 
@@ -45,7 +55,8 @@ class WebUIClient:
 
     def __init__(self, napcat_config: "NapCatConfig"):
         self._napcat_config = napcat_config
-        self._base_uri = f"http://{napcat_config.webui_host}:{napcat_config.webui_port}"
+        http_host = _canonical_webui_http_host(napcat_config.webui_host)
+        self._base_uri = f"http://{http_host}:{napcat_config.webui_port}"
         self._header: Optional[dict] = None
 
     @property
@@ -84,9 +95,21 @@ class WebUIClient:
                 continue
 
         detail = f": {last_error}" if last_error else ""
-        raise WebUIConnectionError(
+        msg = (
             f"连接 WebUI 超时 (已重试{attempt}次, 超时{self.CONNECT_TIMEOUT}s){detail}"
         )
+        err_s = str(last_error) if last_error else ""
+        if any(
+            x in err_s
+            for x in ("10061", "拒绝", "Connection refused", "actively refused")
+        ):
+            msg += (
+                "。常见原因: QQ 客户端尚未完成登录（仍在登录页或未进主界面），"
+                "NapCat WebUI 可能尚未监听；请在弹出的 QQ 窗口中先登录。"
+                " 其次再检查: UAC 提权是否通过、注入窗口是否有报错。"
+                f" 亦可在浏览器访问 http://127.0.0.1:{self._napcat_config.webui_port} 确认 WebUI。"
+            )
+        raise WebUIConnectionError(msg)
 
     def _try_auth(self) -> Optional[str]:
         hashed_token = hashlib.sha256(

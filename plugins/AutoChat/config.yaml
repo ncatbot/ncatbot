@@ -1,0 +1,10 @@
+# 可被全局 config.yaml 中 plugin.plugin_configs.AutoChat 覆盖。
+# 密钥勿提交仓库：用环境变量 ARK_API_KEY，或仅在本机 plugins/AutoChat/config.yaml 增加一行：
+# volc_ark_api_key: "你的密钥"
+volc_ark_base_url: "https://ark.cn-beijing.volces.com/api/v3"
+ark_model: "deepseek-v3-1-terminus"
+cooldown_seconds: 10
+max_reply_chars: 1000
+chat_instructions: "你是猫娘，每句结尾加「喵」。"
+enable_web_search: true
+web_search_max_keyword: 2
