@@ -15,6 +15,7 @@ Bilibili API 查询方法单元测试
   BQ-11: get_video_subtitle 按 language 选择字幕
 """
 
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -142,6 +143,22 @@ class TestParseBiliId:
 class TestGetVideoAudioUrl:
     """BQ-06~08: get_video_audio_url 音频流获取"""
 
+    @pytest.fixture(autouse=True)
+    def _mock_bilibili_video_module(self):
+        """Mock bilibili_api.video 模块，CI 环境可能未安装 bilibili-api-python。"""
+        self.AudioStreamDownloadURL = type("AudioStreamDownloadURL", (), {})
+        mock_video_mod = MagicMock()
+        mock_video_mod.AudioStreamDownloadURL = self.AudioStreamDownloadURL
+        mock_video_mod.VideoDownloadURLDataDetecter = MagicMock()
+        with patch.dict(
+            sys.modules,
+            {
+                "bilibili_api": MagicMock(),
+                "bilibili_api.video": mock_video_mod,
+            },
+        ):
+            yield
+
     @pytest.fixture
     def mixin(self):
         return _FakeQueryMixin()
@@ -149,9 +166,7 @@ class TestGetVideoAudioUrl:
     @pytest.mark.asyncio
     async def test_bq06_dash_audio_stream(self, mixin):
         """BQ-06: DASH 模式返回独立音频流 URL"""
-        from bilibili_api.video import AudioStreamDownloadURL
-
-        mock_audio = MagicMock(spec=AudioStreamDownloadURL)
+        mock_audio = MagicMock(spec=self.AudioStreamDownloadURL)
         mock_audio.url = "https://example.com/audio.m4s"
 
         mock_detector = MagicMock()
