@@ -30,14 +30,110 @@ class QueryAPIMixin:
         video_id:
             BV 号（如 ``BV1wa411Q7N6``）或 av 号（如 ``av258296202``）。
         """
+
+        v = self._make_video(video_id)
+        raw = await v.get_info()
+        return VideoInfo.from_raw(raw)
+
+    async def get_video_subtitle(
+        self, video_id: str, *, page_index: int = 0, language: str = ""
+    ) -> Optional[str]:
+        """获取视频字幕文本，无字幕返回 None。"""
+        import aiohttp
+
+        v = self._make_video(video_id)
+        info = await v.get_info()
+        pages = info.get("pages", [])
+        if not pages or page_index >= len(pages):
+            return None
+
+        cid = pages[page_index]["cid"]
+        subtitle_info = await v.get_subtitle(cid=cid)
+        subtitle_list = (subtitle_info or {}).get("subtitles", [])
+        if not subtitle_list:
+            return None
+
+        # 选择字幕：优先匹配 language，否则取第一条
+        chosen = subtitle_list[0]
+        if language:
+            for s in subtitle_list:
+                if s.get("lan", "") == language:
+                    chosen = s
+                    break
+
+        subtitle_url = chosen.get("subtitle_url", "")
+        if not subtitle_url:
+            return None
+        if subtitle_url.startswith("//"):
+            subtitle_url = "https:" + subtitle_url
+
+        # 下载字幕 JSON 并拼接文本
+        async with aiohttp.ClientSession() as session:
+            async with session.get(subtitle_url) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+
+        body = data.get("body", [])
+        if not body:
+            return None
+        return "\n".join(item.get("content", "") for item in body)
+
+    def _make_video(self, video_id: str):
+        """根据 video_id 构造 bilibili Video 对象。"""
         from bilibili_api import video as bili_video
 
         if video_id.lower().startswith("av"):
-            v = bili_video.Video(aid=int(video_id[2:]), credential=self._credential)
-        else:
-            v = bili_video.Video(bvid=video_id, credential=self._credential)
-        raw = await v.get_info()
-        return VideoInfo.from_raw(raw)
+            return bili_video.Video(aid=int(video_id[2:]), credential=self._credential)
+        return bili_video.Video(bvid=video_id, credential=self._credential)
+
+    async def get_video_audio_url(
+        self, video_id: str, *, page_index: int = 0
+    ) -> Optional[str]:
+        """获取视频音频流 URL。
+
+        优先使用 DASH 模式获取独立音频流（体积小），
+        失败时回退到 html5 FLV 合并流。
+        """
+        from bilibili_api.video import (
+            AudioStreamDownloadURL,
+            VideoDownloadURLDataDetecter,
+        )
+
+        v = self._make_video(video_id)
+
+        # 1. 优先 DASH 模式（独立音频流，需要登录凭据）
+        try:
+            download_data = await v.get_download_url(page_index=page_index)
+            detector = VideoDownloadURLDataDetecter(download_data)
+            streams = detector.detect_best_streams()
+            LOG.debug("DASH streams: %s", [type(s).__name__ for s in streams])
+
+            for stream in streams:
+                if isinstance(stream, AudioStreamDownloadURL):
+                    LOG.info("DASH 独立音频流: %s", stream.url[:80])
+                    return stream.url
+        except Exception as exc:
+            LOG.warning("DASH 模式获取失败: %s", exc)
+
+        # 2. 回退 html5 FLV 合并流（无需鉴权）
+        try:
+            download_data = await v.get_download_url(page_index=page_index, html5=True)
+            detector = VideoDownloadURLDataDetecter(download_data)
+            streams = detector.detect_best_streams()
+            LOG.debug("html5 streams: %s", [type(s).__name__ for s in streams])
+
+            for stream in streams:
+                if isinstance(stream, AudioStreamDownloadURL):
+                    return stream.url
+
+            if streams and hasattr(streams[0], "url"):
+                LOG.info("html5 合并流: %s", streams[0].url[:80])
+                return streams[0].url
+        except Exception as exc:
+            LOG.warning("html5 模式获取失败: %s", exc)
+
+        LOG.warning("无法获取视频 %s 的音频流", video_id)
+        return None
 
     async def parse_bili_id(self, text: str) -> Optional[ParsedBiliId]:
         """从文本中解析B站视频 ID。

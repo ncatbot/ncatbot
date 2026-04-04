@@ -160,3 +160,15 @@ class IBiliAPIClient(IAPIClient):
     @abstractmethod
     async def parse_bili_id(self, text: str) -> Optional[ParsedBiliId]:
         """从文本中解析B站视频ID（支持 b23 短链、BV号、av号）。结果可通过 ``.video_id`` 属性直接获取视频 ID。"""
+
+    @abstractmethod
+    async def get_video_audio_url(
+        self, video_id: str, *, page_index: int = 0
+    ) -> Optional[str]:
+        """获取视频音频流 URL（BV号或av号，page_index 指定分P）"""
+
+    @abstractmethod
+    async def get_video_subtitle(
+        self, video_id: str, *, page_index: int = 0, language: str = ""
+    ) -> Optional[str]:
+        """获取视频字幕文本（优先匹配 language，为空则取第一条），无字幕返回 None"""
