@@ -99,6 +99,11 @@ class MessageEvent(BaseEvent, Replyable, Deletable, HasSender, HasAttachments):
         if text is not None:
             msg.add_text(text)
         if at is not None:
+            if isinstance(at, bool):
+                raise TypeError(
+                    "reply(at=) 需要 (str | int) 类型, 不接受 bool, "
+                    "如需控制是否 @发送者, 请使用 at_sender参数"
+                )
             msg.add_at(at)
         if image is not None:
             msg.add_image(image)
