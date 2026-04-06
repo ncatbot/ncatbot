@@ -149,6 +149,7 @@ class NapCatConfigManager:
                 )
                 return
 
+        LOG.info("WS_TOKEN 为默认弱密钥且监听非本地地址, 将自动替换为强密钥")
         new_token = generate_strong_token()
         nc.ws_token = new_token
 
@@ -214,7 +215,7 @@ class NapCatConfigManager:
             for server in servers[:]:
                 if server.get("port") == target_port:
                     if confirm(
-                        f"端口 {target_port} 已存在配置, 是否强制覆盖?", default=False
+                        f"端口 {target_port} 已存在配置, 是否强制覆盖?", default=True
                     ):
                         servers.remove(server)
                     else:
