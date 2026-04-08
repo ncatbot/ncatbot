@@ -180,6 +180,28 @@ class LoggingConfig(BaseConfig):
             result[key] = upper
         return result
 
+    event_log_format: str = Field(default="summary")
+    """事件日志输出格式。
+
+    - ``"summary"``: 人类可读摘要（默认），DEBUG 级别额外输出完整 JSON。
+    - ``"raw"``: 完整 JSON（旧行为）。
+
+    示例::
+
+        logging:
+          event_log_format: summary
+    """
+
+    @field_validator("event_log_format")
+    @classmethod
+    def _validate_event_log_format(cls, v: str) -> str:
+        lower = v.lower()
+        if lower not in ("summary", "raw"):
+            raise ValueError(
+                f"无效的 event_log_format '{v}'。可选值: raw, summary"
+            )
+        return lower
+
 
 # ==================== 适配器配置条目 ====================
 
