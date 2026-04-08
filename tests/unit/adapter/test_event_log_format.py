@@ -5,6 +5,9 @@
 - 按 post_type 分发到不同格式模板
 """
 
+import logging
+from unittest.mock import patch, MagicMock
+
 import pytest
 from ncatbot.utils.logger.event_log import format_event_summary
 
@@ -185,10 +188,6 @@ class TestFormatUnknown:
         }
         result = format_event_summary(data)
         assert result == "[群消息] G(123) Bot(456): hi"
-
-
-import logging
-from unittest.mock import patch, MagicMock
 
 
 class TestOnEventLogFormat:
