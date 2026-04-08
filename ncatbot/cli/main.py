@@ -11,6 +11,7 @@ from .commands.napcat import napcat
 from .commands.init import init
 from .commands.adapter import adapter
 from .commands.ref import ref
+from .commands.test_ui import test_ui
 
 
 def _get_version() -> str:
@@ -45,3 +46,4 @@ cli.add_command(napcat)
 cli.add_command(init)
 cli.add_command(adapter)
 cli.add_command(ref)
+cli.add_command(test_ui)
