@@ -8,95 +8,8 @@ from typing import Any, Dict, List
 import click
 import yaml
 
-from ..utils.checkbox import checkbox_prompt, alt_screen
-from ..utils.colors import success, warning, info, header
-
-
-# ---------------------------------------------------------------------------
-# 适配器发现 — 从注册表读取
-# ---------------------------------------------------------------------------
-
-
-def _get_adapter_choices() -> List[Dict[str, Any]]:
-    """从适配器注册表构建选择列表。
-
-    返回 ``[{"name": "napcat", "cls": NapCatAdapter, ...}, ...]``。
-    排除 mock 适配器。
-    """
-    from ncatbot.adapter import adapter_registry
-
-    all_adapters = adapter_registry.discover()
-    choices: List[Dict[str, Any]] = []
-    for name, cls in all_adapters.items():
-        if name == "mock":
-            continue
-        choices.append(
-            {
-                "name": name,
-                "cls": cls,
-                "label": f"{getattr(cls, 'description', name)}",
-                "platform": getattr(cls, "platform", name),
-            }
-        )
-    return choices
-
-
-# ---------------------------------------------------------------------------
-# 适配器选择交互
-# ---------------------------------------------------------------------------
-
-
-def _select_adapters() -> List[Dict[str, Any]]:
-    """交互式选择并配置适配器，返回 adapters 列表。
-
-    1. 从注册表发现所有可用适配器
-    2. checkbox 选择在备用屏幕完成
-    3. 各适配器的 ``cli_configure()`` 钩子在备用屏幕中执行
-    4. 恢复主终端后由调用方打印配置摘要
-    """
-    choices = _get_adapter_choices()
-    if not choices:
-        click.echo(warning("未发现任何可用适配器"))
-        return []
-
-    labels = [c["label"] for c in choices]
-    # 不再需要单独的 descriptions，label 已包含描述
-
-    # ① checkbox 选择（自带 alt screen 进出）
-    chosen_indices = checkbox_prompt(
-        labels,
-        checked=[0],  # 默认选中第一个
-        title="请选择要启用的适配器:",
-    )
-
-    if not chosen_indices:
-        click.echo(warning("未选择任何适配器，默认使用第一个"))
-        chosen_indices = [0]
-
-    # ② 在备用屏幕中完成各适配器配置（调用适配器自身的钩子）
-    adapters: List[Dict[str, Any]] = []
-    with alt_screen():
-        for i, idx in enumerate(chosen_indices):
-            choice = choices[idx]
-            adapter_cls = choice["cls"]
-            config = adapter_cls.cli_configure()
-            adapters.append(
-                {
-                    "type": choice["name"],
-                    "platform": choice["platform"],
-                    "enabled": True,
-                    "config": config,
-                }
-            )
-
-    return adapters
-
-
-def _print_adapter_summary(adapters: List[Dict[str, Any]]) -> None:
-    """在主终端打印适配器配置摘要。"""
-    click.echo(header("已配置的适配器:"))
-    for adapter in adapters:
-        click.echo(f"  {success('✔')} {adapter['type']} ({adapter['platform']})")
+from ..utils.colors import success, warning, info
+from .adapter import adapter_interactive, _print_summary
 
 
 # ---------------------------------------------------------------------------
@@ -127,8 +40,8 @@ def init(target_dir: str):
         "请输入管理员 QQ 号（如不适用可留空）", default="", show_default=False
     )
 
-    adapters = _select_adapters()
-    _print_adapter_summary(adapters)
+    adapters = adapter_interactive(default_first=True)
+    _print_summary(adapters)
 
     config_data: Dict[str, Any] = {
         "bot_uin": bot_uin,

@@ -1,17 +1,35 @@
-"""adapter 命令组 — 适配器管理。"""
+"""adapter 命令 — 适配器管理（全副屏交互）。"""
 
-import asyncio
-from typing import Optional
+import sys
+from typing import Any, Dict, List, Optional
 
 import click
 
-from ..utils.colors import success, error, info, warning, header, key, value, dim
+from ..utils.checkbox import _is_raw_terminal, _read_key
+from ..utils.colors import success, warning, info, header
+
+# ---------------------------------------------------------------------------
+# ANSI escape sequences
+# ---------------------------------------------------------------------------
+
+_ENTER_ALT = "\033[?1049h"
+_LEAVE_ALT = "\033[?1049l"
+_CLEAR = "\033[2J"
+_HOME = "\033[H"
+_HIDE_CUR = "\033[?25l"
+_SHOW_CUR = "\033[?25h"
+
+_GREEN = "\033[32m"
+_YELLOW = "\033[33m"
+_CYAN = "\033[36m"
+_DIM = "\033[2m"
+_BOLD = "\033[1m"
+_RESET = "\033[0m"
 
 
-def _get_manager():
-    from ncatbot.utils import get_config_manager
-
-    return get_config_manager()
+# ---------------------------------------------------------------------------
+# 辅助：从注册表 + 已有配置构建交互列表
+# ---------------------------------------------------------------------------
 
 
 def _get_registry():
@@ -20,237 +38,273 @@ def _get_registry():
     return adapter_registry
 
 
-def _find_adapter_entry(mgr, adapter_type: str):
-    """在 config.adapters 列表中查找指定类型的条目。"""
-    for entry in mgr.config.adapters:
-        if entry.type == adapter_type:
-            return entry
-    return None
+def _get_manager():
+    from ncatbot.utils import get_config_manager
+
+    return get_config_manager()
 
 
-# ========================== 适配器专属引导流程 ==========================
+def _build_items(
+    existing_adapters: Optional[list] = None,
+) -> List[Dict[str, Any]]:
+    """合并注册表与已有配置，构建交互列表。
 
-_PLATFORM_MAP = {
-    "napcat": "qq",
-    "bilibili": "bilibili",
-    "github": "github",
-    "mock": "mock",
-}
+    每项含：name / cls / platform / description / enabled / config / configured。
+    """
+    registry = _get_registry()
+    available = registry.discover()
 
+    existing_map: Dict[str, Any] = {}
+    if existing_adapters:
+        for entry in existing_adapters:
+            t = entry.get("type") if isinstance(entry, dict) else entry.type
+            existing_map[t] = entry
 
-def _prompt_napcat() -> dict:
-    """NapCat (QQ) 适配器交互式配置。"""
-    click.echo(info("配置 NapCat (QQ) 适配器:"))
-    ws_uri = click.prompt("  WebSocket 地址", default="ws://localhost:3001", type=str)
-    ws_token = click.prompt("  WebSocket Token", default="napcat_ws", type=str)
-    return {
-        "ws_uri": ws_uri,
-        "ws_token": ws_token,
-        "webui_uri": "http://localhost:6099",
-        "webui_token": "napcat_webui",
-        "enable_webui": True,
-    }
+    items: List[Dict[str, Any]] = []
+    for name in sorted(available.keys()):
+        if name == "mock":
+            continue
+        cls = available[name]
+        existing = existing_map.get(name)
 
+        enabled = False
+        config: Dict[str, Any] = {}
+        if existing is not None:
+            if isinstance(existing, dict):
+                enabled = existing.get("enabled", True)
+                config = existing.get("config", {})
+            else:
+                enabled = existing.enabled
+                config = (
+                    dict(existing.config)
+                    if not isinstance(existing.config, dict)
+                    else existing.config
+                )
 
-def _prompt_github() -> dict:
-    """GitHub 适配器交互式配置。"""
-    click.echo(info("配置 GitHub 适配器:"))
-    click.echo(
-        dim(
-            "  需要 GitHub Personal Access Token (PAT)\n"
-            "  创建方式: GitHub → Settings → Developer settings → Personal access tokens"
+        items.append(
+            {
+                "name": name,
+                "cls": cls,
+                "platform": getattr(cls, "platform", name),
+                "description": getattr(cls, "description", name),
+                "enabled": enabled,
+                "config": config,
+                "configured": bool(config),
+            }
         )
-    )
-    token = click.prompt("  GitHub Token", type=str, hide_input=True)
-    if not token.strip():
-        click.echo(warning("  未输入 token，API 调用将受到严格速率限制"))
-    return {"token": token.strip()}
+    return items
 
 
-def _prompt_bilibili() -> Optional[dict]:
-    """Bilibili 适配器交互式配置 — 扫码登录。"""
-    click.echo(info("配置 Bilibili 适配器:"))
-    click.echo(dim("  将启动扫码登录流程，请准备好 Bilibili APP"))
-    if not click.confirm("  是否继续?", default=True):
+# ---------------------------------------------------------------------------
+# 渲染
+# ---------------------------------------------------------------------------
+
+
+def _render(items: List[Dict[str, Any]], cursor: int) -> str:
+    """渲染适配器管理画面。"""
+    lines: list[str] = []
+    lines.append(f"{_CYAN}{_BOLD}── 适配器管理 ──{_RESET}")
+    lines.append(f"{_DIM}  ↑/↓ 移动  空格 启用/禁用  Enter 配置  q 保存退出{_RESET}")
+    lines.append("")
+
+    for idx, item in enumerate(items):
+        pointer = f"{_CYAN}❯{_RESET} " if idx == cursor else "  "
+        box = f"{_GREEN}[x]{_RESET}" if item["enabled"] else "[ ]"
+        desc = (
+            f"{_BOLD}{item['description']}{_RESET}"
+            if idx == cursor
+            else item["description"]
+        )
+
+        if item["enabled"] and item["configured"]:
+            status = f"  {_GREEN}● 已配置{_RESET}"
+        elif item["enabled"] and not item["configured"]:
+            status = f"  {_YELLOW}◐ 未配置{_RESET}"
+        else:
+            status = ""
+
+        lines.append(f"{pointer}{box} {desc}{status}")
+
+    lines.append("")
+    lines.append(f"{_DIM}  启用的适配器将在 bot 启动时加载{_RESET}")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 单项配置（调用适配器 cli_configure 钩子）
+# ---------------------------------------------------------------------------
+
+
+def _run_configure(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """在副屏中运行适配器的 cli_configure()，返回配置字典。"""
+    sys.stdout.write(_SHOW_CUR + _CLEAR + _HOME)
+    sys.stdout.flush()
+    try:
+        config = item["cls"].cli_configure()
+        click.echo()
+        click.pause("按任意键返回...")
+        return config
+    except (KeyboardInterrupt, EOFError):
         return None
+
+
+# ---------------------------------------------------------------------------
+# 副屏交互主循环
+# ---------------------------------------------------------------------------
+
+
+def adapter_interactive(
+    existing_adapters: Optional[list] = None,
+    *,
+    default_first: bool = False,
+) -> List[Dict[str, Any]]:
+    """全副屏适配器管理交互。
+
+    Parameters
+    ----------
+    existing_adapters:
+        当前已配置的适配器条目（来自 config.yaml 或 ``None``）。
+    default_first:
+        若无已有配置，是否默认启用第一个适配器。
+
+    Returns
+    -------
+    适配器条目字典列表，可直接序列化到 config.yaml。
+    """
+    items = _build_items(existing_adapters)
+    if not items:
+        click.echo(warning("未发现任何可用适配器"))
+        return []
+
+    if default_first and not any(i["enabled"] for i in items):
+        items[0]["enabled"] = True
+
+    # 非交互终端降级
+    if not _is_raw_terminal():
+        return _fallback(items)
+
+    cursor = 0
+    sys.stdout.write(_ENTER_ALT + _HIDE_CUR)
+    sys.stdout.flush()
 
     try:
-        from ncatbot.adapter.bilibili.auth import qrcode_login
+        while True:
+            output = _render(items, cursor)
+            sys.stdout.write(_HOME + _CLEAR + output)
+            sys.stdout.flush()
 
-        credential = asyncio.run(qrcode_login())
-        return {
-            "sessdata": credential.sessdata,
-            "bili_jct": credential.bili_jct,
-            "buvid3": credential.buvid3,
-            "dedeuserid": credential.dedeuserid,
-            "ac_time_value": credential.ac_time_value,
-        }
-    except Exception as e:
-        click.echo(error(f"  Bilibili 登录失败: {e}"))
-        return None
+            key = _read_key()
+            if key == "up":
+                cursor = (cursor - 1) % len(items)
+            elif key == "down":
+                cursor = (cursor + 1) % len(items)
+            elif key == "space":
+                items[cursor]["enabled"] = not items[cursor]["enabled"]
+            elif key == "enter":
+                config = _run_configure(items[cursor])
+                if config is not None:
+                    items[cursor]["config"] = config
+                    items[cursor]["configured"] = bool(config)
+                    items[cursor]["enabled"] = True
+                sys.stdout.write(_HIDE_CUR)
+                sys.stdout.flush()
+            elif key in ("q", "Q", "esc"):
+                break
+    except KeyboardInterrupt:
+        pass
+    finally:
+        sys.stdout.write(_SHOW_CUR + _LEAVE_ALT)
+        sys.stdout.flush()
 
-
-def _prompt_mock() -> dict:
-    """Mock 适配器 — 无需额外配置。"""
-    click.echo(info("Mock 适配器无需额外配置。"))
-    return {}
-
-
-_PROMPT_MAP = {
-    "napcat": _prompt_napcat,
-    "bilibili": _prompt_bilibili,
-    "github": _prompt_github,
-    "mock": _prompt_mock,
-}
-
-
-# ========================== 命令组 ==========================
-
-
-@click.group()
-def adapter():
-    """适配器管理（启用 / 禁用 / 查看）"""
+    return _collect_results(items)
 
 
-@adapter.command("list")
-def adapter_list():
-    """列出所有可用适配器及启用状态"""
-    registry = _get_registry()
-    available = registry.discover()
-    mgr = _get_manager()
-    enabled_types = {e.type: e for e in mgr.config.adapters}
+# ---------------------------------------------------------------------------
+# 非交互降级
+# ---------------------------------------------------------------------------
 
+
+def _fallback(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     click.echo(header("可用适配器:"))
-    click.echo()
-    for name in sorted(available.keys()):
-        cls = available[name]
-        platform = getattr(cls, "platform", "?")
-        entry = enabled_types.get(name)
+    for idx, item in enumerate(items):
+        status = "已启用" if item["enabled"] else "未启用"
+        click.echo(f"  {idx + 1}. [{status}] {item['description']}")
 
-        if entry is not None:
-            if entry.enabled:
-                status = click.style("● 已启用", fg="green")
-            else:
-                status = click.style("○ 已禁用", fg="yellow")
+    raw = click.prompt("输入要启用的编号（逗号分隔）", default="1")
+    chosen: set[int] = set()
+    for part in raw.split(","):
+        part = part.strip()
+        if part.isdigit():
+            val = int(part) - 1
+            if 0 <= val < len(items):
+                chosen.add(val)
+
+    for idx in sorted(chosen):
+        items[idx]["enabled"] = True
+        config = items[idx]["cls"].cli_configure()
+        items[idx]["config"] = config
+        items[idx]["configured"] = bool(config)
+
+    return _collect_results(items)
+
+
+# ---------------------------------------------------------------------------
+# 结果收集
+# ---------------------------------------------------------------------------
+
+
+def _collect_results(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """从交互列表中提取需要写入配置的条目。"""
+    results: List[Dict[str, Any]] = []
+    for item in items:
+        if item["enabled"] or item["configured"]:
+            results.append(
+                {
+                    "type": item["name"],
+                    "platform": item["platform"],
+                    "enabled": item["enabled"],
+                    "config": item["config"],
+                }
+            )
+    return results
+
+
+# ---------------------------------------------------------------------------
+# 摘要输出
+# ---------------------------------------------------------------------------
+
+
+def _print_summary(results: List[Dict[str, Any]]) -> None:
+    """在主终端打印适配器配置摘要。"""
+    if not results:
+        click.echo(info("未配置任何适配器"))
+        return
+    click.echo(header("适配器配置已保存:"))
+    for entry in results:
+        label = f"{entry['type']} ({entry['platform']})"
+        if entry["enabled"]:
+            click.echo(f"  {success('✔')} {label}")
         else:
-            status = dim("  未配置")
-
-        desc = getattr(cls, "description", "")
-        click.echo(f"  {key(name):20s}  platform={value(platform):12s}  {status}")
-        if desc:
-            click.echo(f"  {dim(desc)}")
-        click.echo()
+            click.echo(f"  {warning('○')} {label}")
 
 
-@adapter.command()
-@click.argument("adapter_type")
-def enable(adapter_type: str):
-    """交互式启用适配器（自动引导配置）"""
-    registry = _get_registry()
-    available = registry.discover()
+# ---------------------------------------------------------------------------
+# adapter 命令入口
+# ---------------------------------------------------------------------------
 
-    if adapter_type not in available:
-        names = ", ".join(sorted(available.keys()))
-        click.echo(error(f"未知的适配器类型 '{adapter_type}'。可用: {names}"))
-        raise SystemExit(1)
 
+@click.command()
+def adapter():
+    """适配器管理（启用 / 禁用 / 配置）"""
     mgr = _get_manager()
-    existing = _find_adapter_entry(mgr, adapter_type)
+    existing = mgr.config.adapters
 
-    if existing is not None and existing.enabled:
-        if not click.confirm(
-            warning(f"适配器 '{adapter_type}' 已启用，是否重新配置?"),
-            default=False,
-        ):
-            return
+    results = adapter_interactive(existing)
 
-    # 运行适配器专属引导
-    prompt_fn = _PROMPT_MAP.get(adapter_type)
-    if prompt_fn is not None:
-        adapter_config = prompt_fn()
-        if adapter_config is None:
-            click.echo(info("已取消。"))
-            return
-    else:
-        # 未知适配器（第三方），无引导流程
-        adapter_config = {}
-        click.echo(info(f"第三方适配器 '{adapter_type}'，跳过交互配置。"))
+    # 写回配置
+    from ncatbot.utils.config.models import AdapterEntry
 
-    platform = _PLATFORM_MAP.get(adapter_type, adapter_type)
-
-    if existing is not None:
-        existing.enabled = True
-        existing.config = adapter_config
-        existing.platform = platform
-    else:
-        from ncatbot.utils.config.models import AdapterEntry
-
-        entry = AdapterEntry(
-            type=adapter_type,
-            platform=platform,
-            enabled=True,
-            config=adapter_config,
-        )
-        mgr.config.adapters.append(entry)
-
+    mgr.config.adapters = [AdapterEntry(**entry) for entry in results]
     mgr.save()
-    click.echo(success(f"适配器 '{adapter_type}' 已启用并写入 config.yaml"))
 
-
-@adapter.command()
-@click.argument("adapter_type")
-def disable(adapter_type: str):
-    """禁用适配器"""
-    mgr = _get_manager()
-    existing = _find_adapter_entry(mgr, adapter_type)
-
-    if existing is None:
-        click.echo(error(f"适配器 '{adapter_type}' 未在 config.yaml 中配置"))
-        raise SystemExit(1)
-
-    if not existing.enabled:
-        click.echo(info(f"适配器 '{adapter_type}' 已经是禁用状态"))
-        return
-
-    existing.enabled = False
-    mgr.save()
-    click.echo(success(f"适配器 '{adapter_type}' 已禁用"))
-
-
-@adapter.command()
-def status():
-    """显示已配置适配器的状态摘要"""
-    mgr = _get_manager()
-    entries = mgr.config.adapters
-
-    if not entries:
-        click.echo(
-            info("未配置任何适配器。使用 'ncatbot adapter enable <type>' 启用。")
-        )
-        return
-
-    click.echo(header("适配器状态:"))
-    click.echo()
-    for entry in entries:
-        enabled_str = (
-            click.style("已启用", fg="green")
-            if entry.enabled
-            else click.style("已禁用", fg="yellow")
-        )
-        click.echo(
-            f"  {key(entry.type):16s}  platform={value(entry.platform or '(默认)'):12s}  {enabled_str}"
-        )
-
-        # 显示关键配置摘要（隐藏敏感信息）
-        cfg = entry.config
-        if entry.type == "napcat":
-            click.echo(f"    ws_uri: {dim(cfg.get('ws_uri', '(未设置)'))}")
-        elif entry.type == "github":
-            token = cfg.get("token", "")
-            masked = f"{token[:4]}****" if len(token) > 4 else "(未设置)"
-            click.echo(f"    token: {dim(masked)}")
-        elif entry.type == "bilibili":
-            uid = cfg.get("dedeuserid", "")
-            click.echo(f"    uid: {dim(uid or '(未设置)')}")
-
-        click.echo()
+    _print_summary(results)
