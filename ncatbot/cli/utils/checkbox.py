@@ -125,6 +125,29 @@ def _fallback_prompt(
 
 def _read_key() -> str:
     """读取单个按键（含方向键序列），返回标识字符串。"""
+    if sys.platform == "win32":
+        import msvcrt
+
+        ch = msvcrt.getwch()
+        if ch in ("\x00", "\xe0"):
+            code = msvcrt.getwch()
+            if code == "H":
+                return "up"
+            if code == "P":
+                return "down"
+            return "esc"
+        if ch in ("\r", "\n"):
+            return "enter"
+        if ch == " ":
+            return "space"
+        if ch in ("k", "K"):
+            return "up"
+        if ch in ("j", "J"):
+            return "down"
+        if ch == "\x03":
+            raise KeyboardInterrupt
+        return ch
+
     import tty
     import termios
 
