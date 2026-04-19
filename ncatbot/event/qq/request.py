@@ -52,11 +52,11 @@ class RequestEvent(BaseEvent, HasSender, Approvable):
 
     async def approve(self, remark: str = "", reason: str = "") -> Any:
         if self._data.request_type is RequestType.FRIEND:
-            return await self._api.set_friend_add_request(
+            return await self._api.manage.set_friend_add_request(
                 flag=self._data.flag, approve=True, remark=remark
             )
         elif self._data.request_type is RequestType.GROUP:
-            return await self._api.set_group_add_request(
+            return await self._api.manage.set_group_add_request(
                 flag=self._data.flag,
                 sub_type=self._data.sub_type,  # type: ignore[attr-defined]
                 approve=True,
@@ -65,11 +65,11 @@ class RequestEvent(BaseEvent, HasSender, Approvable):
 
     async def reject(self, reason: str = "") -> Any:
         if self._data.request_type is RequestType.FRIEND:
-            return await self._api.set_friend_add_request(
+            return await self._api.manage.set_friend_add_request(
                 flag=self._data.flag, approve=False
             )
         elif self._data.request_type is RequestType.GROUP:
-            return await self._api.set_group_add_request(
+            return await self._api.manage.set_group_add_request(
                 flag=self._data.flag,
                 sub_type=self._data.sub_type,  # type: ignore[attr-defined]
                 approve=False,
