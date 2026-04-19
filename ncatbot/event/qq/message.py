@@ -122,7 +122,7 @@ class MessageEvent(BaseEvent, Replyable, Deletable, HasSender, HasAttachments):
         )
 
     async def delete(self) -> Any:
-        return await self._api.delete_msg(message_id=self._data.message_id)
+        return await self._api.messaging.delete_msg(message_id=self._data.message_id)
 
     async def get_attachments(self) -> "AttachmentList[Attachment]":
         return self._data.message.get_attachments()
@@ -152,11 +152,11 @@ class GroupMessageEvent(MessageEvent, GroupScoped, Kickable, Bannable):
         return self._data.sender
 
     async def kick(self, reject_add_request: bool = False) -> Any:
-        return await self._api.set_group_kick(
+        return await self._api.manage.set_group_kick(
             self._data.group_id, self._data.user_id, reject_add_request
         )
 
     async def ban(self, duration: int = 30 * 60) -> Any:
-        return await self._api.set_group_ban(
+        return await self._api.manage.set_group_ban(
             self._data.group_id, self._data.user_id, duration
         )
