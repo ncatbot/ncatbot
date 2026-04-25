@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Awaitable, Callable, Coroutine, Optional, cast
 
 from ncatbot.utils import get_log
 
@@ -41,6 +41,7 @@ class LiveSource(BaseSource):
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._main_loop: Optional[asyncio.AbstractEventLoop] = None
         self._ready = threading.Event()
+        self._stopping = False
 
     async def start(self) -> None:
         if self._running:
@@ -48,30 +49,8 @@ class LiveSource(BaseSource):
 
         self._main_loop = asyncio.get_running_loop()
         self._ready.clear()
-
-        from bilibili_api.live import LiveDanmaku
-
-        self._danmaku = LiveDanmaku(
-            room_display_id=self._room_id,
-            credential=self._credential,
-            max_retry=self._max_retry,
-            retry_after=self._retry_after,
-        )
-        self._danmaku.logger = LOG
-
-        @self._danmaku.on("ALL")
-        async def _on_all(event: dict) -> None:
-            # 开播事件：获取直播间信息附加到事件数据
-            if event.get("type") == "LIVE":
-                data = event.get("data", {})
-                if isinstance(data, dict) and data.get("live_time", 0):
-                    await self._attach_room_info(event)
-
-            # 线程安全地将事件回调到主事件循环
-            if self._main_loop is not None and self._main_loop.is_running():
-                asyncio.run_coroutine_threadsafe(
-                    self._callback("live", event), self._main_loop
-                )
+        self._stopping = False
+        self._danmaku = self._create_danmaku()
 
         self._running = True
         self._thread = threading.Thread(
@@ -81,6 +60,42 @@ class LiveSource(BaseSource):
         )
         self._thread.start()
         LOG.info("直播源 %s 已启动 (线程: %s)", self._room_id, self._thread.name)
+
+    def _create_danmaku(self) -> "Any":
+        """创建一个新的 LiveDanmaku 实例并挂载事件回调。"""
+        from bilibili_api.live import LiveDanmaku
+
+        danmaku = cast(
+            Any,
+            LiveDanmaku(
+                room_display_id=self._room_id,
+                credential=self._credential,
+                max_retry=self._max_retry,
+                retry_after=self._retry_after,
+            ),
+        )
+        danmaku.logger = LOG
+
+        @danmaku.on("ALL")
+        async def _on_all(event: dict) -> None:
+            if event.get("type") == "LIVE":
+                data = event.get("data", {})
+                if isinstance(data, dict) and data.get("live_time", 0):
+                    await self._attach_room_info(event)
+
+            if self._main_loop is not None and self._main_loop.is_running():
+                callback_coro = cast(
+                    Coroutine[Any, Any, None],
+                    self._callback("live", event),
+                )
+                asyncio.run_coroutine_threadsafe(callback_coro, self._main_loop)
+
+        @danmaku.on("VERIFICATION_SUCCESSFUL")
+        async def _on_connected(_: dict) -> None:
+            self._ready.set()
+            LOG.debug("直播源 %s WebSocket 验证成功", self._room_id)
+
+        return danmaku
 
     def _run_thread(self) -> None:
         """线程入口：创建独立事件循环并运行 LiveDanmaku 连接。"""
@@ -129,22 +144,38 @@ class LiveSource(BaseSource):
 
     async def _connect_danmaku(self) -> None:
         """在独立事件循环中运行弹幕连接。"""
+        while self._running and not self._stopping:
+            danmaku = self._danmaku
+            if danmaku is None:
+                danmaku = self._create_danmaku()
+                self._danmaku = danmaku
 
-        @self._danmaku.on("VERIFICATION_SUCCESSFUL")
-        async def _on_connected(_: dict) -> None:
-            self._ready.set()
-            LOG.debug("直播源 %s WebSocket 验证成功", self._room_id)
+            try:
+                await danmaku.connect()
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                if self._stopping:
+                    break
+                LOG.exception("直播源 %s 连接异常", self._room_id)
+            finally:
+                self._ready.set()
 
-        try:
-            await self._danmaku.connect()
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            LOG.exception("直播源 %s 连接异常", self._room_id)
-        finally:
-            self._ready.set()  # 防止异常时 ready 永远阻塞
+            if self._stopping or not self._running:
+                break
+
+            LOG.warning(
+                "直播源 %s 连接已断开，%.1f 秒后尝试重连",
+                self._room_id,
+                self._retry_after,
+            )
+            await asyncio.sleep(self._retry_after)
+            self._danmaku = self._create_danmaku()
 
     async def stop(self) -> None:
+        self._stopping = True
+        self._running = False
+
         if self._danmaku is not None and self._loop is not None:
             loop = self._loop
             try:
@@ -166,4 +197,5 @@ class LiveSource(BaseSource):
         self._danmaku = None
         self._thread = None
         self._loop = None
+        self._stopping = False
         LOG.info("直播源 %s 已停止", self._room_id)

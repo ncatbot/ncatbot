@@ -77,6 +77,15 @@ python -m pytest tests/unit/adapter/ -v
 | BL-24c | timestamp=0 视为过期 | 无时间戳的消息被丢弃 |
 | BL-24d | 自定义 max_msg_age | 自定义阈值生效 |
 
+### LiveSource (`test_bilibili_live_source.py`)
+
+测试 LiveSource 的断线重连和停止状态管理。
+
+| 规范 ID | 说明 | 验证点 |
+|---------|------|--------|
+| BL-25a | 断线后重连 | `connect()` 自然返回后创建新的 `LiveDanmaku` 并继续连接 |
+| BL-25b | 停止时清理状态 | `stop()` 在断开前设置停止标记，并在结束后清理线程/循环状态 |
+
 ### BiliQueryAPI (`test_bilibili_query_api.py`)
 
 测试 Bilibili 查询操作 Mixin：视频 ID 解析、音频流获取、字幕获取。
