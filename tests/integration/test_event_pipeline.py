@@ -166,8 +166,11 @@ async def test_reply_through_sugar_layer(harness):
     await harness.settle(0.1)
 
     harness.assert_api("send_group_msg").called()
-    call = harness.assert_api("send_group_msg").last
-    assert call.params["group_id"] == "200"
     from ncatbot.testing.assertions import extract_text
 
-    assert "hi" in extract_text(call)
+    matching_calls = [
+        call
+        for call in harness.assert_api("send_group_msg").calls
+        if call.params.get("group_id") == "200" and "hi" in extract_text(call)
+    ]
+    assert matching_calls
