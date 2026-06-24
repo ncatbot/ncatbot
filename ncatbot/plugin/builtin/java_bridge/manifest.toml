@@ -1,0 +1,6 @@
+name = "ncatbot_java_bridge"
+version = "1.0.0"
+main = "main"
+entry_class = "NcatBotJavaBridgePlugin"
+author = "NcatBot Java"
+description = "加载并桥接 plugins 目录中的 NcatBot Java Jar 插件"
